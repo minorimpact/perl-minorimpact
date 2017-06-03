@@ -13,7 +13,10 @@ package MinorImpact::Util;
 
 use Time::Local;
 use Exporter 'import';
-@EXPORT = ("fromMysqlDate", "toMysqlDate", "uniq", "fleshDate",
+@EXPORT = ("fromMysqlDate", 
+           "toMysqlDate", 
+           "uniq", 
+           "fleshDate",
            "trim"
           );
 
@@ -44,6 +47,9 @@ sub fromMysqlDate {
 sub toMysqlDate {
     my @data = @_;
     my @dates = ();
+    if (scalar(@data) == 0) {
+        push(@data, time());
+    }
 
     foreach my $time (@data) {
         my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($time);

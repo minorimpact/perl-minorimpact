@@ -9,9 +9,25 @@ sub new {
     my $self = {};
     bless($self, $package);
 
-    $self->{DB} = $MinorImpact::SELF->{USERDB} || die;
+    $self->{DB} = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
 
     my $user_id = $params;
+
+    eval {
+        $self->{DB}->do("DESC `user`");
+    };
+    if ($@) {
+        $self->{DB}->do("CREATE TABLE `user` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `name` varchar(25) NOT NULL,
+                `password` varchar(255) NOT NULL,
+                `test` varchar(255) DEFAULT NULL,
+                `admin` tinyint(1) DEFAULT NULL,
+                `create_date` datetime NOT NULL,
+                `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1");
+    }
 
     if ($user_id =~/^\d+$/) {
         $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || return;
