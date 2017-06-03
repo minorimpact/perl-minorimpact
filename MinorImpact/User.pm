@@ -1,7 +1,6 @@
 package MinorImpact::User;
 
 use MinorImpact::Timeline;
-use MinorImpact::Journal;
 
 sub new {
     my $package = shift;
@@ -95,13 +94,6 @@ sub isAdmin {
     return $self->get('admin');
 }
 
-sub getJournals {
-    my $self = shift || return;
-
-    return Journal::search({user_id=>$self->id()});
-}
-
-#sub getParagraphs {
 #    my $self = shift || return;
 #    my @paragraphs = ();
 #
