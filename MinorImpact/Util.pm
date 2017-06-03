@@ -13,7 +13,16 @@ package MinorImpact::Util;
 
 use Time::Local;
 use Exporter 'import';
-@EXPORT = ("fromMysqlDate", "toMysqlDate", "uniq", "fleshDate");
+@EXPORT = ("fromMysqlDate", "toMysqlDate", "uniq", "fleshDate",
+           "trim"
+          );
+
+sub trim {
+    my $string = shift || return;
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+    return $string;
+}
 
 sub fromMysqlDate {
     my @data = @_;

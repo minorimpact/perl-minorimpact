@@ -9,8 +9,9 @@ use URI::Escape;
 
 
 use MinorImpact::BinLib;
-use MinorImpact::User;
+use MinorImpact::Config;
 use MinorImpact::Object;
+use MinorImpact::User;
 use MinorImpact::Util;
 
 $SELF = new MinorImpact;
