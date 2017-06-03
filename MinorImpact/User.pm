@@ -9,7 +9,7 @@ sub new {
     my $self = {};
     bless($self, $package);
 
-    $self->{DB} = $MinorImpact::SELF->{DB} || die;
+    $self->{DB} = $MinorImpact::SELF->{USERDB} || die;
 
     my $user_id = $params;
 

@@ -1,6 +1,7 @@
 package MinorImpact::Config;
 
 use Time::Local;
+use Cwd;
 use Exporter 'import';
 @EXPORT = (
             "readConfig", 
@@ -16,6 +17,9 @@ sub readConfig {
     my $category = 'default';
     my $key = '';
 
+    if ($config_file !~/^\//) {
+        $config_file = cwd() . "/" . $config_file;
+    }
     return $config unless (-f $config_file);
     open(CONFIG, $config_file);
     while(<CONFIG>) {

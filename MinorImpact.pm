@@ -7,14 +7,13 @@ use Data::Dumper;
 use Time::HiRes qw(tv_interval gettimeofday);
 use URI::Escape;
 
-
 use MinorImpact::BinLib;
 use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
 
-$SELF = new MinorImpact;
+#$SELF = new MinorImpact;
 
 sub getDB { return $SELF->{DB}; }
 sub getCGI { return $SELF->{CGI}; }
@@ -32,11 +31,33 @@ sub new {
 
     unless ($self) {
         MinorImpact::log(3, "creating new MinorImpact object");
+
+        my $config;
+        if ($options->{config}) {
+            $config = $options->{config};
+        } elsif ($options->{config_file}) {
+            $config = readConfig($options->{config_file});
+        } elsif (-f "../conf/minorimpact.conf") {
+            $config = readConfig("../conf/minorimpact.conf");
+        } elsif (-f "/etc/minorimpact.conf") {
+            $config = readConfig("/etc/minorimpact.conf");
+        }
+       
+        if (!$config) {
+            die "No configuration";
+        }
         $self = {};
         bless($self, $package);
 
-        my $dsn = "DBI:mysql:database=minorimpact;host=krypton.minorimpact.com;port=3306";
-        $self->{DB} = DBI->connect($dsn, 'minorimpact', 'm!n0r!mp@ct', {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
+        my $dsn = "DBI:mysql:database=$config->{db}->{database};host=$config->{db}->{db_host};port=$config->{db}->{port}";
+        $self->{DB} = DBI->connect($dsn, $config->{db}->{db_user}, $config->{db}->{db_password}, {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
+
+        if ($confg->{user_db}) {
+            my $dsn = "DBI:mysql:database=$config->{db}->{database};host=$config->{db}->{db_host};port=$config->{db}->{port}";
+            $self->{USERDB} = DBI->connect($dsn, $config->{db}->{db_user}, $config->{db}->{db_password}, {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
+        } else {
+            $self->{USERDB} = $self->{DB};
+        }
         $self->{CGI} = new CGI;
 
         $SELF = $self;
@@ -119,7 +140,7 @@ sub getUser {
 
     if ($ENV{'USER'}) {
         MinorImpact::log(8, "\$ENV{'user'}=$ENV{'user'}");
-        my $user = new User($ENV{'user'});
+        my $user = new MinorImpact::User($ENV{'user'});
         MinorImpact::log(7, "ending");
         return $user;
     }
