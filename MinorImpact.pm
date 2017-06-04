@@ -63,7 +63,7 @@ sub new {
         $SELF = $self;
         $self->{starttime} = [gettimeofday];
     }
-
+    $self->checkDatabaseTables();
 
     if ($options->{validUser} || $options->{user_id} || $options->{admin}) {
         my ($script_name) = scriptName();
@@ -376,6 +376,106 @@ FOOTER
 
 sub types {
     return ();
+}
+
+sub checkDatabaseTables {
+    MinorImpact::log(7, "starting");
+    my $self = shift || return;
+
+    my $DB = $self->{DB};
+
+    eval {
+        $DB->do("DESC `object`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `user_id` int(11) NOT NULL,
+            `name` varchar(50) NOT NULL,
+            `description` text,
+            `object_type_id` int(11) NOT NULL,
+            `create_date` datetime NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`)
+            ) ENGINE=MyISAM AUTO_INCREMENT=1223 DEFAULT CHARSET=latin1");
+    }
+    eval {
+        $DB->do("DESC `object_type`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_type` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `name` varchar(50) DEFAULT NULL,
+            `description` text,
+            `plural` varchar(50) DEFAULT NULL,
+            `toplevel` tinyint(1) DEFAULT '0',
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `object_type_idx` (`name`)
+        ) ENGINE=MyISAM AUTO_INCREMENT=18 DEFAULT CHARSET=latin1");
+    }
+
+    eval {
+        $DB->do("DESC `object_field`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_field` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_type_id` int(11) NOT NULL,
+            `name` varchar(50) NOT NULL,
+            `type` varchar(15) DEFAULT NULL,
+            `hidden` tinyint(1) DEFAULT '0',
+            `readonly` tinyint(1) DEFAULT '0',
+            `required` tinyint(1) DEFAULT '0',
+            `sortby` tinyint(1) DEFAULT '0',
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`)
+        ) ENGINE=MyISAM AUTO_INCREMENT=47 DEFAULT CHARSET=latin1");
+    }
+    eval {
+        $DB->do("DESC `object_data`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_data` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `object_id` int(11) NOT NULL,
+  `object_field_id` int(11) NOT NULL,
+  `value` varchar(50) NOT NULL,
+  `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `create_date` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_object_field` (`object_id`,`object_field_id`),
+  KEY `idx_object_data` (`object_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1708 DEFAULT CHARSET=latin1");
+    }
+
+    eval {
+        $DB->do("DESC `object_tag`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_tag` (
+  `object_id` int(11) NOT NULL,
+  `name` varchar(50) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1");
+    }
+
+    eval {
+        $DB->do("DESC `object_text`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_text` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `object_id` int(11) NOT NULL,
+  `object_field_id` int(11) NOT NULL,
+  `value` text,
+  `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `create_date` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=latin1");
+    }
+    MinorImpact::log(7, "ending");
 }
 
 1;

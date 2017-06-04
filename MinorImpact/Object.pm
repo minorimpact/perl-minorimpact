@@ -11,8 +11,10 @@ sub new {
     my $id = shift || return;
 
     MinorImpact::log(7, "starting");
-    my $DB  = MinorImpact::getDB();
+
+    my $DB = MinorImpact::getDB();
     my $object;
+
     eval {
         my $type_name;
         if (ref($id) eq "HASH") {
