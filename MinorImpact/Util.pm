@@ -13,10 +13,11 @@ package MinorImpact::Util;
 
 use Time::Local;
 use Exporter 'import';
-@EXPORT = ("fromMysqlDate", 
+@EXPORT = ("cloneHash",
+           "fleshDate",
+           "fromMysqlDate", 
            "toMysqlDate", 
            "uniq", 
-           "fleshDate",
            "trim"
           );
 
@@ -72,7 +73,7 @@ sub cloneHash {
     return unless (ref($hash) eq "HASH");
     foreach my $key (keys %$hash) {
         if (ref($hash->{$key}) eq "HASH") {
-            $new_hash->{$key} = MinorImpact::cloneHash($hash->{$key});
+            $new_hash->{$key} = MinorImpact::Util::cloneHash($hash->{$key});
         } else {
             $new_hash->{$key} = $hash->{$key};
         }

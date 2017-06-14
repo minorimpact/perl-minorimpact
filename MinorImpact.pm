@@ -6,6 +6,9 @@ use Time::Local;
 use Data::Dumper;
 use Time::HiRes qw(tv_interval gettimeofday);
 use URI::Escape;
+use Template;
+use Cwd;
+use File::Spec;
 
 use MinorImpact::BinLib;
 use MinorImpact::Config;
@@ -59,6 +62,7 @@ sub new {
             $self->{USERDB} = $self->{DB};
         }
         $self->{CGI} = new CGI;
+        $self->{conf} = $config;
 
         $SELF = $self;
         $self->{starttime} = [gettimeofday];
@@ -183,6 +187,9 @@ sub header {
     my $javascript = $args->{javascript} || '';
     my $css = $args->{css} || '';
     my $other = $args->{other} || '';
+    my $script_name = $args->{script_name} || scriptName();
+    my $blank = $args->{blank};
+    my $content_type = $args->{content_type} || "text/html";
 
     unless ($title) {
         $title = $0;
@@ -193,7 +200,11 @@ sub header {
     MinorImpact::log(3, "getting user");
     my $user = $self->getUser();
 
-    my $header = qq(Content-type: text/html\n\n
+    my $header;
+    if ($args->{blank}) {
+        $header = qq(Content-type: $content_type\n\n);
+    } else {
+        $header = qq(Content-type: text/html\n\n
 
 <!DOCTYPE html>
 <head>
@@ -223,7 +234,7 @@ sub header {
     );
     if ($user) {
         $header .= qq(
-                <a href=/cgi-bin/index.cgi>Projects</a>
+                <a href=$script_name>Home</a>
         );
         if ($user->isAdmin()) {
             $header .= qq(
@@ -258,6 +269,7 @@ sub header {
         </table>
     </div> <!-- header -->
     );
+    }
     MinorImpact::log(8, "ending");
     return $header;
 }
@@ -298,7 +310,7 @@ sub log {
     $sub .= "()";
     chomp($message);
 
-    my $log = "$date: $$: $level: $sub: $message\n";
+    my $log = "$date|$$|$level|$sub|$message\n";
     open(LOG, ">>$file");
     print LOG $log;
     #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
@@ -397,7 +409,7 @@ sub checkDatabaseTables {
             `create_date` datetime NOT NULL,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
-            ) ENGINE=MyISAM AUTO_INCREMENT=1223 DEFAULT CHARSET=latin1");
+        )");
     }
     eval {
         $DB->do("DESC `object_type`");
@@ -408,12 +420,13 @@ sub checkDatabaseTables {
             `name` varchar(50) DEFAULT NULL,
             `description` text,
             `plural` varchar(50) DEFAULT NULL,
-            `toplevel` tinyint(1) DEFAULT '0',
+            `url` varchar(255) DEFAULT NULL,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),
             UNIQUE KEY `object_type_idx` (`name`)
-        ) ENGINE=MyISAM AUTO_INCREMENT=18 DEFAULT CHARSET=latin1");
+        )");
+        $DB->do("create index idx_object_type_id on object_field(object_type_id)");
     }
 
     eval {
@@ -432,7 +445,7 @@ sub checkDatabaseTables {
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`)
-        ) ENGINE=MyISAM AUTO_INCREMENT=47 DEFAULT CHARSET=latin1");
+        )");
     }
     eval {
         $DB->do("DESC `object_data`");
@@ -448,7 +461,7 @@ sub checkDatabaseTables {
   PRIMARY KEY (`id`),
   KEY `idx_object_field` (`object_id`,`object_field_id`),
   KEY `idx_object_data` (`object_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1708 DEFAULT CHARSET=latin1");
+)");
     }
 
     eval {
@@ -473,9 +486,40 @@ sub checkDatabaseTables {
   `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `create_date` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=latin1");
+)");
+    }
+    eval {
+        $DB->do("DESC `object_reference`");
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_reference` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_text_id` int(11) NOT NULL,
+            `data` varchar(255) NOT NULL,
+            `object_id` int(11) NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`)
+            )");
     }
     MinorImpact::log(7, "ending");
 }
 
+sub templateToolkit {
+    my $params = shift || {};
+
+    # The default package templates are in the 'template' directory 
+    # in the libary.  Find it, and use it as the secondary template location.
+    (my $package = __PACKAGE__ ) =~ s#::#/#g;
+    my $filename = $package . '.pm';
+
+    (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
+    my $config_file = File::Spec->catfile($path, "$package/template");
+
+    my $tt = Template->new({
+        INCLUDE_PATH=> [ $params->{template_config_file}, $config_file ],
+        INTERPOLATE => 1,
+    }) || die $tt->error();
+    return $tt;
+}
 1;

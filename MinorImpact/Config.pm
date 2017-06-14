@@ -10,6 +10,33 @@ use Exporter 'import';
 
 use MinorImpact::Util;
 
+sub new {
+    my $package = shift;
+    my $params = shift || {};
+
+    my $self = {};
+    bless($self, $package);
+
+    $self->{config} = readConfig($params->{config_file});
+
+    return $self;
+}
+
+sub get {
+    my $self = shift || return;
+    my $category = shift || return;
+    my $key = shift;
+
+    if (!$key) {
+        $key = $category;
+        $category = "default";
+    }
+
+
+    return $self->{config}{$category}{$key};
+}
+
+
 sub readConfig {
     my $config_file = shift || return;
 

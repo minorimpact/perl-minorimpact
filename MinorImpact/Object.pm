@@ -110,7 +110,7 @@ sub _new {
     } elsif ($params =~/^\d+$/) {
         $object_id = $params;
     } else {
-        $object_id = $self->{CGI}->param("${table}_id") || $MinorImpact::SELF->redirect('index.cgi');
+        $object_id = $self->{CGI}->param("id") || $MinorImpact::SELF->redirect('index.cgi');
     }
 
     $self->_reload($object_id);
@@ -264,23 +264,38 @@ sub type_id {
 }
 
 sub getType {
-    my $self = shift || return;
+    MinorImpact::log(7, "starting");
+    my $self = shift;
     my $type_id;
 
     my $DB = MinorImpact::getDB();
+
+    # Figure out the id of the object type they're looking for.
     if (ref($self)) {
         $type_id = $self->type_id();
     } else {
         $type_id = $self;
-        if ($type_id !~/^\d+$/) {
+        if (!$type_id) {
+            #$type_id = $DB->selectrow_array("SELECT id FROM object_type where toplevel = 1", {Slice=>{}});
+            # If type isn't specified, return the first 'toplevel' object, something that no other object
+            # references.
+            my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
+            my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
+            MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
+            $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
+        } elsif ($type_id !~/^\d+$/) {
+            # If someone passes the string name of the type, figure that out for them.
             my $singular = $type_id;
+            $singular =~s/e?s$//;
             $type_id = $DB->selectrow_array("SELECT id FROM object_type where name=? or name=? or plural=?", {Slice=>{}}, ($type_id, $singular, $type_id));
         }
     }
     my $type = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($type_id));
+    MinorImpact::log(7, "ending");
     return $type;
 }
 
+# Return an array of all the object types.
 sub types {
     my $params = shift || {};
     my $DB = MinorImpact::getDB();
@@ -294,21 +309,28 @@ sub types {
 }
 
 sub typeName {
-    my $self = shift || return;
+    MinorImpact::log(7, "starting");
+    my $self = shift;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
     my $type_id;
     if (ref($self)) {
         $type_id = $self->type_id();
-    } else {
+    } elsif($self) {
         $type_id = $self;
     }
+
     my $DB = MinorImpact::getDB();
     my $where = "name=?";
     if ($type_id =~/^[0-9]+$/) {
         $where = "id=?";
+    } else {
+        # This is stupid, I just don't want to have support a sql statement where I have to
+        # pass arbitrary parameters.
+        $type_id = 1;
+        $where = "`default` = ?";
     }
+
     my $sql = "select name, plural from object_type where $where";
     MinorImpact::log(8, "sql=$sql, ($type_id)");
     my ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
@@ -427,7 +449,7 @@ sub _search {
             }
         } elsif ($params->{object_type_id}) {
             MinorImpact::log(8, "trying to get a field id for '$param'");
-            my $object_field_id = MinorImpact::Object::field_id($params->{object_type_id}, $param);
+            my $object_field_id = MinorImpact::Object::fieldID($params->{object_type_id}, $param);
             if ($object_field_id) {
                 $where .= " AND (object_data.object_field_id=? AND object_data.value=?)";
                 push(@fields, $object_field_id);
@@ -492,15 +514,38 @@ sub search {
     return $objects;
 }
 
+sub getChildTypes {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting");
+    $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
+
+    my @childTypes;
+    my $data = $self->{DB}->selectall_arrayref("select DISTINCT object_type_id from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
+    foreach my $row (@$data) {
+        next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
+        if ($params->{id_only}) {
+            push(@childTypes, $row->{object_type_id});
+        } else {
+            push (@childTypes, MinorImpact::Object::getType($row->{object_type_id}));
+        }
+    }
+    MinorImpact::log(7, "ending");
+    return @childTypes;
+}
 sub getChildren {
     my $self = shift || return;
     my $params = shift || {};
+
+    MinorImpact::log(7, "starting");
     $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
 
     my $children;
     my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
+
         foreach my $r2 (@{$self->{DB}->selectall_arrayref("SELECT object_data.object_id, object_field.object_type_id
             FROM object_data, object_field
             WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?", {Slice=>{}}, ($row->{id}, $self->id()))}) {
@@ -511,13 +556,14 @@ sub getChildren {
             }
         }
     }
+    MinorImpact::log(7, "ending");
     return $children;
 }
 
 sub toString {
     my $self = shift || return;
     my $params = shift || {};
-    my $script_name = $params->{script_name} || "object.cgi";
+    my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'object.cgi';
 
     $self->log(7, "starting");
     my $package = ref($self);
@@ -549,7 +595,7 @@ sub toString {
                         foreach my $ref (@$references) {
                             $value =~s/ +/ /g;
                             if ($value =~/$ref->{data}/) {
-                                my $url = "object.cgi?id=$ref->{object_id}";
+                                my $url = "$script_name.cgi?id=" . $ref->{object_id};
                                 $value =~s/$ref->{data}/<a href='$url'>$ref->{data}<\/a>/;
                             }
                         }
@@ -564,20 +610,14 @@ sub toString {
         $string .= "</table>\n";
 
         my $children = $self->getChildren();
-        if (scalar(keys %$children)) {
-            $string .= "<h2>Children</h2>\n";
+        my @child_types = $self->getChildTypes();
+        foreach my $child_type (sort { $a->{name} cmp $b->{name}; }  @child_types) {
+            my $child_type_id = $child_type->{id};
+            $string .= "<h2>" . MinorImpact::Object::typeName($child_type_id, {plural=>1}) . "</h2>\n";
             $string .= "<table>\n";
-            foreach my $type_id (keys %$children) {
-                my $i = 0;
-                foreach my $o (sort { $a->cmp($b); } @{$children->{$type_id}}) {
-                    unless ($i) {
-                        $string .= "<tr><td class=fieldname>" . MinorImpact::Object::typeName($type_id, {plural=>1}) . "</td>";
-                        $i = 1;
-                    } else {
-                        $string .= "<tr><td></td>";
-                    }
-                    $string .= "<td>" . $o->toString() . "</td></tr>\n";
-                }
+            #$string .= "<tr><td><a href=/add/$child_type_id?" . $self->typeName() . "_id=" . $self->id() . ">Add New $child_type->{name}</a></td></tr>\n";
+            foreach my $o (sort { $a->cmp($b); } @{$children->{$child_type_id}}) {
+                $string .= "<tr><td>" . $o->toString() . "</td></tr>\n";
             }
             $string .= "</table>\n";
         }
@@ -643,6 +683,7 @@ sub getReferences {
 sub form {
     my $self = shift || {};
     my $params = shift || {};
+    MinorImpact::log(7, "starting");
 
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -650,7 +691,6 @@ sub form {
     } else {
     }
 
-    MinorImpact::log(7, "starting");
     my $object_id;
     my $object_type_id;
     my $user_id;
@@ -678,38 +718,42 @@ sub form {
                 <td><input type=text name=description value="${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }"></td>
             </tr>
 FORM
-        my $fields = MinorImpact::Object::fields($object_type_id);
-        foreach my $f (@$fields) {
-            my $name = $f->{name};
-            my $type = $f->{type};
-            MinorImpact::log(8, "\$f->{name}='$f->{name}'");
-            next if ($f->{hidden} || $f->{readonly});
-            my @foo = $CGI->param($name);
-            my @values;
-            if (scalar(@foo) > 0) {
-                foreach my $f (@foo) {
-                    push (@values, $f) unless ($f eq '');
+    foreach my $field (keys %{$params->{default_values}}) {
+        $CGI->param($field,$params->{default_values}->{$field});
+    }
+    my $fields = MinorImpact::Object::fields($object_type_id);
+    foreach my $field (@$fields) {
+        my $name = $field->{name};
+        my $type = $field->{type};
+        MinorImpact::log(8, "\$field->{name}='$field->{name}'");
+        next if ($field->{hidden} || $field->{readonly});
+        my @params = $CGI->param($name);
+        my @values;
+        if (scalar(@params) > 0) {
+            foreach my $field (@params) {
+                push (@values, $field) unless ($field eq '');
+            }
+        } else {
+            if ($self) {
+                foreach my $d (@{$self->{object_data}->{$name}}) {
+                    push(@values, $d->{value});
                 }
             } else {
-                if ($self) {
-                    foreach my $d (@{$self->{object_data}->{$name}}) {
-                        push(@values, $d->{value});
-                    }
-                } else {
-                    @values = ();
-                }
-            }
-            foreach my $value (@values) {
-                next if ($value eq '');
-                my $row = formRow({name=>$name, user_id=>$user_id, value=>$value, field_type=>$type, required=>$f->{required}});
-                $form .= $row;
-            }
-            if ($type =~/^\@/ || scalar(@values) == 0) {
-                my $row = formRow({name=>$name, user_id=>$user_id, value=>'', field_type=>$type, required=>$f->{required}});
-                $form .= $row;
+                @values = ();
             }
         }
-        $form .= <<FORM;
+
+        foreach my $value (@values) {
+            next if ($value eq '');
+            my $row = formRow({name=>$name, user_id=>$user_id, value=>$value, field_type=>$type, required=>$f->{required}});
+            $form .= $row;
+        }
+        if ($type =~/^\@/ || scalar(@values) == 0) {
+            my $row = formRow({name=>$name, user_id=>$user_id, value=>'', field_type=>$type, required=>$f->{required}});
+            $form .= $row;
+        }
+    }
+    $form .= <<FORM;
             <!-- CUSTOM -->
             <tr>   
                 <td class=fieldname>Tags</td>
@@ -758,6 +802,9 @@ sub formRow {
     return $row;
 }
 
+# Used to compare one object to another for purposes of sorting.
+# Example:
+#   @sorted_object_list = sort { $a->cmp(b); } @object_list;
 sub cmp {
     my $self = shift || return;
     my $b = shift;
@@ -773,7 +820,9 @@ sub cmp {
     }
 }
 
-sub field_id {
+# Returns the object_field id from the type/field name.
+# Convenience method so searching/filtering can be done by name rather than id.
+sub fieldID {
     my $object_type = shift || return;
     my $field_name = shift || return;
 
