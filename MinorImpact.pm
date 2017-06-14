@@ -16,8 +16,6 @@ use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
 
-#$SELF = new MinorImpact;
-
 sub getDB { return $SELF->{DB}; }
 sub getCGI { return $SELF->{CGI}; }
 sub scriptName {
@@ -190,6 +188,7 @@ sub header {
     my $script_name = $args->{script_name} || scriptName();
     my $blank = $args->{blank};
     my $content_type = $args->{content_type} || "text/html";
+    my $template = $args->{template} || 'header';
 
     unless ($title) {
         $title = $0;
@@ -200,75 +199,10 @@ sub header {
     MinorImpact::log(3, "getting user");
     my $user = $self->getUser();
 
-    my $header;
-    if ($args->{blank}) {
-        $header = qq(Content-type: $content_type\n\n);
-    } else {
-        $header = qq(Content-type: text/html\n\n
-
-<!DOCTYPE html>
-<head>
-    <title>$title</title>
-    <link rel="stylesheet" type="text/css" href="/minorimpact.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.structure.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.theme.css">
-    <script src="/jquery-2.1.4.js"></script>
-    <script src="/jquery-ui-1.11.4/jquery-ui.js"></script>
-    <!-- start \$other -->
-        $other
-    <!-- end \$other -->
-    <style type='text/css'>
-        $css
-    </style>
-    <script>
-        $javascript
-    </script>
-</head>
-<body>
-    <div id=header>
-        <table width=100%>
-        <tr>
-            <td valign=top>
-        <div id=section_menu>
-    );
-    if ($user) {
-        $header .= qq(
-                <a href=$script_name>Home</a>
-        );
-        if ($user->isAdmin()) {
-            $header .= qq(
-                    <a href=/cgi-bin/object_admin.cgi>Admin</a>
-            );
-        }
-    }
-    $header .= qq(
-        </div> <!-- section_menu -->
-        </td>
-        <td valign=top>
-        <div id=user_menu>
-    );
-    if ($user) {
-        $header .= qq(
-            <table>
-                <tr>
-                    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search></form></td>
-                    <td valign=top><a href="user.cgi?user_id=${\ $user->id(); }">${\ $user->get('name'); }</a><a href=logout.cgi>Logout</a></td>
-                </tr>
-            </table>
-        );
-    } else {
-        $header .= qq(
-            <a href=login.cgi>Log In</a>
-        );
-    }
-    $header .= qq(
-        </div> <!-- user_menu -->
-        </td>
-        </tr>
-        </table>
-    </div> <!-- header -->
-    );
+    print qq(Content-type: $content_type\n\n);
+    unless ($args->{blank}) {
+        my $tt = MinorImpact::templateToolkit({template_config_file=>$self->{conf}{default}{template_config_file}});
+        $tt->process($template, {css=>$css, other=>$other, javascript=>$javascript, title=>$title, user=>$user}) || die $tt->error();
     }
     MinorImpact::log(8, "ending");
     return $header;
@@ -374,7 +308,7 @@ FOOTER
     foreach my $key (keys %ENV) {
         #$footer .= "$key='$ENV{$key}'<br />\n";
     }
-    if (-f "/tmp/debug" && $user->isAdmin()) {
+    if (-f "/tmp/debug.log" && $user && $user->isAdmin()) {
         $footer .= "<pre>\n";
         $footer .= `tail -n 40 /tmp/debug.log| grep "$$:"`;
         $footer .= "</pre>\n";
@@ -506,7 +440,14 @@ sub checkDatabaseTables {
 }
 
 sub templateToolkit {
+    my $self = shift || return;
     my $params = shift || {};
+
+    my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
+
+    if ($tt) {
+        return $tt;
+    }
 
     # The default package templates are in the 'template' directory 
     # in the libary.  Find it, and use it as the secondary template location.
@@ -514,10 +455,10 @@ sub templateToolkit {
     my $filename = $package . '.pm';
 
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
-    my $config_file = File::Spec->catfile($path, "$package/template");
+    my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
-    my $tt = Template->new({
-        INCLUDE_PATH=> [ $params->{template_config_file}, $config_file ],
+    $tt = Template->new({
+        INCLUDE_PATH=> [ $template_directory, $global_template_directory ],
         INTERPOLATE => 1,
     }) || die $tt->error();
     return $tt;

@@ -5,6 +5,7 @@ use JSON;
 
 use MinorImpact;
 use MinorImpact::BinLib;
+use MinorImpact::Object::Type;
 
 sub new {
     my $package = shift || return;
@@ -290,7 +291,8 @@ sub getType {
             $type_id = $DB->selectrow_array("SELECT id FROM object_type where name=? or name=? or plural=?", {Slice=>{}}, ($type_id, $singular, $type_id));
         }
     }
-    my $type = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($type_id));
+    #my $type = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($type_id));
+    my $type = new MinorImpact::Object::Type($type_id);
     MinorImpact::log(7, "ending");
     return $type;
 }
@@ -528,7 +530,7 @@ sub getChildTypes {
         if ($params->{id_only}) {
             push(@childTypes, $row->{object_type_id});
         } else {
-            push (@childTypes, MinorImpact::Object::getType($row->{object_type_id}));
+            push (@childTypes, new MinorImpact::Object::Type($row->{object_type_id}));
         }
     }
     MinorImpact::log(7, "ending");

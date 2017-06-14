@@ -1,1 +1,56 @@
-Global header <br />
+<!DOCTYPE html>
+<head>
+    <title>[% title %]</title>
+    <link rel="stylesheet" type="text/css" href="/minorimpact.css">
+    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.structure.css">
+    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.theme.css">
+    <script src="/jquery-2.1.4.js"></script>
+    <script src="/jquery-ui-1.11.4/jquery-ui.js"></script>
+    [% IF other %]
+    <!-- start \$other -->
+        [% other %]
+    <!-- end \$other -->
+    [% END %]
+    [% IF css %]
+    <style type='text/css'>
+        [% css %]
+    </style>
+    [% END %]
+    [% IF javascript %]
+    <script>
+        [% javascript %]
+    </script>
+    [% END %]
+</head>
+<body>
+    <div id=header>
+        <table width=100%>
+        <tr>
+            <td valign=top>
+        <div id=section_menu>
+    [% IF user %]
+                <a href=$script_name>Home</a>
+        [% IF user.isAdmin %]
+                <a href=/cgi-bin/object_admin.cgi>Admin</a>
+        [% END %]
+    [% END %]
+        </div> <!-- section_menu -->
+        </td>
+        <td valign=top>
+        <div id=user_menu>
+    [% IF user %]
+            <table>
+                <tr>
+                    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search></form></td>
+                    <td valign=top><a href="user.cgi?user_id=[% user.id %]">[% user.get('name') %]</a><a href=logout.cgi>Logout</a></td>
+                </tr>
+            </table>
+    [% ELSE %]
+            <a href=login.cgi>Log In</a>
+    [% END %]
+        </div> <!-- user_menu -->
+        </td>
+        </tr>
+        </table>
+    </div> <!-- header -->
