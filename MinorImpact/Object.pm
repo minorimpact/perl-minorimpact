@@ -543,7 +543,7 @@ sub getChildren {
     MinorImpact::log(7, "starting");
     $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
 
-    my $children;
+    my @children;
     my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
@@ -552,14 +552,24 @@ sub getChildren {
             FROM object_data, object_field
             WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?", {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($params->{id_only}) {
-                push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
+                #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
+                push(@children, $r2->{object_id});
             } else {
-                push(@{$children->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
+                #push(@{$children->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
+                push(@children, new MinorImpact::Object($r2->{object_id}));
             }
         }
     }
+
+    if ($params->{sort}) {
+        if ($params->{id_only}) {
+            @children = sort @children;
+        } else {
+            @children = sort {$a->cmp($b); } @children;
+        }
+    }
     MinorImpact::log(7, "ending");
-    return $children;
+    return @children;
 }
 
 sub toString {
