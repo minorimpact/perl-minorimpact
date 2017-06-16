@@ -1,6 +1,8 @@
 package MinorImpact::Object::Type;
 
 use MinorImpact;
+use MinorImpact::Object;
+use MinorImpact::Util;
 
 sub new {
     my $package = shift || return;
@@ -30,11 +32,30 @@ sub name {
     }
 }
 
+sub form {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $local_params = cloneHash($params);
+    $local_params->{object_type_id} = $self->id();
+
+    my $type_name = $self->name();
+    my $form;
+    eval {
+        $form = $type_name->form($local_params);
+    };
+    if ($@) {
+        $form = MinorImpact::Object::form($local_params);
+    }
+
+    return $form;
+}
+
 sub cmp {
     my $self = shift || return;
     my $type = shift || return;
 
-    return $self->id() <=> $type->id();
+    return $self->name() cmp $type->name();
 }
 
 1;

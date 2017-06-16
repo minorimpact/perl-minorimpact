@@ -16,6 +16,7 @@ use Exporter 'import';
 @EXPORT = ("cloneHash",
            "fleshDate",
            "fromMysqlDate", 
+           "parseTags",
            "toMysqlDate", 
            "uniq", 
            "trim"
@@ -73,7 +74,7 @@ sub cloneHash {
     return unless (ref($hash) eq "HASH");
     foreach my $key (keys %$hash) {
         if (ref($hash->{$key}) eq "HASH") {
-            $new_hash->{$key} = MinorImpact::Util::cloneHash($hash->{$key});
+            $new_hash->{$key} = cloneHash($hash->{$key});
         } else {
             $new_hash->{$key} = $hash->{$key};
         }
@@ -119,6 +120,18 @@ Content-type: text/html\n\n
 <body>
 HEADER
     return $header;
+}
+
+sub parseTags {
+    my %tags;
+    foreach my $tags (@_) {
+        foreach my $tag (split(/\W+/, $tags)) {
+            $tag = lc($tag);
+            $tag =~s/\W//g;
+            $tags{$tag}++ if ($tag);
+        }
+    }
+    return sort keys %tags;
 }
 
 sub uniq {

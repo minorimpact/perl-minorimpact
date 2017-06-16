@@ -4,7 +4,7 @@ use Data::Dumper;
 use JSON;
 
 use MinorImpact;
-use MinorImpact::BinLib;
+use MinorImpact::Util;
 use MinorImpact::Object::Type;
 use MinorImpact::Text::Markdown 'markdown';
 
@@ -628,18 +628,19 @@ sub toString {
         }
         $string .= "</table>\n";
 
-        my $children = $self->getChildren();
-        my @child_types = $self->getChildTypes();
-        foreach my $child_type (sort { $a->{name} cmp $b->{name}; }  @child_types) {
-            my $child_type_id = $child_type->{id};
-            $string .= "<h2>" . MinorImpact::Object::typeName($child_type_id, {plural=>1}) . "</h2>\n";
-            $string .= "<table>\n";
-            #$string .= "<tr><td><a href=/add/$child_type_id?" . $self->typeName() . "_id=" . $self->id() . ">Add New $child_type->{name}</a></td></tr>\n";
-            foreach my $o (sort { $a->cmp($b); } @{$children->{$child_type_id}}) {
-                $string .= "<tr><td>" . $o->toString() . "</td></tr>\n";
-            }
-            $string .= "</table>\n";
-        }
+        # Don't display children by default.  Will look into add the tabbed
+        # system in later.
+        #my $children = $self->getChildren();
+        #my @child_types = $self->getChildTypes();
+        #foreach my $child_type (sort { $a->cmp(%b); }  @child_types) {
+        #my $child_type_id = $child_type->id();
+        #$string .= "<h2>" . $child_type->name({plural=>1}) . "</h2>\n";
+        #$string .= "<table>\n";
+        #foreach my $o (sort { $a->cmp($b); } @{$children->{$child_type_id}}) {
+        #$string .= "<tr><td>" . $o->toString() . "</td></tr>\n";
+        #}
+        #$string .= "</table>\n";
+        #}
 
         my $references = $self->getReferences();
         if (scalar(@$references)) {

@@ -9,8 +9,6 @@ use Exporter 'import';
             "in_array", 
             "last_run_time", 
             "getMonth",
-            "parseTags",
-            "processTags",
           );
 
 =head2 BinLib::in_array($needle, @haystack)
