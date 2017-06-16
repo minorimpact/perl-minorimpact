@@ -3,18 +3,17 @@ package MinorImpact::Object::Type;
 use MinorImpact;
 
 sub new {
-    my $package = shift;
-    my $params = shift || {};
+    my $package = shift || return;
+    my $type_id = shift || return;
 
-    unless (ref($params)) {
-        my $type_id = $params;
-        $params = {};
-        $params->{type_id} = $type_id;
-    }
-
-    #my $self = {};
     my $DB = MinorImpact::getDB();
-    my $self = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($params->{type_id}));
+    if ($type_id !~/^\d+$/) {
+        # If someone passes the string name of the type, figure that out for them.
+        my $singular = $type_id;
+        $singular =~s/e?s$//;
+        $type_id = $DB->selectrow_array("SELECT id FROM object_type where name=? or name=? or plural=?", {Slice=>{}}, ($type_id, $singular, $type_id));
+    }
+    my $self = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($type_id));
     bless ($self, $package);
     return $self;
 }
@@ -29,6 +28,13 @@ sub name {
     } else {
         return $self->{name};
     }
+}
+
+sub cmp {
+    my $self = shift || return;
+    my $type = shift || return;
+
+    return $self->id() <=> $type->id();
 }
 
 1;

@@ -6,6 +6,7 @@ use JSON;
 use MinorImpact;
 use MinorImpact::BinLib;
 use MinorImpact::Object::Type;
+use MinorImpact::Text::Markdown 'markdown';
 
 sub new {
     my $package = shift || return;
@@ -161,12 +162,18 @@ sub selectList {
 sub get {
     my $self = shift || return;
     my $name = shift || return;
+    my $params = shift || {};
 
     if (defined($self->{data}->{$name})) {
        return $self->{data}->{$name};
     }
     if (defined($self->{object_data}->{$name}) and ref($self->{object_data}->{$name}) eq "ARRAY" && scalar(@{$self->{object_data}->{$name}}) > 0) {
-        return @{$self->{object_data}->{$name}}[0]->{value};
+        my $value = @{$self->{object_data}->{$name}}[0]->{value};
+        if ($params->{markdown}) {
+            return markdown($value);
+        } else {
+            return $value;
+        }
     }
 }   
 
