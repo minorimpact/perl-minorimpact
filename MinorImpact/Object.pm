@@ -457,6 +457,8 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($params->{object_type_id}) {
+            # If we specified a particular type of object to look for, then we can query
+            # by arbitrary fields. If we didn't limit the object type, and just searched by field names, the results could be... chaotic.
             MinorImpact::log(8, "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($params->{object_type_id}, $param);
             if ($object_field_id) {
@@ -515,6 +517,7 @@ sub search {
         return @objects;
     }
 
+    # Return a hash of arrays organized by type.
     my $objects;
     foreach my $object (@objects) {
         push(@{$objects->{$object->type_id()}}, $object);
@@ -738,9 +741,16 @@ sub form {
                 <td><input type=text name=description value="${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }"></td>
             </tr>
 FORM
+    # Suck in any default values passed in the parameters.
     foreach my $field (keys %{$params->{default_values}}) {
         $CGI->param($field,$params->{default_values}->{$field});
     }
+
+    # Add a field for whatever the last thing they were looking at was.
+    my $cookie_object_id = $CGI->cookie('object_id');
+    my $cookie_object = new MinorImpact::Object($cookie_object_id);
+    $CGI->param($cookie_object->typeName()."_id", $cookie_object->id());
+
     my $fields = MinorImpact::Object::fields($object_type_id);
     foreach my $field (@$fields) {
         my $name = $field->{name};
@@ -763,13 +773,21 @@ FORM
             }
         }
 
+        my $local_params = cloneHash($params);
+        $local_params->{field_type} = $type;
+        $local_params->{required} = $field->{required};
+        $local_params->{name} = $name;
         foreach my $value (@values) {
             next if ($value eq '');
-            my $row = formRow({name=>$name, user_id=>$user_id, value=>$value, field_type=>$type, required=>$f->{required}});
+            $local_params->{value} = $value;
+            #my $row = formRow({name=>$name, user_id=>$user_id, value=>$value, field_type=>$type, required=>$f->{required}, filter=>$params->{filter}});
+            my $row = formRow($local_params);
             $form .= $row;
         }
         if ($type =~/^\@/ || scalar(@values) == 0) {
-            my $row = formRow({name=>$name, user_id=>$user_id, value=>'', field_type=>$type, required=>$f->{required}});
+            $local_params->{value} = '';
+            #my $row = formRow({name=>$name, user_id=>$user_id, value=>'', field_type=>$type, required=>$f->{required}, filter=>$params->{filter}});
+            my $row = formRow($local_params);
             $form .= $row;
         }
     }
@@ -797,10 +815,8 @@ sub formRow {
 
     my $name = $params->{name} || return;
     MinorImpact::log(8, "\$name='$name'");
-    my $user_id = $params->{user_id} || return;
-    MinorImpact::log(8, "\$user_id='$user_id'");
     my $field_type = $params->{field_type} || return;
-    MinorImpact::log(8, "\$field_type='$field_name'");
+    MinorImpact::log(8, "\$field_type='$field_type'");
     my $value = $params->{value};
 
 
@@ -808,7 +824,14 @@ sub formRow {
     $fieldname =~s/_/ /;
     my $row = "<tr><td class=fieldname>$fieldname</td><td>\n";
     if ($field_type =~/object\[(\d+)\]$/) {
-        $row .= "" .  selectList({object_type_id=>$1, user_id=>$user_id, selected=>$value, fieldname=>$name, required=>$params->{required}}) . "\n";
+        my $object_type_id = $1;
+        my $local_params = cloneHash($params);
+        $local_params->{object_type_id} = $object_type_id;
+        $local_params->{fieldname} = $name;
+        $local_params->{selected} = $value;
+        delete($local_params->{name});
+        $row .= "" .  selectList($local_params);
+        #$row .= "" .  selectList({object_type_id=>$object_type_id, user_id=>$user_id, selected=>$value, fieldname=>$name, required=>$params->{required}, filter=>$params->{filter}}) . "\n";
     } elsif ($field_type =~/text$/) {
         $row .= "<textarea name='$name'>$value</textarea>\n";
     } elsif ($field_type =~/boolean$/) {
