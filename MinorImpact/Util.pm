@@ -36,7 +36,7 @@ sub fromMysqlDate {
     foreach my $date (@data) {
         if ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}:\d{1,2}:\d{1,2})$/) {
             my $year = $1;
-            my $month = $2;
+            my $month = ($2 - 1);
             my $mday = $3;
             my ($hour, $min, $sec)  = split(/:/, $4);
 

@@ -6,6 +6,7 @@ use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Type;
+use MinorImpact::Object::Field;
 use MinorImpact::Text::Markdown 'markdown';
 
 sub new {
@@ -92,7 +93,7 @@ sub _new {
                 } else {
                     foreach my $value (split(/\0/, $params->{$field_name})) {
                         MinorImpact::log(8, "$field_name='$value'");
-                        if ($field_type =~/text$/) {
+                        if ($field_type =~/text$/ || $field_type =~/url$/) {
                             $self->{DB}->do("insert into object_text(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, $value)) || die $self->{DB}->errstr;
                         } else {
                             $self->{DB}->do("insert into object_data(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, $value)) || die $self->{DB}->errstr;
@@ -241,7 +242,8 @@ sub update {
 }
 
 sub fields {
-    my $self = shift || return;
+    my $self = shift;
+
     if (ref($self)) {
         return $self->{object_field};
     } else {
@@ -355,18 +357,31 @@ sub _reload {
     $self->log(7, "starting");
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     undef($self->{object_data});
-    my $data = $self->{DB}->selectall_arrayref("select object_data.id, object_field.name, object_data.value from object_data, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_data.object_field_id and object_data.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
+    undef($self->{object_data2});
+    my $data = $self->{DB}->selectall_arrayref("select object_data.id, object_field.name, object_field.type, object_data.value from object_data, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_data.object_field_id and object_data.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
     foreach my $row (@$data) {
         push(@{$self->{object_data}->{$row->{name}}}, {id=>$row->{id}, value=>$row->{value}});
+        MinorImpact::log(8, $row->{name} . "{id=>$row->{id}, type=>$row->{type}, value=>$row->{value}}");
+        push(@{$self->{object_data2}->{$row->{name}}}, new MinorImpact::Object::Field($row->{type}, $row));
     }
-    my $text = $self->{DB}->selectall_arrayref("select object_text.id, object_field.name, object_text.value from object_text, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_text.object_field_id and object_text.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
+    my $text = $self->{DB}->selectall_arrayref("select object_text.id, object_field.name,object_field.type, object_text.value from object_text, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_text.object_field_id and object_text.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
     foreach my $row (@$text) {
         push(@{$self->{object_data}->{$row->{name}}}, {id=>$row->{id}, value=>$row->{value}});
+        MinorImpact::log(8, $row->{name} . "{id=>$row->{id}, type=>$row->{type}, value=>$row->{value}}");
+        push(@{$self->{object_data2}->{$row->{name}}}, new MinorImpact::Object::Field($row->{type}, $row));
     }
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
 
     $self->{object_type} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->type_id()));
     $self->{object_field} = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self->type_id()));
+
+    foreach my $field (@{$self->{object_field}}) {
+        my $name = $field->{name};
+        my $displayname = ucfirst($name);
+        $displayname =~s/_id$//;
+        $displayname =~s/_/ /g;
+        $field->{displayname} = $displayname;
+    }
 
     $self->log(7, "ending");
 }
@@ -585,22 +600,53 @@ sub getChildren {
 sub toString {
     my $self = shift || return;
     my $params = shift || {};
+    $self->log(7, "starting");
+
     my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'object.cgi';
 
-    $self->log(7, "starting");
-    my $package = ref($self);
+    my $MINORIMPACT = new MinorImpact();
+    my $tt = $MINORIMPACT->templateToolkit();
+
     my $string = '';
     if ($params->{column}) {
+        #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
         $string .= "<table class=view>\n";
         my $fields = $self->fields();
         foreach my $f (@$fields) {
             my $name = $f->{name};
+            MinorImpact::log(7, "processing $name");
             my $type = $f->{type};
             next if ($f->{hidden});
             my $fieldname = ucfirst($name);
             $fieldname =~s/_id$//;
             $fieldname =~s/_date$//;
-            if (defined($self->{object_data}->{$name})) {
+            if (defined($self->{object_data2}->{$name})) {
+                foreach my $v (@{$self->{object_data2}->{$name}}) {
+                    my $value = $v->value(); 
+                    MinorImpact::log(7, "$name='$value'");
+                    $string .= "<tr><td class=fieldname>" . $v->displayname() . "</td><td>";
+                    if ($type =~/object\[(\d+)\]$/) {
+                        if ($value && $value =~/^\d+/) {
+                            my $o = new MinorImpact::Object($value);
+                            $string .= $o->toString();
+                        }
+                    } elsif ($type =~/text$/) {
+                        my $id = $v->id();
+                        my $references = $self->getReferences($id);
+                        foreach my $ref (@$references) {
+                            $value =~s/ +/ /g;
+                            if ($value =~/$ref->{data}/) {
+                                my $url = "$script_name.cgi?id=" . $ref->{object_id};
+                                $value =~s/$ref->{data}/<a href='$url'>$ref->{data}<\/a>/;
+                            }
+                        }
+                        $string .= "<p onmouseup='getSelectedText($id);'>$value</p>\n";
+                    } else {
+                        $string .= $v->toString();
+                    }
+                    $string .= "</td></tr>\n";
+                }
+            } elsif (defined($self->{object_data}->{$name})) {
                 foreach my $v (@{$self->{object_data}->{$name}}) {
                     my $id = $v->{id};
                     my $value = $v->{value};
@@ -632,7 +678,7 @@ sub toString {
         $string .= "</table>\n";
 
         # Don't display children by default.  Will look into add the tabbed
-        # system in later.
+        # system in later revision.
         #my $children = $self->getChildren();
         #my @child_types = $self->getChildTypes();
         #foreach my $child_type (sort { $a->cmp(%b); }  @child_types) {
@@ -665,6 +711,7 @@ sub toString {
             $string .= "<td>$self->{data}{$key}</td>\n";
         }
     } elsif ($params->{json}) {
+        $tt->process('object', { object=> $self}, \$string) || die $tt->error();
         my $json = {};
         my $fields = $self->fields();
         $json->{name} = $self->{data}->{name};
@@ -684,7 +731,9 @@ sub toString {
         @{$json->{tags}} = ($self->getTags());
         $string = to_json($json);
     } else {
-        $string .= "<a href='$script_name?id=" . $self->id() . "'>" . $self->name() . "</a>";
+        my $template = $params->{template} || 'object';
+        $tt->process('object', { object=> $self}, \$string) || die $tt->error();
+        #$string .= "<a href='$script_name?id=" . $self->id() . "'>" . $self->name() . "</a>";
     }
     $self->log(7, "ending");
     return $string;
@@ -819,7 +868,6 @@ sub formRow {
     MinorImpact::log(8, "\$field_type='$field_type'");
     my $value = $params->{value};
 
-
     my $fieldname = ucfirst($name);
     $fieldname =~s/_/ /;
     my $row = "<tr><td class=fieldname>$fieldname</td><td>\n";
@@ -847,7 +895,10 @@ sub formRow {
 
 # Used to compare one object to another for purposes of sorting.
 # Example:
-#   @sorted_object_list = sort { $a->cmp(b); } @object_list;
+#   @sorted_object_list = sort { $a->cmp($b); } @object_list;
+# Without an argument return the $value of the sortby field.
+# Example:
+#   @sorted_object_list = sort { $a->cmp() cmp $b->cmp(); } @object_list;
 sub cmp {
     my $self = shift || return;
     my $b = shift;

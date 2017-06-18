@@ -1,0 +1,32 @@
+<table class=view>
+[% FOREACH field IN object.fields() %]
+    [% NEXT if field.hidden %]
+            $fieldname =~s/_date$//;
+            if (defined($self->{object_data}->{$name})) {
+                foreach my $v (@{$self->{object_data}->{$name}}) {
+                    my $id = $v->{id};
+                    my $value = $v->{value};
+                    <tr><td class=fieldname>[% field.fieldname %]</td><td>
+                    if ($type =~/object\[(\d+)\]$/) {
+                            my $o = [% new MinorImpact::Object(field.value).toString() %]
+                        }
+                    } elsif ($type =~/boolean$/) {
+                        $string .= ($value?"yes":"no");
+                    } elsif ($type =~/text$/) {
+                        my $references = $self->getReferences($id);
+                        foreach my $ref (@$references) {
+                            $value =~s/ +/ /g;
+                            if ($value =~/$ref->{data}/) {
+                                my $url = "$script_name.cgi?id=" . $ref->{object_id};
+                                $value =~s/$ref->{data}/<a href='$url'>$ref->{data}<\/a>/;
+                            }
+                        }
+                        $string .= "<p onmouseup='getSelectedText($id);'>$value</p>\n";
+                    } else {
+                        $string .= $value;
+                    }
+                    $string .= "</td></tr>\n";
+                }
+            }
+        }
+</table>
