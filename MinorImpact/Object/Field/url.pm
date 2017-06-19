@@ -21,7 +21,8 @@ sub toString {
     my $self = shift || return;
     MinorImpact::log(7, "starting");
 
-    my $string = "<a href=" . $self->{data}{value} . ">" . $self->{data}{value} . "</a>";
+    my $value = @{$self->{data}{value}}[0];
+    my $string = "<a href=$value>$value</a>";
     MinorImpact::log(7, "ending");
     return $string;
 }

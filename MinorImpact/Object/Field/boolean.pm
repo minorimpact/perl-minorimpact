@@ -21,9 +21,23 @@ sub toString {
     my $self = shift || return;
     MinorImpact::log(7, "starting");
 
-    my $string = $self->{data}{value}?"yes":"no";
+    my $value = @{$self->{data}{value}}[0];
+    my $string = $value?"yes":"no";
     MinorImpact::log(7, "ending");
     return $string;
 }
+
+sub validate {  
+    my $self = shift || return;
+    my $value = shift;
+
+    $value = $self->SUPER::validate($value);
+
+    if ($field_type eq 'boolean') {
+        $value = ($value?1:0);
+    }
+    return $value;
+}
+
 
 1;

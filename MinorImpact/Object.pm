@@ -168,8 +168,8 @@ sub get {
     if (defined($self->{data}->{$name})) {
        return $self->{data}->{$name};
     }
-    if (defined($self->{object_data}->{$name}) and ref($self->{object_data}->{$name}) eq "ARRAY" && scalar(@{$self->{object_data}->{$name}}) > 0) {
-        my $value = @{$self->{object_data}->{$name}}[0]->{value};
+    if (defined($self->{object_data}->{$name})) {
+        my $value = $self->{object_data}->{$name}->value();
         if ($params->{markdown}) {
             return markdown($value);
         } else {
@@ -184,9 +184,10 @@ sub validateFields {
 
     die "uh..." unless ($fields && $params);
 
-    foreach my $row (@$fields) {  
-        my $field_name = $row->{name};
-        my $field_type = $row->{type};
+    foreach my $field_name (keys %$fields) {  
+        my $field = $fields->{$field_name};
+        $field->validate($params->{$field_name});
+        my $field_type = $fields->{$field_name}->type();
         if (defined($params->{$field_name}) && !$params->{$field_name} && $row->{required}) {
             die "$field_name cannot be blank";
         }   
@@ -206,19 +207,19 @@ sub update {
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     my $fields = $self->fields();
-    my $data = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self->type_id()));
     validateFields($fields, $params);
-    foreach my $row (@$fields) {
-        my $field_name = $row->{name};
-        my $field_type = $row->{type};
+    foreach my $field_name (keys %$fields) {
+        my $field = $fields->{$field_name};
+        my $field_type = $field->type();
         if (defined $params->{$field_name}) {
-            $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $row->{id})) || die $self->{DB}->errstr;
-            $self->{DB}->do("delete from object_text where object_id=? and object_field_id=?", undef, ($self->id(), $row->{id})) || die $self->{DB}->errstr;
+            $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
+            $self->{DB}->do("delete from object_text where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
             foreach my $value (split(/\0/, $params->{$field_name})) {
-                if ($field_type =~/text$/) {
-                    $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $row->{id}, $value)) || die $self->{DB}->errstr;
+                if ($field_type =~/text$/ || $field_type eq 'url') {
+                    $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 } else {
-                    $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $row->{id}, $value)) || die $self->{DB}->errstr;
+                    MinorImpact::log(8, "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW()) (" . $self->id() . ", " . $field->get('object_field_id') . ", $value)");
+                    $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 }
             }
         }
@@ -244,12 +245,17 @@ sub update {
 sub fields {
     my $self = shift;
 
+    my $fields;
     if (ref($self)) {
-        return $self->{object_field};
+        $fields = $self->{object_data};
     } else {
         my $DB = MinorImpact::getDB();
-        return $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self));
+        my $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self));
+        foreach my $row (@$data) {
+           $fields->{$row->{name}} = new MinorImpact::Object::Field($row->{type}, $row);
+        }
     }
+    return $fields;
 }
 
 sub type_id {
@@ -357,18 +363,24 @@ sub _reload {
     $self->log(7, "starting");
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     undef($self->{object_data});
-    undef($self->{object_data2});
-    my $data = $self->{DB}->selectall_arrayref("select object_data.id, object_field.name, object_field.type, object_data.value from object_data, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_data.object_field_id and object_data.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
-    foreach my $row (@$data) {
-        push(@{$self->{object_data}->{$row->{name}}}, {id=>$row->{id}, value=>$row->{value}});
-        MinorImpact::log(8, $row->{name} . "{id=>$row->{id}, type=>$row->{type}, value=>$row->{value}}");
-        push(@{$self->{object_data2}->{$row->{name}}}, new MinorImpact::Object::Field($row->{type}, $row));
+    #my $data = $self->{DB}->selectall_arrayref("select object_data.id AS data_id, object_data.value, object_field.* from object_data, object_type, object, object_field where object_field.id=object_data.object_field_id and object_data.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
+    my $fields = $self->{DB}->selectall_arrayref("select object_field.* from object_field where object_field.object_type_id=?", {Slice=>{}}, ($self->type_id()));
+
+    foreach my $row (@$fields) {
+        $self->{object_data}->{$row->{name}} = new MinorImpact::Object::Field($row->{type}, $row);
     }
-    my $text = $self->{DB}->selectall_arrayref("select object_text.id, object_field.name,object_field.type, object_text.value from object_text, object_type, object, object_field where object_type.id=object.object_type_id and object_field.id=object_text.object_field_id and object_text.object_id=object.id and object.object_type_id=object_type.id and object.id=?", {Slice=>{}}, ($object_id));
+
+    my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
+    foreach my $row (@$data) {
+        if ($self->{object_data}->{$row->{name}}) {
+            $self->{object_data}->{$row->{name}}->addValue($row);
+        }
+    }
+    my $text = $self->{DB}->selectall_arrayref("select object_field.name, object_text.id, object_text.value from object_text, object_field where object_field.id=object_text.object_field_id and object_text.object_id=?", {Slice=>{}}, ($self->id()));
     foreach my $row (@$text) {
-        push(@{$self->{object_data}->{$row->{name}}}, {id=>$row->{id}, value=>$row->{value}});
-        MinorImpact::log(8, $row->{name} . "{id=>$row->{id}, type=>$row->{type}, value=>$row->{value}}");
-        push(@{$self->{object_data2}->{$row->{name}}}, new MinorImpact::Object::Field($row->{type}, $row));
+        if ($self->{object_data}->{$row->{name}}) {
+            $self->{object_data}->{$row->{name}}->addValue($row);
+        }
     }
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
 
@@ -566,17 +578,18 @@ sub getChildren {
     my $params = shift || {};
 
     MinorImpact::log(7, "starting");
-    $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
+    my $local_params = cloneHash($params);
+    $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
 
     my @children;
     my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
-        next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
+        next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
         foreach my $r2 (@{$self->{DB}->selectall_arrayref("SELECT object_data.object_id, object_field.object_type_id
             FROM object_data, object_field
             WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?", {Slice=>{}}, ($row->{id}, $self->id()))}) {
-            if ($params->{id_only}) {
+            if ($local_params->{id_only}) {
                 #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
                 push(@children, $r2->{object_id});
             } else {
@@ -586,8 +599,8 @@ sub getChildren {
         }
     }
 
-    if ($params->{sort}) {
-        if ($params->{id_only}) {
+    if ($local_params->{sort}) {
+        if ($local_params->{id_only}) {
             @children = sort @children;
         } else {
             @children = sort {$a->cmp($b); } @children;
@@ -612,26 +625,22 @@ sub toString {
         #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
         $string .= "<table class=view>\n";
         my $fields = $self->fields();
-        foreach my $f (@$fields) {
-            my $name = $f->{name};
+        foreach my $name (keys %{$fields}) {
+            my $field = $fields->{$name};
             MinorImpact::log(7, "processing $name");
-            my $type = $f->{type};
-            next if ($f->{hidden});
-            my $fieldname = ucfirst($name);
-            $fieldname =~s/_id$//;
-            $fieldname =~s/_date$//;
-            if (defined($self->{object_data2}->{$name})) {
-                foreach my $v (@{$self->{object_data2}->{$name}}) {
-                    my $value = $v->value(); 
-                    MinorImpact::log(7, "$name='$value'");
-                    $string .= "<tr><td class=fieldname>" . $v->displayname() . "</td><td>";
-                    if ($type =~/object\[(\d+)\]$/) {
+            my $type = $field->type();
+            next if ($field->get('hidden'));
+                $string .= "<tr><td class=fieldname>" . $field->displayname() . "</td><td>";
+                if ($type =~/object\[(\d+)\]$/) {
+                    foreach my $value ($field->value()) {
                         if ($value && $value =~/^\d+/) {
                             my $o = new MinorImpact::Object($value);
                             $string .= $o->toString();
                         }
-                    } elsif ($type =~/text$/) {
-                        my $id = $v->id();
+                    }
+                } elsif ($type =~/text$/) {
+                    foreach my $value ($field->value()) {
+                        my $id = $field->id();
                         my $references = $self->getReferences($id);
                         foreach my $ref (@$references) {
                             $value =~s/ +/ /g;
@@ -641,40 +650,12 @@ sub toString {
                             }
                         }
                         $string .= "<p onmouseup='getSelectedText($id);'>$value</p>\n";
-                    } else {
-                        $string .= $v->toString();
                     }
-                    $string .= "</td></tr>\n";
+                } else {
+                    $string .= $field->toString();
                 }
-            } elsif (defined($self->{object_data}->{$name})) {
-                foreach my $v (@{$self->{object_data}->{$name}}) {
-                    my $id = $v->{id};
-                    my $value = $v->{value};
-                    $string .= "<tr><td class=fieldname>$fieldname</td><td>";
-                    if ($type =~/object\[(\d+)\]$/) {
-                        if ($value && $value =~/^\d+/) {
-                            my $o = new MinorImpact::Object($value);
-                            $string .= $o->toString();
-                        }
-                    } elsif ($type =~/boolean$/) {
-                        $string .= ($value?"yes":"no");
-                    } elsif ($type =~/text$/) {
-                        my $references = $self->getReferences($id);
-                        foreach my $ref (@$references) {
-                            $value =~s/ +/ /g;
-                            if ($value =~/$ref->{data}/) {
-                                my $url = "$script_name.cgi?id=" . $ref->{object_id};
-                                $value =~s/$ref->{data}/<a href='$url'>$ref->{data}<\/a>/;
-                            }
-                        }
-                        $string .= "<p onmouseup='getSelectedText($id);'>$value</p>\n";
-                    } else {
-                        $string .= $value;
-                    }
-                    $string .= "</td></tr>\n";
-                }
+                $string .= "</td></tr>\n";
             }
-        }
         $string .= "</table>\n";
 
         # Don't display children by default.  Will look into add the tabbed
@@ -801,11 +782,11 @@ FORM
     $CGI->param($cookie_object->typeName()."_id", $cookie_object->id());
 
     my $fields = MinorImpact::Object::fields($object_type_id);
-    foreach my $field (@$fields) {
-        my $name = $field->{name};
-        my $type = $field->{type};
+    foreach my $name (keys %$fields) {
+        my $field = $fields->{$name};
+        my $type = $field->type();
         MinorImpact::log(8, "\$field->{name}='$field->{name}'");
-        next if ($field->{hidden} || $field->{readonly});
+        next if ($field->get('hidden') || $field->get('readonly'));
         my @params = $CGI->param($name);
         my @values;
         if (scalar(@params) > 0) {
@@ -814,9 +795,7 @@ FORM
             }
         } else {
             if ($self) {
-                foreach my $d (@{$self->{object_data}->{$name}}) {
-                    push(@values, $d->{value});
-                }
+                @values = $self->{object_data}->{$name}->value();
             } else {
                 @values = ();
             }
@@ -824,18 +803,17 @@ FORM
 
         my $local_params = cloneHash($params);
         $local_params->{field_type} = $type;
-        $local_params->{required} = $field->{required};
+        $local_params->{required} = $field->get('required');
         $local_params->{name} = $name;
         foreach my $value (@values) {
             next if ($value eq '');
             $local_params->{value} = $value;
-            #my $row = formRow({name=>$name, user_id=>$user_id, value=>$value, field_type=>$type, required=>$f->{required}, filter=>$params->{filter}});
             my $row = formRow($local_params);
             $form .= $row;
         }
         if ($type =~/^\@/ || scalar(@values) == 0) {
+            delete($local_params->{required}) unless(scalar(@values));
             $local_params->{value} = '';
-            #my $row = formRow({name=>$name, user_id=>$user_id, value=>'', field_type=>$type, required=>$f->{required}, filter=>$params->{filter}});
             my $row = formRow($local_params);
             $form .= $row;
         }
