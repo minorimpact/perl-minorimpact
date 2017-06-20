@@ -4,8 +4,9 @@ use Data::Dumper;
 
 use MinorImpact;
 use MinorImpact::Util;
-use MinorImpact::Object::Field::url;
 use MinorImpact::Object::Field::boolean;
+use MinorImpact::Object::Field::text;
+use MinorImpact::Object::Field::url;
 
 sub new {
     my $package = shift || return;
@@ -74,13 +75,13 @@ sub addValue {
     push(@{$self->{data}{value}}, $data->{value});
 }
 
-sub fieldname {
+sub fieldName {
     my $self = shift || return;
 
     return $self->name();
 }
 
-sub displayname {
+sub displayName {
     my $self = shift || return;
 
     my $displayname = $self->name();
@@ -127,6 +128,69 @@ sub type {
     my $self = shift || return;
 
     return $self->{data}{type};
+}
+
+sub formRow {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $name = $self->name()|| return;
+    my $local_params = cloneHash($params);
+
+    my @values = @{$local_params->{value}};
+    @values = $self->value() if (scalar(@values));
+    
+    my $depth = $local_params->{depth} || 0;
+
+    my $field_name = $self->displayName();
+    my $row;
+
+    my $row_value = $values[$depth];
+    $local_params->{row_value} = $row_value;
+    $row .= "<tr><td class=fieldname>$field_name</td><td>\n";
+    $row .= $self->_formRow($local_params);
+    $row .= "*" if ($self->get('required'));
+    $row .= "</td></tr>\n";
+
+    if ($depth < scalar(@values) && $self->isArray()) {
+        delete($local_params->{required});
+        $local_params->{depth}++;
+        $row .= $self->formRow($local_params);
+    }
+    MinorImpact::log(7, "ending");
+    return $row;
+}
+
+sub _formRow {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $name = $params->{name};
+    my $value = $params->{row_value};
+    my $row;
+    if ($self->type() =~/object\[(\d+)\]$/) {
+        my $object_type_id = $1;
+        my $local_params = cloneHash($params);
+        $local_params->{object_type_id} = $object_type_id;
+        $local_params->{fieldname} = $name;
+        $local_params->{selected} = $value;
+        delete($local_params->{name});
+        $row .= "" .  MinorImpact::Object::selectList($local_params);
+        #} elsif ($field_type =~/text$/) {
+        #   $row .= "<textarea name='$name'>$value</textarea>\n";
+        #} elsif ($field_type =~/boolean$/) {
+        #}  
+    } else {
+        $row .= "<input id='$name' type=text name='$name' value='$value'>\n";
+    }
+    return $row;
+}
+
+sub isArray {
+    my $self = shift || return;
+
+    return 1 if ($self->type() =~/^\@/);
+    return 0;
 }
 
 1;

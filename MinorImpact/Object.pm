@@ -384,16 +384,16 @@ sub _reload {
     }
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
 
-    $self->{object_type} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->type_id()));
-    $self->{object_field} = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self->type_id()));
+    #$self->{object_type} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->type_id()));
+    #$self->{object_field} = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($self->type_id()));
 
-    foreach my $field (@{$self->{object_field}}) {
-        my $name = $field->{name};
-        my $displayname = ucfirst($name);
-        $displayname =~s/_id$//;
-        $displayname =~s/_/ /g;
-        $field->{displayname} = $displayname;
-    }
+    #foreach my $field (@{$self->{object_field}}) {
+    #   my $name = $field->{name};
+    #   my $displayname = ucfirst($name);
+    #   $displayname =~s/_id$//;
+    #   $displayname =~s/_/ /g;
+    #   $field->{displayname} = $displayname;
+    #}
 
     $self->log(7, "ending");
 }
@@ -630,7 +630,7 @@ sub toString {
             MinorImpact::log(7, "processing $name");
             my $type = $field->type();
             next if ($field->get('hidden'));
-                $string .= "<tr><td class=fieldname>" . $field->displayname() . "</td><td>";
+                $string .= "<tr><td class=fieldname>" . $field->displayName() . "</td><td>";
                 if ($type =~/object\[(\d+)\]$/) {
                     foreach my $value ($field->value()) {
                         if ($value && $value =~/^\d+/) {
@@ -781,7 +781,12 @@ FORM
     my $cookie_object = new MinorImpact::Object($cookie_object_id);
     $CGI->param($cookie_object->typeName()."_id", $cookie_object->id());
 
-    my $fields = MinorImpact::Object::fields($object_type_id);
+    my $fields;
+    if ($self) {
+        $fields = $self->fields();
+    } else {
+        $fields = MinorImpact::Object::fields($object_type_id);
+    }
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
         my $type = $field->type();
@@ -795,7 +800,7 @@ FORM
             }
         } else {
             if ($self) {
-                @values = $self->{object_data}->{$name}->value();
+                @values = $field->value();
             } else {
                 @values = ();
             }
@@ -805,18 +810,18 @@ FORM
         $local_params->{field_type} = $type;
         $local_params->{required} = $field->get('required');
         $local_params->{name} = $name;
-        foreach my $value (@values) {
-            next if ($value eq '');
-            $local_params->{value} = $value;
-            my $row = formRow($local_params);
+        #foreach my $value (@values) {
+        #    next if ($value eq '');
+        $local_params->{value} = \@values;
+        my $row = $field->formRow($local_params);
             $form .= $row;
-        }
-        if ($type =~/^\@/ || scalar(@values) == 0) {
-            delete($local_params->{required}) unless(scalar(@values));
-            $local_params->{value} = '';
-            my $row = formRow($local_params);
-            $form .= $row;
-        }
+        #}
+        #if ($type =~/^\@/ || scalar(@values) == 0) {
+        #    delete($local_params->{required}) unless(scalar(@values));
+        #    #$local_params->{value} = '';
+        #    my $row = $field->formRow($local_params);
+        #    $form .= $row;
+        #}
     }
     $form .= <<FORM;
             <!-- CUSTOM -->
@@ -835,7 +840,7 @@ FORM
     return $form;
 }
 
-sub formRow {
+sub formRow2 {
     MinorImpact::log(7, "starting");
     my $params = shift || return;
 
@@ -882,8 +887,9 @@ sub cmp {
     my $b = shift;
 
     my $sortby = 'name';
-    foreach my $field (@{$self->{object_field}}) {
-        $sortby = $field->{name} if ($field->{sortby});
+    foreach my $field_name (keys %{$self->{object_data}}) {
+        my $field = $self->{object_data}{$field_name};
+        $sortby = $field->name() if ($field->get('sortby'));
     }
     if ($b) {
         return ($self->get($sortby) cmp $b->cmp());

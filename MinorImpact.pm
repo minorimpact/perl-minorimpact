@@ -131,7 +131,8 @@ sub getUser {
             foreach my $key (keys %ENV) {
                 MinorImpact::log(8, "\$ENV{$key}='$ENV{$key}'");
             }
-            MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}, timeout=>7200});
+            my $timeout = $self->{conf}{default}{user_timeout} || 86400;
+            MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}, timeout=>$timeout});
             #print "Content-type: text/html\n\n";
             #print $CGI->header(-cookie=>$cookie);
             print "Set-Cookie: $cookie\n";
@@ -463,4 +464,5 @@ sub templateToolkit {
     }) || die $tt->error();
     return $tt;
 }
+
 1;

@@ -39,5 +39,17 @@ sub validate {
     return $value;
 }
 
+sub _formRow {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $name = $self->name() || return;
+    my $value = $params->{row_value};
+
+    my $row;
+    $row .= "<input type=checkbox name='$name'" . ($value?" checked":"") . ">\n";
+
+    return $row;
+}
 
 1;

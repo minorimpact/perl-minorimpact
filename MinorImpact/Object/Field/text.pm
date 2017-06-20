@@ -1,4 +1,4 @@
-package MinorImpact::Object::Field::url;
+package MinorImpact::Object::Field::text;
 
 use MinorImpact;
 use MinorImpact::Object::Field;
@@ -17,18 +17,17 @@ sub new {
     return $self;
 }
 
-sub toString {
+sub _formRow {
     my $self = shift || return;
-    MinorImpact::log(7, "starting");
+    my $params = shift || {};
 
-    my $string;
-    my $value = @{$self->{data}{value}}[0];
-    foreach my $value (@{$self->value()}) {
-        $string .= "<a href=$value>$value</a>,";
-    }
-    $string .=~s/,$//;
-    MinorImpact::log(7, "ending");
-    return $string;
+    my $name = $self->name() || return;
+    my $value = $params->{row_value};
+
+    my $row;
+    $row .= "<textarea name='$name'>$value</textarea>\n";
+
+    return $row;
 }
 
 1;

@@ -42,7 +42,7 @@
     [% IF user %]
             <table>
                 <tr>
-                    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search></form></td>
+                    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search value='[% search %]'></form></td>
                     <td valign=top><a href="user.cgi?user_id=[% user.id %]">[% user.get('name') %]</a><a href=logout.cgi>Logout</a></td>
                 </tr>
             </table>
