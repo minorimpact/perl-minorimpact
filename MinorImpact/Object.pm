@@ -145,7 +145,11 @@ sub selectList {
         $local_params->{selected} = $self->id() unless ($local_params->{selected});
     }
 
-    my $select = "<select id='$local_params->{fieldname}' name='$local_params->{fieldname}'>\n";
+    my $select = "<select id='$local_params->{fieldname}' name='$local_params->{fieldname}'";
+    if ($local_params->{duplicate}) {
+        $select .= " onchange='duplicateRow(this);'";
+    }
+    $select .= ">\n";
     $select .= "<option></option>\n" unless ($local_params->{required});
     my @objects = search($local_params);
     foreach my $object (@objects) {
@@ -272,7 +276,7 @@ sub type_id {
         if ($self =~/^[0-9]+$/) {
             $object_type_id = $self;
         } else {
-            $object_type_id = $DB->selectrow_array("select id from object_type where name=?", undef, ($self));
+            $object_type_id = $DB->selectrow_array("select id from object_type where name=? or plural=?", undef, ($self, $self));
         }
     }
     MinorImpact::log(7, "ending");
@@ -744,136 +748,17 @@ sub form {
     } else {
     }
 
-    my $object_id;
-    my $object_type_id;
-    my $user_id;
-
-    $object_id = $self->id() if ($self);
-    $object_type_id = $self?$self->type_id():$params->{object_type_id};
-    $user_id = $MinorImpact::SELF->getUser()->id();
-    MinorImpact::log(8, "\$user_id='$user_id'");
-    return unless ($object_type_id);
-    
-    my $CGI = MinorImpact::getCGI();
-    
-    my $form = <<FORM;
-    <form method=POST>
-        <input type=hidden name=id value="${\ ($object_id?$object_id:''); }">
-        <input type=hidden name=a value="${\ ($object_id?'edit':'add'); }">
-        <input type=hidden name=type_id value="$object_type_id">
-        <table class=edit>
-            <tr>   
-                <td class=fieldname>Name</td>
-                <td><input type=text name=name value="${\ ($CGI->param('name') || ($self && $self->name())); }"></td>
-            </tr>
-            <tr>   
-                <td class=fieldname>Description</td>
-                <td><input type=text name=description value="${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }"></td>
-            </tr>
-FORM
-    # Suck in any default values passed in the parameters.
-    foreach my $field (keys %{$params->{default_values}}) {
-        $CGI->param($field,$params->{default_values}->{$field});
-    }
-
-    # Add a field for whatever the last thing they were looking at was.
-    my $cookie_object_id = $CGI->cookie('object_id');
-    my $cookie_object = new MinorImpact::Object($cookie_object_id);
-    $CGI->param($cookie_object->typeName()."_id", $cookie_object->id());
-
-    my $fields;
+    my $local_params = cloneHash($params);
+    my $type;
     if ($self) {
-        $fields = $self->fields();
+        $local_params->{object_id} = $self->id();
+        $type = $self->getType();
     } else {
-        $fields = MinorImpact::Object::fields($object_type_id);
+        $type = new MinorImpact::Object::Type($local_params->{object_type_id}, $local_params);
     }
-    foreach my $name (keys %$fields) {
-        my $field = $fields->{$name};
-        my $type = $field->type();
-        MinorImpact::log(8, "\$field->{name}='$field->{name}'");
-        next if ($field->get('hidden') || $field->get('readonly'));
-        my @params = $CGI->param($name);
-        my @values;
-        if (scalar(@params) > 0) {
-            foreach my $field (@params) {
-                push (@values, $field) unless ($field eq '');
-            }
-        } else {
-            if ($self) {
-                @values = $field->value();
-            } else {
-                @values = ();
-            }
-        }
 
-        my $local_params = cloneHash($params);
-        $local_params->{field_type} = $type;
-        $local_params->{required} = $field->get('required');
-        $local_params->{name} = $name;
-        #foreach my $value (@values) {
-        #    next if ($value eq '');
-        $local_params->{value} = \@values;
-        my $row = $field->formRow($local_params);
-            $form .= $row;
-        #}
-        #if ($type =~/^\@/ || scalar(@values) == 0) {
-        #    delete($local_params->{required}) unless(scalar(@values));
-        #    #$local_params->{value} = '';
-        #    my $row = $field->formRow($local_params);
-        #    $form .= $row;
-        #}
-    }
-    $form .= <<FORM;
-            <!-- CUSTOM -->
-            <tr>   
-                <td class=fieldname>Tags</td>
-                <td><input type=text name=tags value='${\ ($CGI->param('tags') || ($self && join(' ', $self->getTags()))); }'></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td><input type=submit name=submit></td>
-            </tr>
-        </table>
-    </form>
-FORM
     MinorImpact::log(7, "ending");
-    return $form;
-}
-
-sub formRow2 {
-    MinorImpact::log(7, "starting");
-    my $params = shift || return;
-
-
-    my $name = $params->{name} || return;
-    MinorImpact::log(8, "\$name='$name'");
-    my $field_type = $params->{field_type} || return;
-    MinorImpact::log(8, "\$field_type='$field_type'");
-    my $value = $params->{value};
-
-    my $fieldname = ucfirst($name);
-    $fieldname =~s/_/ /;
-    my $row = "<tr><td class=fieldname>$fieldname</td><td>\n";
-    if ($field_type =~/object\[(\d+)\]$/) {
-        my $object_type_id = $1;
-        my $local_params = cloneHash($params);
-        $local_params->{object_type_id} = $object_type_id;
-        $local_params->{fieldname} = $name;
-        $local_params->{selected} = $value;
-        delete($local_params->{name});
-        $row .= "" .  selectList($local_params);
-        #$row .= "" .  selectList({object_type_id=>$object_type_id, user_id=>$user_id, selected=>$value, fieldname=>$name, required=>$params->{required}, filter=>$params->{filter}}) . "\n";
-    } elsif ($field_type =~/text$/) {
-        $row .= "<textarea name='$name'>$value</textarea>\n";
-    } elsif ($field_type =~/boolean$/) {
-        $row .= "<input type=checkbox name='$name'" . ($value?" checked":"") . ">\n";
-    } else {
-        $row .= "<input id='$name' type=text name='$name' value='$value'>\n";
-    }
-    $row .= "*" if ($params->{required});
-    $row .= "</td></tr>\n";
-    MinorImpact::log(7, "ending");
-    return $row;
+    return $type->form($local_params);
 }
 
 # Used to compare one object to another for purposes of sorting.

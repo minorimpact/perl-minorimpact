@@ -5,3 +5,17 @@
 <script src="/jquery-2.1.4.js"></script>
 <script src="/jquery-ui-1.11.4/jquery-ui.js"></script>
 
+<script>
+    // Duplicates the row the control is in and marks it so it
+    // won't get duplicated again.  Used to dynamically add array fields
+    // to forms.
+    function duplicateRow(o) {
+        if (\$(o).data('duped') == 1) {
+            return;
+        }
+        var \$tr = \$(o).closest("tr");
+        var \$clone = \$tr.clone();
+        \$tr.after(\$clone);
+        \$(o).data("duped", 1);
+    }   
+</script>

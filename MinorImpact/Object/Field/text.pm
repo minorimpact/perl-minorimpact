@@ -17,7 +17,7 @@ sub new {
     return $self;
 }
 
-sub _formRow {
+sub _input {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -25,7 +25,11 @@ sub _formRow {
     my $value = $params->{row_value};
 
     my $row;
-    $row .= "<textarea name='$name'>$value</textarea>\n";
+    $row .= "<textarea name='$name'";
+    if ($params->{duplicate}) {
+        $row .= " onchange='duplicateRow(this);'";
+    }
+    $row .= ">$value</textarea>\n";
 
     return $row;
 }

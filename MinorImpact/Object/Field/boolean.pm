@@ -27,6 +27,11 @@ sub toString {
     return $string;
 }
 
+sub isArray() {
+    my $self = shift || return;
+    return 0;
+}
+
 sub validate {  
     my $self = shift || return;
     my $value = shift;
@@ -39,7 +44,7 @@ sub validate {
     return $value;
 }
 
-sub _formRow {
+sub _input {
     my $self = shift || return;
     my $params = shift || {};
 

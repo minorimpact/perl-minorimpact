@@ -138,30 +138,32 @@ sub formRow {
     my $local_params = cloneHash($params);
 
     my @values = @{$local_params->{value}};
-    @values = $self->value() if (scalar(@values));
+    @values = $self->value() unless (scalar(@values));
     
-    my $depth = $local_params->{depth} || 0;
-
     my $field_name = $self->displayName();
-    my $row;
+    my $i = 0;
 
-    my $row_value = $values[$depth];
-    $local_params->{row_value} = $row_value;
+    $local_params->{row_value} = $values[$i];
+    my $row;
     $row .= "<tr><td class=fieldname>$field_name</td><td>\n";
-    $row .= $self->_formRow($local_params);
+    $row .= $self->_input($local_params);
     $row .= "*" if ($self->get('required'));
     $row .= "</td></tr>\n";
 
-    if ($depth < scalar(@values) && $self->isArray()) {
-        delete($local_params->{required});
-        $local_params->{depth}++;
-        $row .= $self->formRow($local_params);
+    if ($self->isArray()) {
+        while (++$i <= (scalar(@values)-1)) {
+            $local_params->{row_value} = $values[$i];
+            $row .= "<tr><td></td><td>" . $self->_input($local_params) . "</td></tr>";
+        }
+        $local_params->{duplicate} = 1;
+        delete($local_params->{row_value});
+        $row .= "<tr><td></td><td>" . $self->_input($local_params) . "</td></tr>";
     }
     MinorImpact::log(7, "ending");
     return $row;
 }
 
-sub _formRow {
+sub _input {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -181,7 +183,11 @@ sub _formRow {
         #} elsif ($field_type =~/boolean$/) {
         #}  
     } else {
-        $row .= "<input id='$name' type=text name='$name' value='$value'>\n";
+        $row .= "<input id='$name' type=text name='$name' value='$value'";
+        if ($params->{duplicate}) {
+            $row .= " onchange='duplicateRow(this);'";
+        }
+        $row .= ">\n";
     }
     return $row;
 }
