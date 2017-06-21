@@ -10,13 +10,13 @@ use MinorImpact::Object::Field::url;
 
 sub new {
     my $package = shift || return;
-    my $field_type = shift || return;
     my $data = shift || return;
 
     MinorImpact::log(7, "starting");
     my $self;
     eval {
         MinorImpact::log(7, "\$field_type=$field_type");
+        my $field_type = $data->{type};
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
     if ($@ =~/^error:/) {

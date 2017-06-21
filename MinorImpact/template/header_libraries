@@ -16,6 +16,14 @@
         var \$tr = \$(o).closest("tr");
         var \$clone = \$tr.clone();
         \$tr.after(\$clone);
+        \$(\$clone).find('input').each(function () {
+                var re = /_(\d+)\$/;
+                //var new_name = this.name.replace(re, 
+                var ids = this.name.match(re);
+                var id = ids[1];
+                var new_name = this.name.replace('_' + id, '_' + (parseInt(id) + 1));
+                this.setAtribute("name", new_name);
+            });
         \$(o).data("duped", 1);
     }   
 </script>
