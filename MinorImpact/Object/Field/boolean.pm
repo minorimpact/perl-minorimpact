@@ -9,21 +9,29 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self = $package->SUPER::_new($data);
 
     bless($self, $package);
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $self;
+}
+
+sub addValue {
+    my $self = shift || return;
+    my $data = shift || return;
+
+    $data->{value} = ($data->{value}?1:0);
+    $self->SUPER::addValue($data);
 }
 
 sub toString {
     my $self = shift || return;
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $value = @{$self->{data}{value}}[0];
     my $string = $value?"yes":"no";
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $string;
 }
 

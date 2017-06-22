@@ -11,16 +11,24 @@ package MinorImpact::Util;
 
 =cut
 
+use Data::Dumper;
 use Time::Local;
 use Exporter 'import';
-@EXPORT = ("cloneHash",
-           "fleshDate",
-           "fromMysqlDate", 
-           "parseTags",
-           "toMysqlDate", 
-           "uniq", 
-           "trim"
+@EXPORT = ( "cloneHash",
+            "dumper",
+            "fleshDate",
+            "fromMysqlDate", 
+            "parseTags",
+            "toMysqlDate", 
+            "uniq", 
+            "trim"
           );
+
+sub dumper {
+    my $dumpee = shift || return;
+    my $dump = Dumper($dumpee);
+    print "Content-type: text/html\n\n<pre>$dump</pre>\n";
+}
 
 sub trim {
     my $string = shift || return;

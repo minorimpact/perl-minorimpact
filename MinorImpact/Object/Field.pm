@@ -12,10 +12,10 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self;
     eval {
-        MinorImpact::log(7, "\$field_type=$field_type");
+        #MinorImpact::log(7, "\$field_type=$field_type");
         my $field_type = $data->{type};
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
@@ -30,14 +30,14 @@ sub new {
         $self = MinorImpact::Object::Field::_new($package, $data);
         bless($self, $package);
     }
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $self;
 }
 
 sub _new {
     my $package = shift || return;
     my $data = shift || return;
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -51,7 +51,7 @@ sub _new {
         push(@{$self->{data}{value}}, $value);
     }
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $self;
 }
 
@@ -87,7 +87,8 @@ sub displayName {
     my $displayname = $self->name();
     $displayname =~s/_id$//;
     $displayname =~s/_date$//;
-    $displayname = ucfirst($displayname) . " (f)";
+    $displayname =~s/_/ /g;
+    $displayname = ucfirst($displayname);
     return $displayname;
 }
 
@@ -134,6 +135,7 @@ sub formRow {
     my $self = shift || return;
     my $params = shift || {};
 
+    #MinorImpact::log(7, "start");
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
 
@@ -159,7 +161,7 @@ sub formRow {
         delete($local_params->{row_value});
         $row .= "<tr><td></td><td>" . $self->_input($local_params) . "</td></tr>";
     }
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $row;
 }
 
@@ -178,10 +180,6 @@ sub _input {
         $local_params->{selected} = $value;
         delete($local_params->{name});
         $row .= "" .  MinorImpact::Object::selectList($local_params);
-        #} elsif ($field_type =~/text$/) {
-        #   $row .= "<textarea name='$name'>$value</textarea>\n";
-        #} elsif ($field_type =~/boolean$/) {
-        #}  
     } else {
         $row .= "<input id='$name' type=text name='$name' value='$value'";
         if ($params->{duplicate}) {

@@ -9,11 +9,11 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self = $package->SUPER::_new($data);
 
     bless($self, $package);
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $self;
 }
 

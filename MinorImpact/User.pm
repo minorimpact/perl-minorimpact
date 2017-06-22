@@ -105,19 +105,9 @@ sub update {
 
 sub isAdmin {
     my $self = shift || return;
-    MinorImpact::log(7, "starting");
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "ending");
     return $self->get('admin');
 }
-
-#    my $self = shift || return;
-#    my @paragraphs = ();
-#
-#    my $data = $self->{DB}->selectall_arrayref("SELECT * FROM paragraph WHERE entry_id = ? ORDER BY display_order", {Slice=>{}}, ($self->id()));
-#    foreach my $row (@$data) {
-#        push(@paragraphs, new Timeline::Paragraph($row->{id}));
-#    }
-#    return @paragraphs;
-#}
 
 1;

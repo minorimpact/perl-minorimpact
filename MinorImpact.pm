@@ -28,7 +28,7 @@ sub new {
     my $options = shift || {};
 
     my $self = $SELF;
-    MinorImpact::log(8, "starting");
+    #MinorImpact::log(8, "starting");
 
     unless ($self) {
         MinorImpact::log(3, "creating new MinorImpact object");
@@ -88,7 +88,7 @@ sub new {
         $self->redirect("https://$ENV{HTTP_HOST}/cgi-bin/login.cgi");
     }
 
-    MinorImpact::log(8, "ending");
+    #MinorImpact::log(8, "ending");
     return $self;
 }
 
@@ -100,7 +100,7 @@ sub validUser {
 }
 
 sub getUser {
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self = shift || return;
     my $params = shift || {};
 
@@ -108,15 +108,15 @@ sub getUser {
 
     my $user_id = $CGI->cookie("user_id");
     if ($user_id) {
-        MinorImpact::log(8, "user_id=$user_id");
+        #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
 
         my $client_ip = MinorImpact::cache({key=>"client_ip:$user_id"});
-        MinorImpact::log(8, "client_ip=$client_ip");
+        #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $client_ip) {
-            MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+            #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
             if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
-                MinorImpact::log(7, "ending");
+                #MinorImpact::log(7, "ending");
                 return $user;
             }
         }
@@ -129,33 +129,33 @@ sub getUser {
             my $user_id = $user->id();
             my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
             foreach my $key (keys %ENV) {
-                MinorImpact::log(8, "\$ENV{$key}='$ENV{$key}'");
+                #MinorImpact::log(8, "\$ENV{$key}='$ENV{$key}'");
             }
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
             MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}, timeout=>$timeout});
             #print "Content-type: text/html\n\n";
             #print $CGI->header(-cookie=>$cookie);
             print "Set-Cookie: $cookie\n";
-            MinorImpact::log(7, "ending");
+            #MinorImpact::log(7, "ending");
             return $user;
         }
     }
 
     if ($ENV{'USER'}) {
-        MinorImpact::log(8, "\$ENV{'user'}=$ENV{'user'}");
+        #MinorImpact::log(8, "\$ENV{'user'}=$ENV{'user'}");
         my $user = new MinorImpact::User($ENV{'user'});
-        MinorImpact::log(7, "ending");
+        #MinorImpact::log(7, "ending");
         return $user;
     }
     MinorImpact::log(3, "no user found");
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return;
 }
 
 sub redirect {
     my $self = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $location = shift || $self->{CGI}->param('redirect') ||  'index.cgi';
 
     #$location =~s/[^a-z0-9.\-_?\/:=]//;
@@ -167,7 +167,7 @@ sub redirect {
     #print $self->{CGI}->header(-location=>$location);
     MinorImpact::log(3, "redirecting to $location");
     print "Location: $location\n\n";
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     exit;
 }
 
@@ -180,7 +180,7 @@ sub redirect {
 sub header {
     my $self = shift || return;
     my $args = shift || {};
-    MinorImpact::log(8, "starting");
+    #MinorImpact::log(8, "starting");
 
     my $title = $args->{title} || '';
     my $javascript = $args->{javascript} || '';
@@ -205,7 +205,7 @@ sub header {
         my $tt = MinorImpact::templateToolkit({template_config_file=>$self->{conf}{default}{template_config_file}});
         $tt->process($template, {css=>$css, other=>$other, javascript=>$javascript, title=>$title, user=>$user}) || die $tt->error();
     }
-    MinorImpact::log(8, "ending");
+    #MinorImpact::log(8, "ending");
     return $header;
 }
 
@@ -326,7 +326,7 @@ sub types {
 }
 
 sub checkDatabaseTables {
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self = shift || return;
 
     my $DB = $self->{DB};
@@ -437,7 +437,7 @@ sub checkDatabaseTables {
             PRIMARY KEY (`id`)
             )");
     }
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
 }
 
 sub templateToolkit {
