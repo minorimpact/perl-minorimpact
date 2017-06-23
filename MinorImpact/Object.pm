@@ -2,11 +2,11 @@ package MinorImpact::Object;
 
 use Data::Dumper;
 use JSON;
+use Text::Markdown 'markdown';
 
 use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
-use MinorImpact::Text::Markdown 'markdown';
 
 sub new {
     my $package = shift || return;
