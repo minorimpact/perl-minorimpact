@@ -103,7 +103,7 @@ sub main {
         $params->{name} = $options{"field-name"};
 
         if (!$options{force}) {
-            print "Are you sure you want to delete the $options{'field-name'} field from the $type_name object? (y/N) ";
+            print "This will also erase all the data in this field from all objects, and CANNOT BE UNDONE! Are you sure you want to delete the $options{'field-name'} field from the $type_name object? (y/N) ";
             my $input = <STDIN>;
             chomp($input); $input = (split(//, $input))[0];
             if ($input !~/^[yY]$/) {

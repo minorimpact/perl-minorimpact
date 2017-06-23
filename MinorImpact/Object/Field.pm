@@ -229,7 +229,10 @@ sub delField {
     my $object_type_id = $params->{object_type_id} || die "No object type id";
     my $name = $params->{name} || die "Field name can't be blank.";
 
-    $DB->do("DELETE FROM  object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
+    
+    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || die $DB->errst;
+    $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
 }
 
 1;
