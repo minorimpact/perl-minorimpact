@@ -106,7 +106,7 @@ sub getUser {
 
     my $CGI = $self->{CGI};
 
-    my $user_id = $CGI->cookie("user_id");
+    my $user_id = $CGI->cookie("user_id") || MinorImpact::cache({key=>'user_id'});
     if ($user_id) {
         #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
@@ -118,24 +118,31 @@ sub getUser {
             if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
                 #MinorImpact::log(7, "ending");
                 return $user;
+            } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
+                return $user;
             }
         }
     }
 
-    if ($CGI->param('username') && $CGI->param('password')) {
-        MinorImpact::log(3, "validating " . $CGI->param('username'));
-        my $user = new MinorImpact::User($CGI->param('username'));
-        if ($user && $user->validate_user($CGI->param('password'))) {
+    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};;
+    my $password = $params->{password} || $CGI->param('password');
+
+    if ($username && $password) {
+        MinorImpact::log(3, "validating " . $username);
+        my $user = new MinorImpact::User($username);
+        if ($user && $user->validate_user($password)) {
             my $user_id = $user->id();
-            my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
-            foreach my $key (keys %ENV) {
-                #MinorImpact::log(8, "\$ENV{$key}='$ENV{$key}'");
-            }
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
-            MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}, timeout=>$timeout});
-            #print "Content-type: text/html\n\n";
-            #print $CGI->header(-cookie=>$cookie);
-            print "Set-Cookie: $cookie\n";
+
+            MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}||$ENV{SSH_CLIENT}, timeout=>$timeout});
+            if ($ENV{REMOTE_ADDR}) {
+                my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
+                print "Set-Cookie: $cookie\n";
+            } else {
+                # TODO: This only supports a single command line connection at a time.  Might be a
+                #   problem in the future.
+                MinorImpact::cache({key=>"user_id", value=>$user_id, timeout=>$timeout});
+            }
             #MinorImpact::log(7, "ending");
             return $user;
         }
@@ -345,6 +352,8 @@ sub checkDatabaseTables {
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
         )");
+        $DB->do("create index idx_object_user_id on object(user_id)");
+        $DB->do(" create index idx_object_user_type on object(user_id, object_type_id)");
     }
     eval {
         $DB->do("DESC `object_type`");
@@ -372,6 +381,7 @@ sub checkDatabaseTables {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `object_type_id` int(11) NOT NULL,
             `name` varchar(50) NOT NULL,
+            `description` text,
             `type` varchar(15) DEFAULT NULL,
             `hidden` tinyint(1) DEFAULT '0',
             `readonly` tinyint(1) DEFAULT '0',

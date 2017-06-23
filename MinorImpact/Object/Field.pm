@@ -8,6 +8,10 @@ use MinorImpact::Object::Field::boolean;
 use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::url;
 
+# TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
+#   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
+#   should be written back to the database.  It's really weak as is.
+
 sub new {
     my $package = shift || return;
     my $data = shift || return;
@@ -41,8 +45,10 @@ sub _new {
 
     my $self = {};
 
+    # TODO: We're basically sending this the database row that we want to be turned into a field.  We should really just give
+    #   it an object_type and an object_field_id and let it suck it in for itself.
     # We want the value to be an array, not a scalar, so duplicate
-    # it and rewrite it as an array.
+    #   it and rewrite it as an array.
     my $local_data = cloneHash($data);
     my $self->{data} = $local_data;
     if (defined($local_data->{value})) {
@@ -98,6 +104,7 @@ sub value {
     return wantarray?@{$self->{data}{value}}:@{$self->{data}{value}}[0]; 
 }
 
+# return a piece of metadata about this field.
 sub get {
     my $self = shift || return;
     my $field = shift || return; 
@@ -131,6 +138,7 @@ sub type {
     return $self->{data}{type};
 }
 
+# Returns a row in a table that contains the field name and the input field.
 sub formRow {
     my $self = shift || return;
     my $params = shift || {};
@@ -150,12 +158,12 @@ sub formRow {
     $row .= "<tr><td class=fieldname>$field_name</td><td>\n";
     $row .= $self->_input($local_params);
     $row .= "*" if ($self->get('required'));
-    $row .= "</td></tr>\n";
+    $row .= "</td><td class=small><span class=small>" . $self->get('description') . "</span></td></tr>\n";
 
     if ($self->isArray()) {
         while (++$i <= (scalar(@values)-1)) {
             $local_params->{row_value} = $values[$i];
-            $row .= "<tr><td></td><td>" . $self->_input($local_params) . "</td></tr>";
+            $row .= "<tr><td></td><td align=left>" . $self->_input($local_params) . "</td></tr>";
         }
         $local_params->{duplicate} = 1;
         delete($local_params->{row_value});
@@ -165,6 +173,7 @@ sub formRow {
     return $row;
 }
 
+# Returns the form input control for this field.
 sub _input {
     my $self = shift || return;
     my $params = shift || {};
@@ -190,11 +199,37 @@ sub _input {
     return $row;
 }
 
+# Returns true if this field contains an array of values.
 sub isArray {
     my $self = shift || return;
 
     return 1 if ($self->type() =~/^\@/);
     return 0;
+}
+
+# Add a new field to an object.
+sub addField {
+    my $params = shift || return;
+
+    my $DB = MinorImpact::getDB() || die "Can't connect to database.";
+
+    my $object_type_id = $params->{object_type_id} || die "No object type id";
+    my $name = $params->{name} || die "Field name can't be blank.";
+    my $type = $params->{type} || die "Field type can't be blank.";
+
+    $DB->do("INSERT INTO object_field (object_type_id, name, description, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $name, $params->{description}, $type, ($params->{hidden}?1:0), ($params->{"readonly"}?1:0), ($params->{"required"}?1:0), ($params->{"sortby"}?1:0))) || die $DB->errstr;
+}
+
+# Delete a field from an object.
+sub delField {
+    my $params = shift || return;
+
+    my $DB = MinorImpact::getDB() || die "Can't connect to database.";
+
+    my $object_type_id = $params->{object_type_id} || die "No object type id";
+    my $name = $params->{name} || die "Field name can't be blank.";
+
+    $DB->do("DELETE FROM  object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
 }
 
 1;

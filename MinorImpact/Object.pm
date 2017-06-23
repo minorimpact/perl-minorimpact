@@ -23,7 +23,7 @@ sub new {
             my $data = $DB->selectrow_hashref("SELECT name FROM object_type ot WHERE ot.id=?", undef, ($id->{type_id})) || die $MinorImpact::SELF->{DB}->errstr;
             $type_name = $data->{name}; 
         } else {
-            my $data = $DB->selectrow_hashref("SELECT ot.name FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $MinorImpact::SELF->{DB}->errstr;
+            my $data = $DB->selectrow_hashref("SELECT ot.name FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
             $type_name = $data->{name};
         }
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
@@ -253,18 +253,25 @@ sub update {
 }
 
 sub fields {
-    my $self = shift;
+    my $self = shift || return;
 
-    if (ref($self)) {
+    my $object_type_id;
+    if (ref($self) eq "HASH") {
+        $object_type_id = $self->{object_type_id};
+    } elsif (ref($self)) {
+        return $self->{object_data} if ($self->{object_data});
         $object_type_id = $self->type_id();
     } else {
         $object_type_id = $self;
     }
 
+    die "No type_id defined\n" unless ($object_type_id);
+
     my $fields;
     my $DB = MinorImpact::getDB();
-    my $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id));
+    my $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
     foreach my $row (@$data) {
+        #MinorImpact::log(8, $row->{name});
         $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
     }
     return $fields;
@@ -284,7 +291,9 @@ sub type_id {
         if ($self =~/^[0-9]+$/) {
             $object_type_id = $self;
         } else {
-            $object_type_id = $DB->selectrow_array("select id from object_type where name=? or plural=?", undef, ($self, $self));
+            my $singular = $self;
+            $singular =~s/s$//;
+            $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
         }
     }
     #MinorImpact::log(7, "ending");
@@ -364,9 +373,18 @@ sub typeName {
     my $sql = "select name, plural from object_type where $where";
     #MinorImpact::log(8, "sql=$sql, ($type_id)");
     my ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
+    if (!$plural_name) {
+        $plural_name = $type_name . "s";
+    }
     #MinorImpact::log(8, "type_name=$type_name");
     #MinorImpact::log(7, "ending");
-    return ($params->{plural}?($plural_name?$plural_name:$type_name . "s"):$type_name);
+
+    if ($params->{plural}) {
+        return $plural_name;
+    } elsif ($params->{singular} || !wantarray) {
+        return $type_name
+    }
+    return ($type_name, $plural_name);
 }
 
 sub _reload {
@@ -518,7 +536,9 @@ sub search {
     #MinorImpact::log(7, "starting");
 
     my $local_params = cloneHash($params);
-    $local_params->{user_id} = $MinorImpact::SELF->getUser()->id() || redirect("index.cgi");
+    if (!$local_params->{user_id}) {
+        $local_params->{user_id} = $MinorImpact::SELF->getUser()->id() || redirect("index.cgi");
+    }
     my @ids = _search($local_params);
     return @ids if ($params->{id_only});
     my @objects;
@@ -709,6 +729,8 @@ sub toString {
         $json->{children} = $self->getChildren({id_only=>1});
         @{$json->{tags}} = ($self->getTags());
         $string = to_json($json);
+    } elsif ($params->{text}) {
+        return $self->name();
     } else {
         my $template = $params->{template} || 'object';
         $tt->process('object', { object=> $self}, \$string) || die $tt->error();
