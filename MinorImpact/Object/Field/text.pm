@@ -1,5 +1,7 @@
 package MinorImpact::Object::Field::text;
 
+use Text::Markdown 'markdown';
+
 use MinorImpact;
 use MinorImpact::Object::Field;
 
@@ -32,6 +34,25 @@ sub _input {
     $row .= ">$value</textarea>\n";
 
     return $row;
+}
+
+sub toString {
+    my $self = shift || return;
+    my $value = shift;
+
+    my @strings;
+    
+    if ($value) {
+        push (@strings, $value);
+    } else {
+        foreach my $value (@{$self->{data}{value}}) {
+            push(@strings, markdown($value));
+        }
+    }
+    if (wantarray){
+        return @strings;
+    }
+    return join("\n", @strings);
 }
 
 1;

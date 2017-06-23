@@ -657,7 +657,7 @@ sub toString {
                     }
                 }
             } elsif ($type =~/text$/) {
-                foreach my $value ($field->value()) {
+                foreach my $value ($field->toString()) {
                     my $id = $field->id();
                     my $references = $self->getReferences($id);
                     foreach my $ref (@$references) {
@@ -760,6 +760,8 @@ sub form {
 
     if (ref($self) eq "HASH") {
         $params = $self;
+        undef($self);
+    } elsif (!ref($self)) {
         undef($self);
     }
 

@@ -61,6 +61,11 @@ sub main {
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
     my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
 
+    # Just change the action from list to info if someone specifies a type - ou
+    #   can't list a single item.
+    if ($options{type} && $options{action} eq 'list') {
+        $options{action} = 'info';
+    }
     if ($options{action} eq 'list') {
         my $types = MinorImpact::Object::types() || die "Can't retrieve list of types.\n";
         foreach my $type (sort {$a->{name} cmp $b->{name}; } @$types) {
