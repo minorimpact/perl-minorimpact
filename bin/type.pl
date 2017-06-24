@@ -5,9 +5,6 @@ use Data::Dumper;
 use Term::ReadKey;
 use Getopt::Long "HelpMessage";
 
-use lib "/home/pgillan/www/project.minorimpact.com/lib";
-use project;
-
 use MinorImpact;
 use MinorImpact::Object;
 
@@ -17,6 +14,8 @@ my $MINORIMPACT;
 
 my %options = (
                 action => "list",
+                # TODO: Get rid of this, it should either be passed on the comman line,
+                #   or read from a standard place, /etc/minorimpact.conf
                 config => "/home/pgillan/www/project.minorimpact.com/conf/minorimpact.conf",
                 help => sub { HelpMessage(); },
                 user => $ENV{USER},
@@ -158,7 +157,8 @@ type.pl [options]
   Options:
   -a, --action=ACTION   Perform ACTION.  default: list
                         Actions:
-                            addfield    Add a new field to TYPE. See "Field options" below.
+                            addfield    Add a new field FIELDNAME to TYPE. See "Field options" below.
+                            delfield    Delete field FIELDNAME from TYPE.
                             info        Show information about TYPE.
                             list        show all types.
   -c, --config=FILE     Read connection information from FILE.
@@ -172,7 +172,8 @@ type.pl [options]
   -v, --verbose         Verbose output.
 
   Field options:
-      --field-name=NAME Field name.
+      --field-name=FIELDNAME
+                        Field name.
       --field-description=DESCRIPTIOn
                         Field description.
       --field-type=FIELDTYPE
