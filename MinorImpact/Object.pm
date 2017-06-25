@@ -537,7 +537,8 @@ sub search {
 
     my $local_params = cloneHash($params);
     if (!$local_params->{user_id}) {
-        $local_params->{user_id} = $MinorImpact::SELF->getUser()->id() || redirect("index.cgi");
+        my $user = $MinorImpact::SELF->getUser();
+        $local_params->{user_id} = $user->id() || redirect("index.cgi");
     }
     my @ids = _search($local_params);
     return @ids if ($params->{id_only});
@@ -661,13 +662,16 @@ sub toString {
                     my $id = $field->id();
                     my $references = $self->getReferences($id);
                     foreach my $ref (@$references) {
-                        $value =~s/ +/ /g;
-                        if ($value =~/$ref->{data}/) {
-                            my $url = "$script_name.cgi?id=" . $ref->{object_id};
-                            $value =~s/$ref->{data}/<a href='$url'>$ref->{data}<\/a>/;
+                        my $test_data = $ref->{data};
+                        $test_data =~s/\W/ /gm;
+                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
+                        if ($value =~/($test_data)/mgi) {
+                            my $match = $1;
+                            my $url = "$script_name?id=" . $ref->{object_id};
+                            $value =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
                         }
                     }
-                    $string .= "<p onmouseup='getSelectedText($id);'>$value</p>\n";
+                    $string .= "<div onmouseup='getSelectedText($id);'>$value</div>\n";
                 }
             } else {
                 $string .= $field->toString();
@@ -710,27 +714,10 @@ sub toString {
             $string .= "<td>$self->{data}{$key}</td>\n";
         }
     } elsif ($params->{json}) {
-        $tt->process('object', { object=> $self}, \$string) || die $tt->error();
-        my $json = {};
-        my $fields = $self->fields();
-        $json->{name} = $self->{data}->{name};
-        $json->{description} = $self->{data}->{description};
-        $json->{type_id} = $self->type_id();
-        foreach my $f (@$fields) {
-            my $name = $f->{name};
-            if (defined($self->{object_data}->{$name})) {
-                if ($f->{type} =~/^\@/) {
-                    $json->{$name} = $self->{object_data}->{$name};
-                } else {
-                    $json->{$name} = @{$self->{object_data}->{$name}}[0];
-                }
-            }
-        }
-        $json->{children} = $self->getChildren({id_only=>1});
-        @{$json->{tags}} = ($self->getTags());
-        $string = to_json($json);
+        #$tt->process('object', { object=> $self}, \$string) || die $tt->error();
+        $string = to_json($self->toData());
     } elsif ($params->{text}) {
-        return $self->name();
+        $string = $self->name();
     } else {
         my $template = $params->{template} || 'object';
         $tt->process('object', { object=> $self}, \$string) || die $tt->error();
@@ -739,6 +726,30 @@ sub toString {
     #$self->log(7, "ending");
     return $string;
 }
+
+sub toData {
+    my $self = shift || return;
+
+        my $data = {};
+        $data->{id} = $self->id();
+        $data->{name} = $self->name();
+        $data->{description} = $self->get('description');
+        $data->{type_id} = $self->type_id();
+        my $fields = $self->fields();
+        foreach my $name (keys %$fields) {
+            my $field = $fields->{$name};
+            my @values = $field->value();
+            if ($field->isArray()) {
+                $data->{$name} = $values[0];
+            } else {
+                $data->{$name} = \@values;
+            }
+        }
+        #$data->{children} = $self->getChildren({id_only=>1});
+        #@{$data->{tags}} = ($self->getTags());
+    return $data;
+}
+
 
 sub getReferences {
     my $self = shift || return;

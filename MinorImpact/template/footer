@@ -1,2 +1,3 @@
+[% INCLUDE add_reference_dialog %]
 </body>
 </html>

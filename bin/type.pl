@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-
 use Data::Dumper;
 use Term::ReadKey;
 use Getopt::Long "HelpMessage";
@@ -8,9 +7,7 @@ use Getopt::Long "HelpMessage";
 use MinorImpact;
 use MinorImpact::Object;
 
-
 my $MINORIMPACT;
-
 
 my %options = (
                 action => "list",
@@ -59,6 +56,8 @@ sub main {
     }
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
     my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
+    die $user->name() . " does not have admin priviledges" unless ($user->isAdmin());
+
 
     # Just change the action from list to info if someone specifies a type - ou
     #   can't list a single item.

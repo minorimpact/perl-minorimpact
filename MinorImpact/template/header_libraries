@@ -6,6 +6,74 @@
 <script src="/jquery-ui-1.11.4/jquery-ui.js"></script>
 
 <script>
+    \$(function () {
+        \$( "#reference_add-dialog" ).dialog({
+            autoOpen: false,
+            height: 350,
+            width: 375,
+            modal: true,
+            buttons: {
+                "Create Reference": function() {
+                    var data = \$(this).data('data');
+                    var object_text_id = \$(this).data('object_text_id');
+                    var object_id = \$("#object_id").val();
+                    var url = "/cgi-bin/add_reference.cgi?object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + data;
+                    \$.get(url, function(data, status){
+                        \$( "#reference_add-dialog" ).dialog("close");
+                        window.location.reload(true);
+                    });
+                },
+                Cancel: function() {
+                    \$( this ).dialog( "close" );
+                }
+        }});
+        \$("#object_type_id").html('');
+        \$("#object_type_id").change(function() {
+            reloadObjects();
+        });
+        \$.getJSON("/cgi-bin/object_types.cgi?",function(data) {
+            for (var i=0; i<data.length; i++) {
+                var object_type = data[i];
+                var select = "<option value=" + object_type.id;
+                select = select + ">" + object_type.name + "</option>";
+                \$("#object_type_id").append(select);
+            }
+        });
+    });
+
+    function reloadObjects() {
+        \$("#object_id").html('');
+        \$.getJSON("tablist.cgi?format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
+            for (var i=0; i<data.length; i++) {
+                var object = data[i];
+                var select = "<option value=" + object.id;
+                select = select + ">" + object.name + "</option>";
+                \$("#object_id").append(select);
+            }
+        });
+    }
+
+    function getSelectedText(object_text_id) {
+        var text = "";
+        if (window.getSelection && \$('#reference_add-dialog').dialog('isOpen') ==  false) {
+            text = window.getSelection().toString();
+            if (text.length == 0) {
+                return;
+            }
+            \$("#reference_add-dialog").data('object_text_id',object_text_id).data('data', text).dialog("open");
+            \$("#reference_add-text").html(text);
+            \$("#object_id").html('');
+            \$.getJSON("tablist.cgi?format=json&type_id=" + \$("#object_type_id").val(), function(data) {
+                for (var i=0; i<data.length; i++) {
+                    var object = data[i];
+                    var select = "<option value=" + object.id;
+                    select = select + ">" + object.name + "</option>";
+                    \$("#object_id").append(select);
+                }
+            });
+        }
+    }
+
     // Duplicates the row the control is in and marks it so it
     // won't get duplicated again.  Used to dynamically add array fields
     // to forms.
@@ -16,14 +84,5 @@
         var \$tr = \$(o).closest("tr");
         var \$clone = \$tr.clone();
         \$tr.after(\$clone);
-        //\$(\$clone).find('input').each(function () {
-        //        var re = /_(\d+)\$/;
-        //        //var new_name = this.name.replace(re, 
-        //        var ids = this.name.match(re);
-        //        var id = ids[1];
-        //        var new_name = this.name.replace('_' + id, '_' + (parseInt(id) + 1));
-        //        this.setAtribute("name", new_name);
-        //    });
-        \$(o).data("duped", 1);
     }   
 </script>
