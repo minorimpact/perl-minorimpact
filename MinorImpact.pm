@@ -65,7 +65,7 @@ sub new {
         $SELF = $self;
         $self->{starttime} = [gettimeofday];
     }
-    $self->checkDatabaseTables();
+    checkDatabaseTables($self->{DB});
 
     if ($options->{validUser} || $options->{user_id} || $options->{admin}) {
         my ($script_name) = scriptName();
@@ -85,7 +85,7 @@ sub new {
     }
     if ($options->{https} && $ENV{HTTPS} ne 'on') {
         MinorImpact::log(3, "not https");
-        $self->redirect("https://$ENV{HTTP_HOST}/cgi-bin/login.cgi");
+        $self->redirect();
     }
 
     #MinorImpact::log(8, "ending");
@@ -124,7 +124,7 @@ sub getUser {
         }
     }
 
-    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};;
+    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
 
     if ($username && $password) {
@@ -167,13 +167,16 @@ sub redirect {
 
     #$location =~s/[^a-z0-9.\-_?\/:=]//;
     #$location = uri_escape($location);
-    if ($location !~/^\//) {
-        $location = "/cgi-bin/$location";
+    my $domain = "https://$ENV{HTTP_HOST}";
+    if ($location =~/^\//) {
+        $location = "$domain/$location";
+    } elsif ($location !~/^\//) {
+        $location = "$domain/cgi-bin/$location";
     }
 
     #print $self->{CGI}->header(-location=>$location);
     MinorImpact::log(3, "redirecting to $location");
-    print "Location: $location\n\n";
+    print "Location:$location\n\n";
     #MinorImpact::log(7, "ending");
     exit;
 }
@@ -209,8 +212,8 @@ sub header {
 
     print qq(Content-type: $content_type\n\n);
     unless ($args->{blank}) {
-        my $tt = MinorImpact::templateToolkit({template_config_file=>$self->{conf}{default}{template_config_file}});
-        $tt->process($template, {css=>$css, other=>$other, javascript=>$javascript, title=>$title, user=>$user}) || die $tt->error();
+        my $TT = MinorImpact::getTT({template_config_file=>$self->{conf}{default}{template_config_file}});
+        $TT->process($template, {css=>$css, other=>$other, javascript=>$javascript, title=>$title, user=>$user}) || die $TT->error();
     }
     #MinorImpact::log(8, "ending");
     return $header;
@@ -334,12 +337,10 @@ sub types {
 
 sub checkDatabaseTables {
     #MinorImpact::log(7, "starting");
-    my $self = shift || return;
-
-    my $DB = $self->{DB};
+    my $DB = shift || return;
 
     eval {
-        $DB->do("DESC `object`");
+        $DB->do("DESC `object`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object` (
@@ -351,12 +352,12 @@ sub checkDatabaseTables {
             `create_date` datetime NOT NULL,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
-        )");
-        $DB->do("create index idx_object_user_id on object(user_id)");
-        $DB->do(" create index idx_object_user_type on object(user_id, object_type_id)");
+        )") || die $DB->errstr;
+        $DB->do("create index idx_object_user_id on object(user_id)") || die $DB->errstr;
+        $DB->do(" create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
     }
     eval {
-        $DB->do("DESC `object_type`");
+        $DB->do("DESC `object_type`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_type` (
@@ -405,8 +406,7 @@ sub checkDatabaseTables {
   `create_date` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_object_field` (`object_id`,`object_field_id`),
-  KEY `idx_object_data` (`object_id`)
-)");
+  KEY `idx_object_data` (`object_id`))");
     }
 
     eval {
@@ -450,14 +450,15 @@ sub checkDatabaseTables {
     #MinorImpact::log(7, "ending");
 }
 
-sub templateToolkit {
+# Return the templateToolkit object;
+sub getTT {
     my $self = shift || return;
     my $params = shift || {};
 
     my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
 
-    if ($tt) {
-        return $tt;
+    if ($TT) {
+        return $TT;
     }
 
     # The default package templates are in the 'template' directory 
@@ -468,11 +469,17 @@ sub templateToolkit {
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
     my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
-    $tt = Template->new({
+    $TT = Template->new({
         INCLUDE_PATH=> [ $template_directory, $global_template_directory ],
         INTERPOLATE => 1,
-    }) || die $tt->error();
-    return $tt;
+    }) || die $TT->error();
+    return $TT;
+}
+
+sub templateToolkit {
+    my $self = shift || return;
+
+    return $self->getTT();
 }
 
 1;

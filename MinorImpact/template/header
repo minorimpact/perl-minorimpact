@@ -54,3 +54,4 @@
         </tr>
         </table>
     </div> <!-- header -->
+    [% INCLUDE error %]

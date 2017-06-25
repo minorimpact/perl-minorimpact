@@ -43,7 +43,7 @@
 
     function reloadObjects() {
         \$("#object_id").html('');
-        \$.getJSON("tablist.cgi?format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
+        \$.getJSON("index.cgi?a=list&format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
             for (var i=0; i<data.length; i++) {
                 var object = data[i];
                 var select = "<option value=" + object.id;

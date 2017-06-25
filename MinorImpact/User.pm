@@ -11,13 +11,27 @@ sub new {
 
     $self->{DB} = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
 
+    checkDatabaseTables($self->{DB});
+
     my $user_id = $params;
 
+    if ($user_id =~/^\d+$/) {
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+    } else {
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+    }
+
+    return $self;
+}
+
+sub checkDatabaseTables {
+    my $DB = shift || return;
+
     eval {
-        $self->{DB}->do("DESC `user`");
+        $DB->do("DESC `user`") || die $DB->errstr;
     };
     if ($@) {
-        $self->{DB}->do("CREATE TABLE `user` (
+        $DB->do("CREATE TABLE `user` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `name` varchar(25) NOT NULL,
                 `password` varchar(255) NOT NULL,
@@ -26,16 +40,9 @@ sub new {
                 `create_date` datetime NOT NULL,
                 `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`)
-            ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1");
+            ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1") || die $DB->errstr;
+        $DB->do("create unique index idx_user_name on user(name)") || die $DB->errstr;
     }
-
-    if ($user_id =~/^\d+$/) {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || return;
-    } else {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || return;
-    }
-
-    return $self;
 }
 
 sub validate_user {
@@ -49,10 +56,11 @@ sub validate_user {
 sub add_user {
     my $params = shift || return;
 
-    if ($params->{name} && $params->{password}) {
-        $self->{DB}->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'name'}, $params->{'password'}));
-        $user_id = $self->{DB}->{mysql_insertid};
-        return $user_id;
+    my $DB = $MinorImpact::SELF->{USERDB};
+    if ($params->{username} && $params->{password}) {
+        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
+        my $user_id = $DB->{mysql_insertid};
+        return new MinorImpact::User($user_id);
     }
     return;
 }

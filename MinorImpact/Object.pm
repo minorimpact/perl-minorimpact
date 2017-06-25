@@ -635,13 +635,18 @@ sub toString {
     my $params = shift || {};
     #$self->log(7, "starting");
 
-    my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'object.cgi';
+    my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
 
     my $MINORIMPACT = new MinorImpact();
     my $tt = $MINORIMPACT->templateToolkit();
 
     my $string = '';
-    if ($params->{column}) {
+    if ($params->{column}) { $params->{format} = "column";
+    } elsif ($params->{row}) { $params->{format} = "row";
+    } elsif ($params->{json}) {$params->{format} = "json";
+    } elsif ($params->{text}) {$params->{format} = "text";
+    } 
+    if ($params->{format} eq 'column') {
         #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
         $string .= "<table class=view>\n";
         foreach my $name (keys %{$self->{object_data}}) {
@@ -709,14 +714,14 @@ sub toString {
         foreach my $tag ($self->getTags()) {
             $string .= "<a class=tag href=tags.cgi?search_tag=$tag>#$tag</a>";
         }
-    } elsif ($params->{row}) {
+    } elsif ($params->{format} eq 'row') {
         foreach my $key (keys %{$self->{data}}) {
             $string .= "<td>$self->{data}{$key}</td>\n";
         }
-    } elsif ($params->{json}) {
+    } elsif ($params->{format} eq 'json') {
         #$tt->process('object', { object=> $self}, \$string) || die $tt->error();
         $string = to_json($self->toData());
-    } elsif ($params->{text}) {
+    } elsif ($params->{format} eq 'text') {
         $string = $self->name();
     } else {
         my $template = $params->{template} || 'object';
