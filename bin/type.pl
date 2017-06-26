@@ -21,6 +21,7 @@ my %options = (
 Getopt::Long::Configure("bundling");
 GetOptions( \%options, 
             "action|a=s",
+            "addfield",
             "config|c=s", 
             "field-name=s",
             "field-description=s",
@@ -61,6 +62,7 @@ sub main {
 
     # Just change the action from list to info if someone specifies a type - ou
     #   can't list a single item.
+    $options{action} = "addfield" if ($options{addfield} && !$options{action});
     if ($options{type} && $options{action} eq 'list') {
         $options{action} = 'info';
     }
@@ -160,6 +162,7 @@ type.pl [options]
                             delfield    Delete field FIELDNAME from TYPE.
                             info        Show information about TYPE.
                             list        show all types.
+      --addfield        Equivilant to --action=addfield.
   -c, --config=FILE     Read connection information from FILE.
   -f, --force           Never request conformation.
   -h, --help            Usage information.

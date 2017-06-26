@@ -106,6 +106,9 @@ sub getUser {
 
     my $CGI = $self->{CGI};
 
+    # If the user has logged in before, and we can verify it's the same session,
+    #   we can get the user_id from cache or cookie and don't require credentials
+    #   again.
     my $user_id = $CGI->cookie("user_id") || MinorImpact::cache({key=>'user_id'});
     if ($user_id) {
         #MinorImpact::log(8, "user_id=$user_id");
@@ -124,9 +127,9 @@ sub getUser {
         }
     }
 
+    # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
-
     if ($username && $password) {
         MinorImpact::log(3, "validating " . $username);
         my $user = new MinorImpact::User($username);
@@ -148,12 +151,11 @@ sub getUser {
         }
     }
 
-    if ($ENV{'USER'}) {
-        #MinorImpact::log(8, "\$ENV{'user'}=$ENV{'user'}");
-        my $user = new MinorImpact::User($ENV{'user'});
-        #MinorImpact::log(7, "ending");
-        return $user;
-    }
+    # Not sure what this is supposed to do.
+    #if ($ENV{'USER'}) {
+    #   my $user = new MinorImpact::User($ENV{'user'});
+    #    return $user;
+    #}
     MinorImpact::log(3, "no user found");
     #MinorImpact::log(7, "ending");
     return;

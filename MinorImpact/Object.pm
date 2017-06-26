@@ -199,6 +199,7 @@ sub validateFields {
 
     foreach my $field_name (keys %$fields) {  
         my $field = $fields->{$field_name};
+        $params->{$field_name} = '' unless (exists($params->{$field_name}));;
         $field->validate($params->{$field_name});
     }
 }
