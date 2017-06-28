@@ -64,7 +64,7 @@ sub _new {
 sub validate {
     my $self = shift || return;
     my $value = shift;
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $field_type = $self->type();
     if (defined($value) && !$value && $self->get('required')) {
@@ -103,8 +103,17 @@ sub displayName {
 
 sub value { 
     my $self = shift || return; 
+    my $params = shift || {};
 
-    return wantarray?@{$self->{data}{value}}:@{$self->{data}{value}}[0]; 
+    my @values;
+    # TODO: Rethink this.  I like the idea of returning an actual object for fields that are references to other 
+    #   objects, but too many things are expecting an an actual id, and then do stuff with that.
+    #if ($self->type() =~/object\[(\d+)\]$/ && !$params->{id_only}) {
+    #    @values = map { new MinorImpact::Object($_); } @{$self->{data}{value}};
+    #} else {
+        @values = @{$self->{data}{value}};
+    #}
+    return wantarray?@values:$values[0]; 
 }
 
 # return a piece of metadata about this field.
@@ -151,7 +160,7 @@ sub formRow {
     my $local_params = cloneHash($params);
 
     my @values = @{$local_params->{value}};
-    @values = $self->value() unless (scalar(@values));
+    @values = $self->value({id_only=>1}) unless (scalar(@values));
     
     my $field_name = $self->displayName();
     my $i = 0;
@@ -216,7 +225,7 @@ sub addField {
 
     my $DB = MinorImpact::getDB() || die "Can't connect to database.";
 
-    my $object_type_id = $params->{object_type_id} || die "No object type id";
+    my $object_type_id = MinorImpact::Object::type_id($params->{object_type_id}) || die "No object type id";
     my $name = $params->{name} || die "Field name can't be blank.";
     my $type = $params->{type} || die "Field type can't be blank.";
 

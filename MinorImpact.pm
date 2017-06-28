@@ -1,14 +1,15 @@
 package MinorImpact;
 
-use DBI;
 use CGI;
-use Time::Local;
-use Data::Dumper;
-use Time::HiRes qw(tv_interval gettimeofday);
-use URI::Escape;
-use Template;
 use Cwd;
+use Data::Dumper;
+use DBI;
 use File::Spec;
+use JSON;
+use Template;
+use Time::HiRes qw(tv_interval gettimeofday);
+use Time::Local;
+use URI::Escape;
 
 use MinorImpact::BinLib;
 use MinorImpact::Config;
@@ -90,13 +91,6 @@ sub new {
 
     #MinorImpact::log(8, "ending");
     return $self;
-}
-
-sub validUser {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    return $self->getUser($params);
 }
 
 sub getUser {
@@ -183,44 +177,6 @@ sub redirect {
     exit;
 }
 
-# return standard page header
-# args:
-#   title - text for the <title> block. defaults to script name.
-#   javascript - code for the <script> block
-#   css - content for the <style> block
-#   other - other miscellaneous output to be added to the <header> block
-sub header {
-    my $self = shift || return;
-    my $args = shift || {};
-    #MinorImpact::log(8, "starting");
-
-    my $title = $args->{title} || '';
-    my $javascript = $args->{javascript} || '';
-    my $css = $args->{css} || '';
-    my $other = $args->{other} || '';
-    my $script_name = $args->{script_name} || scriptName();
-    my $blank = $args->{blank};
-    my $content_type = $args->{content_type} || "text/html";
-    my $template = $args->{template} || 'header';
-
-    unless ($title) {
-        $title = $0;
-        $title =~s/^.+\/([^\/]+).cgi$/$1/;
-        $title = ucfirst($title);
-    }
-
-    MinorImpact::log(3, "getting user");
-    my $user = $self->getUser();
-
-    print qq(Content-type: $content_type\n\n);
-    unless ($args->{blank}) {
-        my $TT = MinorImpact::getTT({template_config_file=>$self->{conf}{default}{template_config_file}});
-        $TT->process($template, {css=>$css, other=>$other, javascript=>$javascript, title=>$title, user=>$user}) || die $TT->error();
-    }
-    #MinorImpact::log(8, "ending");
-    return $header;
-}
-
 sub param {
     my $self = shift || return;
     my $param = shift;
@@ -231,17 +187,6 @@ sub param {
     }
     my $CGI = $self->{CGI};
     return $CGI->param($param);
-}
-
-sub getEntries {
-    my $self = shift || return;
-    my $user = $self->getUser() || return;
-
-    my @entries = ();
-    foreach my $entry_id (Journal::Entry::_search({user_id=>$user->id()})) {
-        push(@entries, new Journal::Entry($entry_id));
-    }
-    return @entries;
 }
 
 sub log {
@@ -297,44 +242,6 @@ sub cache {
         }
     }
     return $value;
-}
-
-# return standard page footer
-sub footer {
-    my $self = shift || return;
-
-    my $user = $self->getUser();
-
-    my $client_ip;
-    if ($user) {
-       $client_ip = MinorImpact::cache({key=>"client_ip:" . $user->id()});
-    } else {
-        $client_ip = $ENV{'REMOTE_ADDR'};
-    }
-
-    my $elapsed = sprintf("%.3f", tv_interval ($self->{starttime}));
-
-    my $footer = <<FOOTER;
-    <div id=footer>
-        $0, $client_ip, ${elapsed}s<br />
-FOOTER
-    foreach my $key (keys %ENV) {
-        #$footer .= "$key='$ENV{$key}'<br />\n";
-    }
-    if (-f "/tmp/debug.log" && $user && $user->isAdmin()) {
-        $footer .= "<pre>\n";
-        $footer .= `tail -n 40 /tmp/debug.log| grep "$$:"`;
-        $footer .= "</pre>\n";
-    }
-    $footer .= <<FOOTER;
-    </div>
-</body>
-FOOTER
-    return $footer;
-}
-
-sub types {
-    return ();
 }
 
 sub checkDatabaseTables {
@@ -484,4 +391,121 @@ sub templateToolkit {
     return $self->getTT();
 }
 
+# TEST: Something I'm thinking about; some of the functionality of cgi scripts can be handled
+#   by the MinorImpact object, reducing code reuse.
+sub cgi {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $script = $params->{script} || 'index';
+
+    if ($params->{script} eq 'login') {
+        $self->cgi_login();
+    } elsif ($script eq 'logout') {
+        $self->cgi_logout();
+    } elsif ($script eq 'object_types') {
+        $self->cgi_object_types();
+    }
+    return;
+
+    my $user = $self->getUser();
+    my $CGI = $self->getCGI();
+    my $script_name = MinorImpact::scriptName();
+    my $TT = $self->getTT();
+
+    my $action = $CGI->param('action') || $CGI->param('a') || "view";
+    my $tab_id = $CGI->param('tab_id') || 0;
+    my $object_id = $CGI->param('id') || $CGI->param('object_id');
+    my $cookie_object_id = $CGI->cookie("object_id");
+    my $type_id = $CGI->param('type_id');
+    my $format = $CGI->param('format') || 'html';
+
+
+    if ($action eq 'view' && $object_id) {
+        my $view_params = {tab_id=>$tab_id, object=>new MinorImapct::Object($object_id)};
+        if ($params->{view}) {
+           &{$params->{view}}->($view_params);
+        } else {
+            cgi_view($view_params);
+        }
+    }
+}
+
+sub cgi_login {
+    my $self = shift || return;
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+    
+    my $username = $CGI->param('username');
+    my $redirect = $CGI->param('redirect');
+    
+    my $user = $self->getUser();
+    if ($user) {
+        $self->redirect();
+    }
+    
+    $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
+}
+
+sub cgi_logout {
+    my $self = shift || return;
+
+    my $CGI = $self->getCGI();
+
+    my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
+    my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
+    print $CGI->header(-cookie=>$object_cookie, -cookie=>$user_cookie, -location=>"login.cgi");
+}
+
+sub cgi_object_types {
+    my $self = shift || return;
+
+    print "Content-type: text/plain\n\n";
+    my @json;
+    foreach my $object_type (@{MinorImpact::Object::types()}) {
+        push(@json, {id=>$object_type->{id}, name=>$object_type->{name}});
+    }
+    print to_json(\@json);
+}
+
+
+sub cgi_view {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $user = $self->getUser();
+    my $object = $params->{object} || return;
+    my $tab_id = $params->{tab_id} || 0;
+    my $error = $oarams->{error};
+
+        my $tab_number = 0;
+
+        # TODO: figure out some way for these to be alphabetized
+        foreach my $child_type_id ($object->getChildTypes()) {
+            last if ($child_type_id == $tab_id);
+            $tab_number++;
+        }
+
+        my $javascript = <<JAVASCRIPT;
+        \$(function () {
+            \$("#tabs").tabs({
+                active: $tab_number,
+                beforeLoad: function( event, ui ) {
+                    ui.panel.html("<div>Loading...</div>");
+                }
+            });
+        });
+JAVASCRIPT
+
+        $TT->process('index', {javascript=>$javascript,
+                                user=>$user,
+                                projects=>[@projects],
+                                project=>$project,
+                                object=>$object,
+                                error=>$error,
+                                tab_number=>$tab_number,
+                                }) || die $TT->error();
+
+}
 1;
