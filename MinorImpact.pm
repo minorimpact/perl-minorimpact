@@ -12,6 +12,7 @@ use Time::Local;
 use URI::Escape;
 
 use MinorImpact::BinLib;
+use MinorImpact::CGI;
 use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
@@ -399,113 +400,15 @@ sub cgi {
 
     my $script = $params->{script} || 'index';
 
-    if ($params->{script} eq 'login') {
-        $self->cgi_login();
+    if ($script eq 'index') {
+        MinorImpact::CGI::index($self, $params);
+    } elsif ($script eq 'login') {
+        MinorImpact::CGI::login($self);
     } elsif ($script eq 'logout') {
-        $self->cgi_logout();
+        MinorImpact::CGI::logout($self);
     } elsif ($script eq 'object_types') {
-        $self->cgi_object_types();
-    }
-    return;
-
-    my $user = $self->getUser();
-    my $CGI = $self->getCGI();
-    my $script_name = MinorImpact::scriptName();
-    my $TT = $self->getTT();
-
-    my $action = $CGI->param('action') || $CGI->param('a') || "view";
-    my $tab_id = $CGI->param('tab_id') || 0;
-    my $object_id = $CGI->param('id') || $CGI->param('object_id');
-    my $cookie_object_id = $CGI->cookie("object_id");
-    my $type_id = $CGI->param('type_id');
-    my $format = $CGI->param('format') || 'html';
-
-
-    if ($action eq 'view' && $object_id) {
-        my $view_params = {tab_id=>$tab_id, object=>new MinorImapct::Object($object_id)};
-        if ($params->{view}) {
-           &{$params->{view}}->($view_params);
-        } else {
-            cgi_view($view_params);
-        }
+        MinorImpact::CGI::object_types($self);
     }
 }
 
-sub cgi_login {
-    my $self = shift || return;
-
-    my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
-    
-    my $username = $CGI->param('username');
-    my $redirect = $CGI->param('redirect');
-    
-    my $user = $self->getUser();
-    if ($user) {
-        $self->redirect();
-    }
-    
-    $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
-}
-
-sub cgi_logout {
-    my $self = shift || return;
-
-    my $CGI = $self->getCGI();
-
-    my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
-    my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
-    print $CGI->header(-cookie=>$object_cookie, -cookie=>$user_cookie, -location=>"login.cgi");
-}
-
-sub cgi_object_types {
-    my $self = shift || return;
-
-    print "Content-type: text/plain\n\n";
-    my @json;
-    foreach my $object_type (@{MinorImpact::Object::types()}) {
-        push(@json, {id=>$object_type->{id}, name=>$object_type->{name}});
-    }
-    print to_json(\@json);
-}
-
-
-sub cgi_view {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    my $user = $self->getUser();
-    my $object = $params->{object} || return;
-    my $tab_id = $params->{tab_id} || 0;
-    my $error = $oarams->{error};
-
-        my $tab_number = 0;
-
-        # TODO: figure out some way for these to be alphabetized
-        foreach my $child_type_id ($object->getChildTypes()) {
-            last if ($child_type_id == $tab_id);
-            $tab_number++;
-        }
-
-        my $javascript = <<JAVASCRIPT;
-        \$(function () {
-            \$("#tabs").tabs({
-                active: $tab_number,
-                beforeLoad: function( event, ui ) {
-                    ui.panel.html("<div>Loading...</div>");
-                }
-            });
-        });
-JAVASCRIPT
-
-        $TT->process('index', {javascript=>$javascript,
-                                user=>$user,
-                                projects=>[@projects],
-                                project=>$project,
-                                object=>$object,
-                                error=>$error,
-                                tab_number=>$tab_number,
-                                }) || die $TT->error();
-
-}
 1;

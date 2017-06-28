@@ -1,5 +1,3 @@
-Content-type: text/html
-
 [% INCLUDE header %]
     <form method=POST>
         <input type=hidden name=redirect value='[% redirect %]'>

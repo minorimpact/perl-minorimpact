@@ -1,0 +1,10 @@
+[% INCLUDE header %]
+
+[% IF object %]
+    <a class='back' href=index.cgi?id=[% object.id() %]>back</a>
+[% END %]
+<span class=object_name>New [% type_name %]</span>
+
+[% form %]
+
+[% INCLUDE footer %]

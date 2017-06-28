@@ -186,7 +186,6 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
-
     #if (!$fields) {
     #   dumper($fields);
     #}
@@ -216,8 +215,8 @@ sub update {
 
     my $fields = $self->fields();
     #print "Content-type: text/html\n\n";
-    dumper($fields);
-    dumper($params);;
+    #dumper($fields);
+    #dumper($params);;
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
@@ -320,9 +319,13 @@ sub getType {
             # If type isn't specified, return the first 'toplevel' object, something that no other object
             # references.
             my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
-            my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
-            #MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
-            $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
+            if (scalar(@$nextlevel) > 0) {
+                my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
+                #MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
+                $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
+            } else {
+                $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
+            }
         } elsif ($type_id !~/^\d+$/) {
             # If someone passes the string name of the type, figure that out for them.
             my $singular = $type_id;
@@ -612,9 +615,9 @@ sub getChildren {
     foreach my $row (@$data) {
         next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
-        foreach my $r2 (@{$self->{DB}->selectall_arrayref("SELECT object_data.object_id, object_field.object_type_id
-            FROM object_data, object_field
-            WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?", {Slice=>{}}, ($row->{id}, $self->id()))}) {
+        my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";
+        MinorImpact::log(8, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
+        foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($local_params->{id_only}) {
                 #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
                 push(@children, $r2->{object_id});

@@ -1,6 +1,6 @@
-[% INCLUDE header %]
+Content-type: text/html
 
-<div id=list_menu><a href=index.cgi?type_id=[% type_id %]&a=add>Add [% type_name %]</a></div>
+<!-- default.tablist -->
 <table class=list>
 [% FOREACH o IN objects %]
     <tr>
@@ -8,5 +8,3 @@
     </tr>
 [% END %]
 </table>
-
-[% INCLUDE footer %]

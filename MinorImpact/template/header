@@ -1,6 +1,9 @@
+Content-type: text/html
+
 <!DOCTYPE html>
+<!-- defult header -->
 <head>
-    <title>[% title %]</title>
+    <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
     <link rel="stylesheet" type="text/css" href="/minorimpact.css">
     <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
     <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.structure.css">
@@ -22,6 +25,7 @@
         [% javascript %]
     </script>
     [% END %]
+    [% INCLUDE header_libraries %]
 </head>
 <body>
     <div id=header>
@@ -30,7 +34,9 @@
             <td valign=top>
         <div id=section_menu>
     [% IF user %]
-                <a href=$script_name>Home</a>
+        [% IF script_name %]
+            <a href=[% script_name %]>Home</a>
+        [% END %]
         [% IF user.isAdmin %]
                 <a href=/cgi-bin/object_admin.cgi>Admin</a>
         [% END %]
@@ -54,4 +60,5 @@
         </tr>
         </table>
     </div> <!-- header -->
+
     [% INCLUDE error %]
