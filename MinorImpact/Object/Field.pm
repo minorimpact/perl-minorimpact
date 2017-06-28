@@ -64,6 +64,7 @@ sub _new {
 sub validate {
     my $self = shift || return;
     my $value = shift;
+    MinorImpact::log(7, "starting");
 
     my $field_type = $self->type();
     if (defined($value) && !$value && $self->get('required')) {
@@ -75,6 +76,8 @@ sub validate {
 sub addValue {
     my $self = shift || return;
     my $data = shift || return;
+    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(8, "$data->{name}='$data->{value}'");
     
     $self->{data}{data_id} = $data->{id};
     $self->{data}{name} = $data->{name};

@@ -1,0 +1,11 @@
+Content-type: text/html
+
+<div id=list_menu><a href=index.cgi?type_id=[% type_id %]&a=add>Add [% object.typeName({object_type_id=>type_id, singular=>1}) %]</a></div>
+<table class=list>
+[%# FOREACH o IN object.getChildren({object_type_id=>type_id, sort=>0}) %]
+[% FOREACH o IN objects %]
+    <tr>
+        <td>[% o.toString({script_name=>"index.cgi"}) %]</td>
+    </tr>
+[% END %]
+</table>

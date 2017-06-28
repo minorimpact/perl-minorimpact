@@ -29,7 +29,7 @@ sub new {
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
         $object = $type_name->new($id) if ($type_name);
     };
-    #MinorImpact::log(1, $@) if ($@);
+    #MinorImpact::log(1, "id='$id',error:$@") if ($@);
     if ($@ =~/^error:/) {
         my $error = $@;
         $error =~s/ at \/.*$//;
@@ -197,9 +197,9 @@ sub validateFields {
     die "No fields to validate." unless ($fields);
     die "No parameters to validate." unless($params);
 
-    foreach my $field_name (keys %$fields) {  
+    foreach my $field_name (keys %$params) {  
         my $field = $fields->{$field_name};
-        $params->{$field_name} = '' unless (exists($params->{$field_name}));;
+        next unless ($field);
         $field->validate($params->{$field_name});
     }
 }
@@ -208,19 +208,21 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
-    #$self->log(7, "starting");
+    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(8, "id='" . $self->id() . "'");
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($params->{'description'}, $self->id())) if (defined($params->{description}));
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     my $fields = $self->fields();
     #print "Content-type: text/html\n\n";
-    #print Dumper $fields;
-    #print Dumper $params;
+    dumper($fields);
+    dumper($params);;
     validateFields($fields, $params);
 
-    foreach my $field_name (keys %$fields) {
+    foreach my $field_name (keys %$params) {
         my $field = $fields->{$field_name};
+        next unless ($field);
         my $field_type = $field->type();
         if (defined $params->{$field_name}) {
             $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
@@ -393,6 +395,8 @@ sub _reload {
     my $object_id = shift || $self->id();
 
     #MinorImpact::log(7, "starting");
+    #MinorImpact::log(8, "object_id='$object_id'");
+         
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     undef($self->{object_data});
 
@@ -401,6 +405,7 @@ sub _reload {
     my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
     foreach my $row (@$data) {
         if ($self->{object_data}->{$row->{name}}) {
+
             $self->{object_data}->{$row->{name}}->addValue($row);
         }
     }
@@ -866,7 +871,7 @@ FORM
     </form>
 FORM
 
-    $form = "<script>$script</script>$form";
+    $form = "<script>$script</script>$form(" . ref($self) . ")";
     #MinorImpact::log(7, "ending");
     return $form;
 }
