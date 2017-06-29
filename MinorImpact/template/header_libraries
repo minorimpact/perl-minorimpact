@@ -17,7 +17,8 @@
                     var data = \$(this).data('data');
                     var object_text_id = \$(this).data('object_text_id');
                     var object_id = \$("#object_id").val();
-                    var url = "/cgi-bin/add_reference.cgi?object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + data;
+                    var url = "/cgi-bin/add_reference.cgi?object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + encodeURI(data);
+                    //alert(url);
                     \$.get(url, function(data, status){
                         \$( "#reference_add-dialog" ).dialog("close");
                         window.location.reload(true);

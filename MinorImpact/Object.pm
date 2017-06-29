@@ -175,7 +175,7 @@ sub get {
     }
     if (defined($self->{object_data}->{$name})) {
         my @value = $self->{object_data}->{$name}->value();
-        #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
+        MinorImpact::log(8,"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
             if ($params->{markdown}) {
                 $value =  markdown($value);
@@ -693,20 +693,20 @@ sub toString {
                     }
                 }
             } elsif ($type =~/text$/) {
-                foreach my $value ($field->toString()) {
+                foreach my $val ($field->toString()) {
                     my $id = $field->id();
                     my $references = $self->getReferences($id);
                     foreach my $ref (@$references) {
                         my $test_data = $ref->{data};
                         $test_data =~s/\W/ /gm;
                         $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
-                        if ($value =~/($test_data)/mgi) {
+                        if ($val =~/($test_data)/mgi) {
                             my $match = $1;
                             my $url = "$script_name?id=" . $ref->{object_id};
-                            $value =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
+                            $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
                         }
                     }
-                    $value = "<div onmouseup='getSelectedText($id);'>$value</div>\n";
+                    $value .= "<div onmouseup='getSelectedText($id);'>$val</div>\n";
                 }
             } else {
                 $value = $field->toString();
