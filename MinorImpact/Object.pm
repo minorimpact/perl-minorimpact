@@ -612,6 +612,7 @@ sub getChildTypes {
     #MinorImpact::log(7, "ending");
     return @childTypes;
 }
+
 sub getChildren {
     my $self = shift || return;
     my $params = shift || {};
@@ -620,7 +621,7 @@ sub getChildren {
     my $local_params = cloneHash($params);
     $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
 
-    my @results;
+    my @children;
     my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
@@ -629,23 +630,22 @@ sub getChildren {
         MinorImpact::log(8, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
         foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($local_params->{id_only}) {
-                #push(@{$results->{$r2->{object_type_id}}}, $r2->{object_id});
-                push(@results, $r2->{object_id});
+                #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
+                push(@children, $r2->{object_id});
             } else {
-                #push(@{$results->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
+                #push(@{$children->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
                 #MinorImpact::log(8, "\$r2->{object_id}='" . $r2->{object_id} . "'");
-                push(@results, new MinorImpact::Object($r2->{object_id}));
+                push(@children, new MinorImpact::Object($r2->{object_id}));
             }
         }
         #MinorImpact::log(8, "found " . scalar(@results) . " so far");
     }
 
-    my @children;
     if ($local_params->{sort}) {
         if ($local_params->{id_only}) {
-            @children = sort @results;
+            @children = sort @children;
         } else {
-            @children = sort {$a->cmp($b); } @results;
+            @children = sort {$a->cmp($b); } @children;
         }
     }
     #MinorImpact::log(8, "returning " . scalar(@children));
