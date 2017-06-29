@@ -1,0 +1,8 @@
+<tr>
+    <td class=fieldname>
+        [% name %]
+    </td>
+    <td>
+        [% value %]
+    </td>
+</tr>

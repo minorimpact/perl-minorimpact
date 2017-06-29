@@ -12,8 +12,7 @@ sub new {
     my $package = shift || return;
     my $id = shift || return;
 
-    #MinorImpact::log(7, "starting");
-
+    #MinorImpact::log(7, "starting(" . $id . ")");
     my $DB = MinorImpact::getDB();
     my $object;
 
@@ -50,7 +49,7 @@ sub _new {
     my $self = {};
     bless($self, $package);
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting(" . $params . ")");
     #MinorImpact::log(8, "package='$package'");
     my $type_name = lc($package);
     if ($type_name && !$params->{type_id}) {
@@ -169,16 +168,21 @@ sub get {
     my $name = shift || return;
     my $params = shift || {};
 
+    my @values;
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     if (defined($self->{data}->{$name})) {
        return $self->{data}->{$name};
     }
     if (defined($self->{object_data}->{$name})) {
-        my $value = $self->{object_data}->{$name}->value();
-        if ($params->{markdown}) {
-            return markdown($value);
-        } else {
-            return $value;
+        my @value = $self->{object_data}->{$name}->value();
+        #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
+        foreach my $value (@value) {
+            if ($params->{markdown}) {
+                $value =  markdown($value);
+            }
+            push(@values, $value);
         }
+        return wantarray?@values:$values[0];
     }
 }   
 
@@ -207,8 +211,7 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(8, "id='" . $self->id() . "'");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($params->{'description'}, $self->id())) if (defined($params->{description}));
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
@@ -230,6 +233,7 @@ sub update {
                 if ($field_type =~/text$/ || $field_type eq 'url') {
                     $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 } else {
+                    MinorImpact::log(8, "$field_name='$value'");
                     #MinorImpact::log(8, "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW()) (" . $self->id() . ", " . $field->get('object_field_id') . ", $value)");
                     $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 }
@@ -397,8 +401,7 @@ sub _reload {
     my $self = shift || return;
     my $object_id = shift || $self->id();
 
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(8, "object_id='$object_id'");
+    #MinorImpact::log(7, "starting(" . $object_id . ")");
          
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     undef($self->{object_data});
@@ -475,7 +478,7 @@ sub _search {
     my @fields;
 
     $select .= $params->{select} if ($params->{select});
-    $where .= $params->{where} if ($params->{where});
+    $where .= " AND " . $params->{where} if ($params->{where});
 
     foreach my $param (keys %$params) {
         next if ($param =~/^(id_only|sort|limit|page)$/);
@@ -545,11 +548,18 @@ sub search {
     #MinorImpact::log(7, "starting");
 
     my $local_params = cloneHash($params);
+    # TODO: Right now you can only search for things that belong to the currently logged in
+    #   user.  That's not usefull in the long run.
     if (!$local_params->{user_id}) {
         my $user = $MinorImpact::SELF->getUser();
         $local_params->{user_id} = $user->id() || redirect("index.cgi");
     }
     my @ids = _search($local_params);
+    # TODO: There's no sorting or type tree or pagination allowed if someone just wants a raw list
+    #   of IDs.  Does it make sense to change things?  Is it more likely they're going to do this
+    #   on their own if they're that type of consumer?  Is it logical to say "you can't sort them
+    #   unless you also want the overhead of  creating the full object;  you can't have your cake
+    #   and eat it too."
     return @ids if ($params->{id_only});
     my @objects;
     foreach my $id (@ids) {
@@ -606,11 +616,11 @@ sub getChildren {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $local_params = cloneHash($params);
     $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
 
-    my @children;
+    my @results;
     my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
@@ -619,26 +629,37 @@ sub getChildren {
         MinorImpact::log(8, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
         foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($local_params->{id_only}) {
-                #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
-                push(@children, $r2->{object_id});
+                #push(@{$results->{$r2->{object_type_id}}}, $r2->{object_id});
+                push(@results, $r2->{object_id});
             } else {
-                #push(@{$children->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
-                push(@children, new MinorImpact::Object($r2->{object_id}));
+                #push(@{$results->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
+                #MinorImpact::log(8, "\$r2->{object_id}='" . $r2->{object_id} . "'");
+                push(@results, new MinorImpact::Object($r2->{object_id}));
             }
         }
+        #MinorImpact::log(8, "found " . scalar(@results) . " so far");
     }
 
+    my @children;
     if ($local_params->{sort}) {
         if ($local_params->{id_only}) {
-            @children = sort @children;
+            @children = sort @results;
         } else {
-            @children = sort {$a->cmp($b); } @children;
+            @children = sort {$a->cmp($b); } @results;
         }
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log(8, "returning " . scalar(@children));
     return @children;
 }
 
+# Renders an object to a string in a specified format.
+#
+# Parameters
+#   format
+#     'column': Standard full page representation.
+#     'json': JSON data object.
+#     'text': straight text, no markup; similar to $object->name().
+#     'row': a horizontal represenation, in cells.
 sub toString {
     my $self = shift || return;
     my $params = shift || {};
@@ -647,7 +668,7 @@ sub toString {
     my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
 
     my $MINORIMPACT = new MinorImpact();
-    my $tt = $MINORIMPACT->templateToolkit();
+    my $TT = $MINORIMPACT->getTT();
 
     my $string = '';
     if ($params->{column}) { $params->{format} = "column";
@@ -663,12 +684,12 @@ sub toString {
             #MinorImpact::log(7, "processing $name");
             my $type = $field->type();
             next if ($field->get('hidden'));
-            $string .= "<tr><td class=fieldname>" . $field->displayName() . "</td><td>";
+            my $value;
             if ($type =~/object\[(\d+)\]$/) {
-                foreach my $value ($field->value()) {
-                    if ($value && $value =~/^\d+/) {
-                        my $o = new MinorImpact::Object($value);
-                        $string .= $o->toString();
+                foreach my $v ($field->value()) {
+                    if ($v && $v =~/^\d+/) {
+                        my $o = new MinorImpact::Object($v);
+                        $value .= $o->toString() if ($o);
                     }
                 }
             } elsif ($type =~/text$/) {
@@ -685,13 +706,16 @@ sub toString {
                             $value =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
                         }
                     }
-                    $string .= "<div onmouseup='getSelectedText($id);'>$value</div>\n";
+                    $value = "<div onmouseup='getSelectedText($id);'>$value</div>\n";
                 }
             } else {
-                $string .= $field->toString();
+                $value = $field->toString();
             }
-            $string .= "</td></tr>\n";
+            my $row;
+            $TT->process('field_column', {name=>$field->displayName(), value=>$value}, \$row) || die $TT->error();
+            $string .= $row;
         }
+        $string .= "<!-- CUSTOM -->\n";
         $string .= "</table>\n";
 
         # Don't display children by default.  Will look into add the tabbed
@@ -734,7 +758,7 @@ sub toString {
         $string = $self->name();
     } else {
         my $template = $params->{template} || 'object';
-        $tt->process('object', { object=> $self}, \$string) || die $tt->error();
+        $TT->process('object', { object=> $self}, \$string) || die $TT->error();
         #$string .= "<a href='$script_name?id=" . $self->id() . "'>" . $self->name() . "</a>";
     }
     #$self->log(7, "ending");

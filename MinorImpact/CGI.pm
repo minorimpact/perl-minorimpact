@@ -9,35 +9,38 @@ sub index {
     my $self = shift || return;
     my $params = shift || {};
 
-        my $user = $self->getUser();
-        my $TT = $self->getTT();
-        my $CGI = $self->getCGI();
-        my $script_name = MinorImpact::scriptName();
+    my $user = $self->getUser();
+    my $TT = $self->getTT();
+    my $CGI = $self->getCGI();
+    my $script_name = MinorImpact::scriptName();
 
-        my $action = $CGI->param('action') || $CGI->param('a') || "list";
-        my $tab_id = $CGI->param('tab_id') || 0;
-        my $object_id = $CGI->param('id') || $CGI->param('object_id');
-        my $last_object_id = $CGI->cookie("object_id");
-        my $type_id = $CGI->param('type_id');
-        my $format = $CGI->param('format') || 'html';
+    my $action = $CGI->param('action') || $CGI->param('a') || "list";
+    my $tab_id = $CGI->param('tab_id') || 0;
+    my $object_id = $CGI->param('id') || $CGI->param('object_id');
+    my $last_object_id = $CGI->cookie("object_id");
+    my $type_id = $CGI->param('type_id');
+    my $format = $CGI->param('format') || 'html';
 
-        my $object;
-        my $error;
+    my $object;
+    my $error;
 
-        $object = new MinorImpact::Object($object_id) if ($object_id);
+    $object = new MinorImpact::Object($object_id) if ($object_id);
+    $action = "view" if ($action eq "list" && $object);
 
-        if ($CGI->param('submit')) {
-            my $params = $CGI->Vars;
-            if ($action eq 'add') {
-                $params->{user_id} = $user->id();
-                #my $type_name = $type->name();
-                #$object = $type_name->new($params);
-                $params->{type_id} = $type_id;
-                eval {
-                    $object = new MinorImpact::Object($params);
-                };
-                $error = $@ if ($@);
+    if ($CGI->param('submit')) {
+        my $params = $CGI->Vars;
+        if ($action eq 'add') {
+            MinorImpact::log(8, "submitted action eq 'add'");
+            $params->{user_id} = $user->id();
+            #my $type_name = $type->name();
+            #$object = $type_name->new($params);
+            $params->{type_id} = $type_id;
+            eval {
+                $object = new MinorImpact::Object($params);
+            };
+            $error = $@ if ($@);
             } elsif ($action eq 'edit') {
+                MinorImpact::log(8, "submitted action eq 'edit'");
                 eval {
                     $object->update($params);
                 };
@@ -47,7 +50,15 @@ sub index {
                 $self->redirect("$script_name?id=" . $object->id());
             }
         }
-        if ($action eq 'add') {
+        if ($params->{actions}{$action}) {
+            my $local_params = {}; #cloneHash($params);
+            $local_params->{tab_id} = $tab_id;
+            $local_params->{object} = $object;
+            $local_params->{type_id} = $type_id;
+            $local_params->{format} = $format;
+            my $sub = $params->{actions}{$action};
+            return $sub->($self, $local_params);
+        } elsif ($action eq 'add') {
             my $form;
             $type_id ||= MinorImpact::Object::getType();
             my $type_name = MinorImpact::Object::typeName({object_type_id=>$type_id});
@@ -95,17 +106,15 @@ sub index {
                                     }) || die $TT->error();
         } elsif ($object) { # $action eq 'view'
             # Display one particular object.
-            my $view_params = {tab_id=>$tab_id, object=>$object};
-            if ($params->{view}) {
-                return &{$params->{view}}->($view_params);
-            }
             my $tab_number = 0;
+            MinorImpact::log(8, "action eq 'view'");
 
             # TODO: figure out some way for these to be alphabetized
             foreach my $child_type_id ($object->getChildTypes()) {
                 last if ($child_type_id == $tab_id);
                 $tab_number++;
             }
+            MinorImpact::log(8, "action eq 'view'");
 
             my $javascript = <<JAVASCRIPT;
             \$(function () {
@@ -118,6 +127,7 @@ sub index {
             });
 JAVASCRIPT
 
+            MinorImpact::log(8, $object->name());
             $TT->process('index', {
                                     error=>$error,
                                     javascript=>$javascript,
@@ -126,14 +136,10 @@ JAVASCRIPT
                                     tab_number=>$tab_number,
                                     user=>$user,
                                 }) || die $TT->error();
+            MinorImpact::log(8, $object->name());
         } else { # $action eq 'list'
             # Show all the objects of a certain type, or the default type.
             $type_id ||= MinorImpact::Object::getType();
-            if ($params->{list}) {
-                my $list_params = {type_id=>$type_id, format=>$format};
-                my $list = $params->{list};
-                return $list->($self, $list_params);
-            }
             my @objects = MinorImpact::Object::search({object_type_id=>$type_id, sort=>1});
             if (scalar(@objects) == 0) {
                 $self->redirect("$script_name?a=add&type_id=$type_id");
