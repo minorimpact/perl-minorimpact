@@ -63,6 +63,7 @@ sub new {
         }
         $self->{CGI} = new CGI;
         $self->{conf} = $config;
+        $slf->{conf}{default}{home_script} ||= "index.cgi";
 
         $SELF = $self;
         $self->{starttime} = [gettimeofday];
