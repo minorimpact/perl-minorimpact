@@ -1,0 +1,22 @@
+[% INCLUDE header title="Tags" %]
+
+<form>
+Search: <input type=text name=search_tag value='[% search_tag %]'><input type=submit value='search'>
+</form>
+[%#    if ($search_tag) {
+        my $objects = MinorImpact::Object::search({tag=>$search_tag, type_tree=>1});
+%]
+<table class='list view'>
+[% FOREACH type_id IN objects.keys %]
+    [% FOREACH object IN objects.$type_id %]
+        <tr>
+            <td class=fieldname> [% IF loop.first %] [% object.typeName({object_type_id=>type_id, plural=>1}) %] [% END %]</td>
+            <td> [% object.toString() %] </td>
+        </tr>
+    [% END %]
+[% END %]
+</table>
+
+[% INCLUDE footer %]
+
+

@@ -1,0 +1,23 @@
+[% INCLUDE header %]
+
+<form>
+    Search: <input type=text name=search value='[% search %]'><input type=submit value='search'>
+</form>
+[% IF search %]
+    <table class=list>
+    [% FOREACH type IN objects.keys %]
+        [% FOREACH object IN objects.$type %]
+            <tr><td>
+                [% IF loop.first %]
+                    [% typeName(type) %]
+                [% END %]
+            </td><td>[% object.toString() %]</td></tr>
+        [% END %]
+    [% END %]
+    </table>
+[% ELSE %]
+    No results
+[% END %]
+
+[% INCLUDE footer %]
+

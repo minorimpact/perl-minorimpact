@@ -206,6 +206,43 @@ sub object_types {
     print to_json(\@json);
 }
 
+sub search {
+    my $MINORIMPACT = shift || return;
+
+    my $user = $MINORIMPACT->getUser();
+    my $CGI = $MINORIMPACT->getCGI();
+    my $TT = $MINORIMPACT->getTT();
+
+    my $project_id = $CGI->param('project_id');
+    my $object_id = $CGI->param('object_id') || $CGI->cookie('object_id');
+
+    my $search = $CGI->param('search');
+
+    my $objects = MinorImpact::Object::search({text=>$search, type_tree=>1, sort=>1});
+    $TT->process('search', {
+                            objects=>$objects,
+                            user=>$user,
+                            search=>$search,
+                            typeName => sub { MinorImpact::Object::typeName(@_, {plural=>1}) },
+                        }) || die $TT->error();
+}
+
+sub tags {
+    my $MINORIMPACT = shift || return;
+
+    my $user = $MINORIMPACT->getUser();
+    my $CGI = $MINORIMPACT->getCGI();
+    my $TT = $MINORIMPACT->getTT();
+
+    my $search_tag = $CGI->param('search_tag');
+
+    my $objects;
+    if ($search_tag) {
+        $objects = MinorImpact::Object::search({tag=>$search_tag, type_tree=>1});
+    }
+    $TT->process('tags', {objects=>$objects, search_tag=>$search_tag, user=>$user}) || die $TT->error();
+}
+
 sub user {
     my $MI = shift || return;
 
