@@ -137,6 +137,10 @@ JAVASCRIPT
                                     user=>$user,
                                 }) || die $TT->error();
             MinorImpact::log(8, $object->name());
+        } elsif ( $action eq 'logout' ) {
+            logout($self);
+        } elsif ($action eq 'user' ) {
+            user($self);
         } else { # $action eq 'list'
             # Show all the objects of a certain type, or the default type.
             $type_id ||= MinorImpact::Object::getType();
@@ -202,6 +206,16 @@ sub object_types {
     print to_json(\@json);
 }
 
+sub user {
+    my $MI = shift || return;
+
+    my $user = $MI->getUser();
+    my $TT = $MI->getTT();
+
+    $TT->process('user', {
+                            user=>$user,
+                        }) || die $TT->error();
+}
 
 sub view {
     my $self = shift || return;

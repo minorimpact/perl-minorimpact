@@ -1,7 +1,7 @@
 Content-type: text/html
 
 <!DOCTYPE html>
-<!-- defult header -->
+<!-- default header -->
 <head>
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
     <link rel="stylesheet" type="text/css" href="/minorimpact.css">
@@ -32,33 +32,20 @@ Content-type: text/html
         <table width=100%>
         <tr>
             <td valign=top>
-        <div id=section_menu>
-    [% IF user %]
-        [% IF script_name %]
-            <a href=[% script_name %]>Home</a>
-        [% END %]
-        [% IF user.isAdmin %]
-                <a href=/cgi-bin/object_admin.cgi>Admin</a>
-        [% END %]
-    [% END %]
-        </div> <!-- section_menu -->
-        </td>
-        <td valign=top>
-        <div id=user_menu>
-    [% IF user %]
-            <table>
-                <tr>
-                    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search value='[% search %]'></form></td>
-                    <td valign=top><a href="user.cgi?user_id=[% user.id %]">[% user.get('name') %]</a><a href=logout.cgi>Logout</a></td>
-                </tr>
-            </table>
-    [% ELSE %]
-            <a href=login.cgi>Log In</a>
-    [% END %]
-        </div> <!-- user_menu -->
-        </td>
+                <div id=section_menu>
+                    [% IF script_name %]
+                        <a href=[% script_name %]>Home</a>
+                    [% END %]
+                    [% INCLUDE header_links_site %]
+                </div> <!-- section_menu -->
+            </td>
+            <td valign=top>
+                <div id=user_menu>
+                [% INCLUDE header_links_user %]
+                </div> <!-- user_menu -->
+            </td>
         </tr>
         </table>
-    </div> <!-- header -->
+    </div> 
 
     [% INCLUDE error %]

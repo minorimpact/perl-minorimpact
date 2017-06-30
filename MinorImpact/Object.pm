@@ -175,7 +175,7 @@ sub get {
     }
     if (defined($self->{object_data}->{$name})) {
         my @value = $self->{object_data}->{$name}->value();
-        MinorImpact::log(8,"$name='" . join(",", @value) . "'");
+        #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
             if ($params->{markdown}) {
                 $value =  markdown($value);

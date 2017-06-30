@@ -408,6 +408,8 @@ sub cgi {
         MinorImpact::CGI::logout($self);
     } elsif ($script eq 'object_types') {
         MinorImpact::CGI::object_types($self);
+    } elsif ($script eq 'user') {
+        MinorImpact::CGI::user($self);
     }
 }
 
