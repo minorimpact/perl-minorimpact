@@ -1,8 +1,9 @@
 Content-type: text/html
 
 <!DOCTYPE html>
-<!-- default header -->
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
 <head>
+    <!-- default header -->
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
     <link rel="stylesheet" type="text/css" href="/minorimpact.css">
     <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
