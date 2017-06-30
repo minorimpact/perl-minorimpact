@@ -33,6 +33,7 @@ GetOptions( \%options,
             "force|f",
             "help|?|h",
             "password|p=s",
+            "plural=s",
             "type|type_id|t=s",
             "user|u=s",
             "verbose",
@@ -58,6 +59,8 @@ sub main {
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
     my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
     die $user->name() . " does not have admin priviledges" unless ($user->isAdmin());
+    my $DB = $MINORIMPACT->getDB();
+    MinorImpact::checkDatabaseTables($DB);
 
 
     # Just change the action from list to info if someone specifies a type - ou
@@ -99,6 +102,17 @@ sub main {
         $params->{readonly} = $options{"field-readonly"};
         $params->{sortby} = $options{"field-sortby"};
         MinorImpact::Object::Field::addField($params);
+    } elsif ($options{action} eq 'addtype') {
+        my $type = $options{type};
+        my $type_id = MinorImpact::Object::type_id($type);
+        die "$type already exists." if ($type_id);
+
+
+        my $name = $options{type};
+        my $plural = $options{plural} ||"${name}s";
+
+        $DB->do("INSERT INTO object_type (name, plural, create_date) VALUES (?, ?, NOW())", undef, ($name, $plural)) || die $DB->errstr;
+
     } elsif ($options{action} eq 'delfield') {
         my $type_id = MinorImpact::Object::type_id($options{type}) || die "Can't get id for $options{type}";
         my $type_name = MinorImpact::Object::typeName($type_id);
@@ -158,6 +172,7 @@ type.pl [options]
   Options:
   -a, --action=ACTION   Perform ACTION.  default: list
                         Actions:
+                            addtype     Create a new TYPE.
                             addfield    Add a new field FIELDNAME to TYPE. See "Field options" below.
                             delfield    Delete field FIELDNAME from TYPE.
                             info        Show information about TYPE.
@@ -166,12 +181,14 @@ type.pl [options]
   -c, --config=FILE     Read connection information from FILE.
   -f, --force           Never request conformation.
   -h, --help            Usage information.
-  -i, --id=ID           ID of the object you want to take action on.
   -t, --type=TYPE       Work with TYPE object definition.
   -p, --password=PASSWORD
                         Connect with PASSWORD.  Will prompt if not specified.
   -u, --user=USER       Connect as USER.  default: $ENV{USER}
   -v, --verbose         Verbose output.
+
+  Type options:
+      --plural          The plural form of TYPE.
 
   Field options:
       --field-name=FIELDNAME
