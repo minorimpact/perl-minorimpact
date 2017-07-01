@@ -208,6 +208,9 @@ sub object_types {
 
 sub search {
     my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $local_params = cloneHash($params);
 
     my $user = $MINORIMPACT->getUser();
     my $CGI = $MINORIMPACT->getCGI();
@@ -219,7 +222,13 @@ sub search {
 
     my $search = $CGI->param('search');
 
-    my $objects = MinorImpact::Object::search({text=>$search, type_tree=>1, sort=>1});
+    my $objects;
+    if ($search) {
+        $local_params->{text} = $search;
+        $local_params->{type_tree} = 1;
+        $local_params->{sort} = 1;
+        $objects = MinorImpact::Object::search($local_params);
+    }
     $TT->process('search', {
                             objects=>$objects,
                             search=>$search,
@@ -229,7 +238,9 @@ sub search {
 
 sub tags {
     my $MINORIMPACT = shift || return;
+    my $params = shift || {};
 
+    my $local_params = cloneHash($params);
     my $user = $MINORIMPACT->getUser();
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
@@ -239,7 +250,9 @@ sub tags {
 
     my $objects;
     if ($search_tag) {
-        $objects = MinorImpact::Object::search({tag=>$search_tag, type_tree=>1});
+        $local_params->{tag} = $search_tag;
+        $local_params->{type_tree} = 1;
+        $objects = MinorImpact::Object::search($local_params);
     }
     $TT->process('tags', {
                             objects=>$objects, 

@@ -429,9 +429,9 @@ sub cgi {
     } elsif ($script eq 'object_types') {
         MinorImpact::CGI::object_types($self);
     } elsif ($script eq 'search') {
-        MinorImpact::CGI::search($self);
+        MinorImpact::CGI::search($self, $params->{params});
     } elsif ($script eq 'tags') {
-        MinorImpact::CGI::tags($self);
+        MinorImpact::CGI::tags($self, $params->{params});
     } elsif ($script eq 'user') {
         MinorImpact::CGI::user($self);
     }
