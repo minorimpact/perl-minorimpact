@@ -18,6 +18,7 @@ use Exporter 'import';
             "dumper",
             "fleshDate",
             "fromMysqlDate", 
+            "indexOf",
             "parseTags",
             "toMysqlDate", 
             "uniq", 
@@ -28,51 +29,6 @@ sub dumper {
     my $dumpee = shift || return;
     my $dump = Dumper($dumpee);
     print "Content-type: text/html\n\n<pre>$dump</pre>\n";
-}
-
-sub trim {
-    my $string = shift || return;
-    $string =~ s/^\s+//;
-    $string =~ s/\s+$//;
-    return $string;
-}
-
-sub fromMysqlDate {
-    my @data = @_;
-    my @dates = ();
-
-    foreach my $date (@data) {
-        if ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}:\d{1,2}:\d{1,2})$/) {
-            my $year = $1;
-            my $month = ($2 - 1);
-            my $mday = $3;
-            my ($hour, $min, $sec)  = split(/:/, $4);
-
-            push(@dates,timelocal($sec, $min, $hour, $mday, $month, $year));
-        }
-    }
-    return wantarray?@dates:$dates[0];
-}
-
-sub toMysqlDate {
-    my @data = @_;
-    my @dates = ();
-    if (scalar(@data) == 0) {
-        push(@data, time());
-    }
-
-    foreach my $time (@data) {
-        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($time);
-        $mon++;
-        $mon = "0$mon" if ($mon < 10);
-        $mday = "0$mday" if ($mday < 10);
-        $hour = "0$hour" if ($hour < 10);
-        $min = "0$min" if ($min < 10);
-        $sec = "0$sec" if ($sec < 10);
-    
-        push @dates, ($year + 1900) . "-$mon-$mday $hour:$min:$sec";
-    }
-    return wantarray?@dates:$dates[0];
 }
 
 sub cloneHash {
@@ -90,65 +46,8 @@ sub cloneHash {
     return $new_hash;
 }
 
-sub header {
-    my $args = shift || {};
-
-    my $title = $args->{title} || '';
-    my $css = $args->{css} || '';
-    my $other = $args->{other} || '';
-
-    unless ($title) {
-        $title = $0;
-        $title =~s/^.+\/([^\/]+).cgi$/$1/;
-        $title = ucfirst($title);
-    }
-
-    my $header = <<HEADER;
-Content-type: text/html\n\n
-
-<head>
-    <title>$title</title>
-    <style type='text/css'>
-        body { background-color:white; font-family:sans-serif; }
-
-        #top_menu { border-bottom:solid 1px black; font-size:large; }
- 
-        #list_menu  { }
-        #list_name { font-size:large; font-weight:bold; }
- 
-        #view { padding-top: 20px; }
-        #view_menu a { font-size:smaller; }
-        #view_table { padding-top:20px; }
-        #view_name { font-size: large; }
-        #view_name:after { content:"\\000A"; white-space: pre;}
-        $css
-    </style>
-    $other
-</head>
-<body>
-HEADER
-    return $header;
-}
-
-sub parseTags {
-    my %tags;
-    foreach my $tags (@_) {
-        foreach my $tag (split(/\W+/, $tags)) {
-            $tag = lc($tag);
-            $tag =~s/\W//g;
-            $tags{$tag}++ if ($tag);
-        }
-    }
-    return sort keys %tags;
-}
-
-sub uniq {
-    my %seen;
-    return grep { !$seen{$_}++ } @_;
-}
-
 sub fleshDate {
-    my $date = shift || return;
+    my $date = trim(shift) || return;
 
     my ($year, $month, $day, $hour, $min, $sec) = (0, 1, 1, 0, 0, 0);
     if ($date =~/^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{1,2}):(\d{1,2})$/) {
@@ -172,5 +71,94 @@ sub fleshDate {
     }
     return timelocal($sec, $min, $hour, $day, ($month-1), $year);
 }
+
+sub fromMysqlDate {
+    my @data = @_;
+    my @dates = ();
+
+    foreach my $date (@data) {
+        my $time;
+        if ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}:\d{1,2}:\d{1,2})$/) {
+            my $year = $1;
+            my $month = ($2 - 1);
+            my $mday = $3;
+            my ($hour, $min, $sec)  = split(/:/, $4);
+
+            $time = timelocal($sec, $min, $hour, $mday, $month, $year);
+        } elsif ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2})$/) {
+            my $year = $1;
+            my $month = ($2 - 1);
+            my $mday = $3;
+
+            $time = timelocal(0, 0, 0, $mday, $month, $year);
+        }
+        push(@dates,$time);
+    }
+    if (scalar(@data) > 1) {
+        return @dates;
+    }
+    return $dates[0];
+}
+
+sub indexOf {
+    my $string = shift || return;
+    my @data = @_;
+
+    for (my $i=0; $i< scalar(@data); $i++) {
+        return $i if ($data[$i] eq $string);
+    }
+    return undef;
+}
+
+sub parseTags {
+    my %tags;
+    foreach my $tags (@_) {
+        foreach my $tag (split(/\W+/, $tags)) {
+            $tag = lc($tag);
+            $tag =~s/\W//g;
+            $tags{$tag}++ if ($tag);
+        }
+    }
+    return sort keys %tags;
+}
+
+sub toMysqlDate {
+    my @data = @_;
+    my @dates = ();
+    if (scalar(@data) == 0) {
+        push(@data, time());
+    }
+
+    foreach my $time (@data) {
+        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($time);
+        $mon++;
+        $mon = "0$mon" if ($mon < 10);
+        $mday = "0$mday" if ($mday < 10);
+        $hour = "0$hour" if ($hour < 10);
+        $min = "0$min" if ($min < 10);
+        $sec = "0$sec" if ($sec < 10);
+    
+        my $date =  ($year + 1900) . "-$mon-$mday $hour:$min:$sec";
+        $date =~s/ 00:00:00$//;
+        push(@dates, $date);
+    }
+    if (scalar(@data) > 1) {
+        return @dates;
+    }
+    return $dates[0];
+}
+
+sub trim {
+    my $string = shift || return;
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+    return $string;
+}
+
+sub uniq {
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
+
 1;
 

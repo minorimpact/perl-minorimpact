@@ -113,7 +113,7 @@ sub value {
     #} else {
         @values = @{$self->{data}{value}};
     #}
-    return wantarray?@values:$values[0]; 
+    return @values;
 }
 
 # return a piece of metadata about this field.

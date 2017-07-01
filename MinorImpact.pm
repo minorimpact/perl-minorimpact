@@ -363,14 +363,19 @@ sub checkDatabaseTables {
 
 # Return the templateToolkit object;
 sub getTT {
-    my $self = shift || return;
+    my $self = shift || {};
     my $params = shift || {};
 
-    my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
-
-    if ($TT) {
-        return $TT;
+    if (ref($self) eq "HASH") {
+        $params = $self;
+        $self = $MinorImpact::SELF;
     }
+
+    if ($self->{TT}) {
+        return $self->{TT};
+    }
+
+    my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
 
     # The default package templates are in the 'template' directory 
     # in the libary.  Find it, and use it as the secondary template location.
@@ -380,10 +385,24 @@ sub getTT {
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
     my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
+    my $variables = {
+                        home => $self->{conf}{default}{home_script},
+                        script_name => MinorImpact::scriptName(),
+                        user => $self->getUser(),
+                    };
+    if ($params->{variables}) {
+        foreach my $key (keys %{$params->{variables}}) {
+            $variables->{$key} = $params->{variables}{$key};
+        }
+    }
+
     $TT = Template->new({
-        INCLUDE_PATH=> [ $template_directory, $global_template_directory ],
+        INCLUDE_PATH => [ $template_directory, $global_template_directory ],
         INTERPOLATE => 1,
+        VARIABLES => $variables,
     }) || die $TT->error();
+
+    $self->{TT} = $TT;
     return $TT;
 }
 

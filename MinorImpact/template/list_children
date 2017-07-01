@@ -5,7 +5,7 @@ Content-type: text/html
 [%# FOREACH o IN object.getChildren({object_type_id=>type_id, sort=>0}) %]
 [% FOREACH o IN objects %]
     <tr>
-        <td>[% o.toString({script_name=>"index.cgi"}) %]</td>
+        <td>[% o.toString({format=>'list'}) %]</td>
     </tr>
 [% END %]
 </table>

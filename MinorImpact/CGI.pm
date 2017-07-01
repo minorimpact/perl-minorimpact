@@ -73,21 +73,15 @@ sub index {
         $TT->process('add', {
                             error=>$error,
                             form => $form,
-                            home=>$self->{conf}{default}{home_script},
                             object=>$object,
-                            script_name=>$script_name,
                             type_name => $type_name,
-                            user=>$user,
                         }) || die $TT->error();
     } elsif ($action eq 'edit' && $object) {
             my $form = $object->form();
             $TT->process('edit', { 
                                 error=>$error,
                                 form=>$form,
-                                home=>$self->{conf}{default}{home_script},
                                 object=>$object,
-                                script_name=>$script_name,
-                                user=>$user,
                             }) || die $TT->error();
     } elsif ($action eq 'delete' && $object) {
         $type_id = $object->type_id();
@@ -226,12 +220,9 @@ sub search {
 
     my $objects = MinorImpact::Object::search({text=>$search, type_tree=>1, sort=>1});
     $TT->process('search', {
-                            home=>$MINORIMPACT->{conf}{default}{home_script},
                             objects=>$objects,
-                            script_name=>$script_name,
                             search=>$search,
                             typeName => sub { MinorImpact::Object::typeName(@_, {plural=>1}) },
-                            user=>$user,
                         }) || die $TT->error();
 }
 
@@ -250,11 +241,8 @@ sub tags {
         $objects = MinorImpact::Object::search({tag=>$search_tag, type_tree=>1});
     }
     $TT->process('tags', {
-                            home=>$MINORIMPACT->{conf}{default}{home_script},
                             objects=>$objects, 
-                            script_name=>$script_name,
                             search_tag=>$search_tag,
-                            user=>$user,
                         }) || die $TT->error();
 }
 
@@ -265,11 +253,7 @@ sub user {
     my $TT = $MI->getTT();
     my $script_name = MinorImpact::scriptName();
 
-    $TT->process('user', {
-                            home=>$MI->{conf}{default}{home_script},
-                            script_name=>$script_name,
-                            user=>$user,
-                        }) || die $TT->error();
+    $TT->process('user') || die $TT->error();
 }
 
 sub view {
@@ -303,14 +287,11 @@ JAVASCRIPT
 
     $TT->process('index', {
                             error=>$error,
-                            home=>$MI->{conf}{default}{home_script},
                             javascript=>$javascript,
                             object=>$object,
                             projects=>[@projects],
                             project=>$project,
-                            script_name=>$script_name,
                             tab_number=>$tab_number,
-                            user=>$user,
                             }) || die $TT->error();
 
 }

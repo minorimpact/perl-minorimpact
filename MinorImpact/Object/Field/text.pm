@@ -49,9 +49,6 @@ sub toString {
             push(@strings, markdown($value));
         }
     }
-    if (wantarray){
-        return @strings;
-    }
     return join("\n", @strings);
 }
 

@@ -174,6 +174,7 @@ sub get {
        return $self->{data}->{$name};
     }
     if (defined($self->{object_data}->{$name})) {
+        my $field = $self->{object_data}->{$name};
         my @value = $self->{object_data}->{$name}->value();
         #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
@@ -182,7 +183,10 @@ sub get {
             }
             push(@values, $value);
         }
-        return wantarray?@values:$values[0];
+        if ($field->isArray()) {
+            return @values;
+        }
+        return $values[0];
     }
 }   
 
@@ -233,7 +237,7 @@ sub update {
                 if ($field_type =~/text$/ || $field_type eq 'url') {
                     $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 } else {
-                    MinorImpact::log(8, "$field_name='$value'");
+                    #MinorImpact::log(8, "$field_name='$value'");
                     #MinorImpact::log(8, "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW()) (" . $self->id() . ", " . $field->get('object_field_id') . ", $value)");
                     $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 }
@@ -284,6 +288,12 @@ sub fields {
 }
 
 sub type_id {
+    my $self = shift || return;
+
+    return MinorImpact::Object::typeID($self);
+}
+
+sub typeID {
     my $self = shift || return;
 
     #MinorImpact::log(7, "starting");
@@ -391,10 +401,8 @@ sub typeName {
 
     if ($params->{plural}) {
         return $plural_name;
-    } elsif ($params->{singular} || !wantarray) {
-        return $type_name
     }
-    return ($type_name, $plural_name);
+    return $type_name
 }
 
 sub _reload {
@@ -756,10 +764,11 @@ sub toString {
         $string = to_json($self->toData());
     } elsif ($params->{format} eq 'text') {
         $string = $self->name();
+    } elsif ($params->{format} eq 'list') {
+        $string = "<tr><td>" . $self->toString() . "</td></tr>";
     } else {
         my $template = $params->{template} || 'object';
-        $TT->process('object', { object=> $self}, \$string) || die $TT->error();
-        #$string .= "<a href='$script_name?id=" . $self->id() . "'>" . $self->name() . "</a>";
+        $TT->process('object', { object => $self }, \$string) || die $TT->error();
     }
     #$self->log(7, "ending");
     return $string;

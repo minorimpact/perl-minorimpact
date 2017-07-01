@@ -34,9 +34,6 @@ Content-type: text/html
         <tr>
             <td valign=top>
                 <div id=section_menu>
-                    [% IF home %]
-                        <a href=[% home %]>Home</a>
-                    [% END %]
                     [% INCLUDE header_links_site %]
                 </div> <!-- section_menu -->
             </td>
