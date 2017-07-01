@@ -21,7 +21,7 @@ sub new {
     my $self;
     eval {
         my $field_type = $data->{type};
-        MinorImpact::log(7, "\$field_type=$field_type");
+        #MinorImpact::log(7, "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
     if ($@ =~/^error:/) {

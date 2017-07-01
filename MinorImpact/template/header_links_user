@@ -6,5 +6,6 @@
 </table>
 [% ELSE %]
         <a href=login.cgi>Log In</a>
+        <a href=register.cgi>Register</a>
 [% END %]
 

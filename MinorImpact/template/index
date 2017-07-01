@@ -5,6 +5,7 @@
     <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
     <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
 [% END %]
+[% INCLUDE index_links_object %]
 
 [% object.toString({format=>'column'}) %]
 
