@@ -6,6 +6,7 @@ use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field::boolean;
 use MinorImpact::Object::Field::text;
+use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::url;
 
 # TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
@@ -19,8 +20,8 @@ sub new {
     #MinorImpact::log(7, "starting");
     my $self;
     eval {
-        #MinorImpact::log(7, "\$field_type=$field_type");
         my $field_type = $data->{type};
+        MinorImpact::log(7, "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
     if ($@ =~/^error:/) {

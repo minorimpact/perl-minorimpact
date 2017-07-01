@@ -5,8 +5,8 @@
     <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
     <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
 [% END %]
-<p class=object_description>[% object.get('description', {markdown=>1}) %]</p>
-[% object.toString({column=>1}) %]<br />
+
+[% object.toString({format=>'column'}) %]
 
 <div id=tabs>
 <ul>

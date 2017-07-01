@@ -832,7 +832,6 @@ sub form {
         undef($self);
     }
 
-    # SOMETHING HAS TO HAPPEN HERE, I NEED TO GO TO THE INHEIRITED OBJECT'S FORM() FIRST.  SOMEHOW THAT GOT LOST IN THE SHUFFLE.
     my $user_id = $MinorImpact::SELF->getUser()->id();
     my $CGI = MinorImpact::getCGI();
 
@@ -852,15 +851,15 @@ sub form {
         <input type=hidden name=a value="${\ ($self?'edit':'add'); }">
         <input type=hidden name=type_id value="$object_type_id">
         <table class=edit>
-            <tr>   
+FORM
+    unless ($params->{no_name}) {
+     $form .= <<FORM;
+        <tr>   
                 <td class=fieldname>Name</td>
                 <td><input type=text name=name value="${\ ($CGI->param('name') || ($self && $self->name())); }"></td>
             </tr>
-            <tr>   
-                <td class=fieldname>Description</td>
-                <td><textarea name=description>${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }</textarea></td>
-            </tr>
 FORM
+     }
     # Suck in any default values passed in the parameters.
     foreach my $field (keys %{$params->{default_values}}) {
         $CGI->param($field,$params->{default_values}->{$field});
