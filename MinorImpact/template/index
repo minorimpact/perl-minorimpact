@@ -2,8 +2,8 @@
 
 <span class=object_name>[% object.name() %]</span>
 [% IF object.user_id() == user.id() %]
-    <a href=index.cgi?a=edit&id=[% object.id() %]>edit</a>
-    <a href=index.cgi?a=delete&id=[% object.id() %]>delete</a>
+    <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
+    <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
 [% END %]
 <p class=object_description>[% object.get('description', {markdown=>1}) %]</p>
 [% object.toString({column=>1}) %]<br />
@@ -11,7 +11,7 @@
 <div id=tabs>
 <ul>
 [% FOREACH child_type IN object.getChildTypes() %]
-    <li><a href='index.cgi?id=[% object.id() %]&type_id=[% child_type %]&a=tablist'>[% object.typeName({object_type_id=>child_type, plural=>1}) %]</a></li>
+    <li><a href='[% script_name %]?id=[% object.id() %]&type_id=[% child_type %]&a=tablist'>[% object.typeName({object_type_id=>child_type, plural=>1}) %]</a></li>
 [% END %]
 </ul>
 </div>

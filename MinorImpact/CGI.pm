@@ -24,7 +24,9 @@ sub index {
     my $object;
     my $error;
 
-    $object = new MinorImpact::Object($object_id) if ($object_id);
+    eval {
+        $object = new MinorImpact::Object($object_id) if ($object_id);
+    };
     $action = "view" if ($action eq "list" && $object);
 
     if ($CGI->param('submit')) {
@@ -84,7 +86,6 @@ sub index {
                                 object=>$object,
                             }) || die $TT->error();
     } elsif ($action eq 'delete' && $object) {
-        $type_id = $object->type_id();
         $object->delete() if ($object);
         $self->redirect();
     } elsif ($action eq 'tablist' && $object && $type_id) {

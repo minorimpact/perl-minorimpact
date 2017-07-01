@@ -8,6 +8,8 @@ use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
 
+my $OBJECT_CACHE;
+
 sub new {
     my $package = shift || return;
     my $id = shift || return;
@@ -15,6 +17,8 @@ sub new {
     #MinorImpact::log(7, "starting(" . $id . ")");
     my $DB = MinorImpact::getDB();
     my $object;
+
+    return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id});
 
     eval {
         my $type_name;
@@ -39,6 +43,8 @@ sub new {
         $object = MinorImpact::Object::_new($package, $id);
     }
     #MinorImpact::log(7, "ending");
+
+    $OBJECT_CACHE->{$object->id()} = $object;
     return $object;
 }
 
@@ -329,7 +335,10 @@ sub getType {
     } else {
         $type_id = $self;
         if (!$type_id) {
-            #$type_id = $DB->selectrow_array("SELECT id FROM object_type where toplevel = 1", {Slice=>{}});
+            if ($MinorImpact::SELF->{conf}{default}{default_object_type}) {
+                my $type = $MinorImpact::SELF->{conf}{default}{default_object_type};
+                return MinorImpact::Object::typeID($type);
+            }
             # If type isn't specified, return the first 'toplevel' object, something that no other object
             # references.
             my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
@@ -849,7 +858,7 @@ sub form {
             </tr>
             <tr>   
                 <td class=fieldname>Description</td>
-                <td><input type=text name=description value="${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }"></td>
+                <td><textarea name=description>${\ ($CGI->param('description') || ($self &&  $self->get('description'))); }</textarea></td>
             </tr>
 FORM
     # Suck in any default values passed in the parameters.
