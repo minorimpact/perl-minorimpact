@@ -125,7 +125,10 @@ sub index {
         });
 JAVASCRIPT
 
-        MinorImpact::log(8, $object->name());
+
+        my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>$object->id());
+        print "Set-Cookie: $object_cookie\n";
+
         $TT->process('index', {
                                     error=>$error,
                                     javascript=>$javascript,
@@ -135,7 +138,6 @@ JAVASCRIPT
                                     tab_number=>$tab_number,
                                     user=>$user,
                                 }) || die $TT->error();
-        MinorImpact::log(8, $object->name());
     } elsif ( $action eq 'logout' ) {
         logout($self);
     } elsif ($action eq 'user' ) {

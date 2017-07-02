@@ -32,7 +32,7 @@ sub new {
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
         $object = $type_name->new($id) if ($type_name);
     };
-    #MinorImpact::log(1, "id='$id',error:$@") if ($@);
+    MinorImpact::log(1, "id='$id',error:$@") if ($@);
     if ($@ =~/^error:/) {
         my $error = $@;
         $error =~s/ at \/.*$//;
@@ -42,9 +42,10 @@ sub new {
     unless ($object) {
         $object = MinorImpact::Object::_new($package, $id);
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log(8, "\$object doesn't exist") unless ($object);
+    #MinorImpact::log(7, "ending($id)");
 
-    $OBJECT_CACHE->{$object->id()} = $object;
+    $OBJECT_CACHE->{$object->id()} = $object if ($object);
     return $object;
 }
 
@@ -122,7 +123,7 @@ sub _new {
 
     $self->_reload($object_id);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending(" . $self->id() . ")");
     return $self;
 }
 
@@ -440,7 +441,7 @@ sub _reload {
     }
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending(" . $object_id . ")");
 }
 
 sub getTags {
@@ -542,7 +543,7 @@ sub _search {
     }
 
     my $sql = "$select $where";
-    MinorImpact::log(8, "sql='$sql', \@fields='" . join(',', @fields) . "'");
+    MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "'");
 
     my $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
 
@@ -644,14 +645,12 @@ sub getChildren {
         next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
         my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";
-        MinorImpact::log(8, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
+        MinorImpact::log(3, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
         foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($local_params->{id_only}) {
-                #push(@{$children->{$r2->{object_type_id}}}, $r2->{object_id});
                 push(@children, $r2->{object_id});
             } else {
-                #push(@{$children->{$r2->{object_type_id}}}, new MinorImpact::Object($r2->{object_id}));
-                #MinorImpact::log(8, "\$r2->{object_id}='" . $r2->{object_id} . "'");
+                #MinorImpact::log(8, "creating new object '" . $r2->{object_id} . "'");
                 push(@children, new MinorImpact::Object($r2->{object_id}));
             }
         }
@@ -869,7 +868,7 @@ FORM
     my $cookie_object_id = $CGI->cookie('object_id');
     if ($cookie_object_id) {
         my $cookie_object = new MinorImpact::Object($cookie_object_id);
-        $CGI->param($cookie_object->typeName()."_id", $cookie_object->id());
+        $CGI->param($cookie_object->typeName()."_id", $cookie_object->id()) if ($cookie_object);
     }
 
     my $fields;

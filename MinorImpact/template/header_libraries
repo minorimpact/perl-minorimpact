@@ -81,11 +81,15 @@
     // won't get duplicated again.  Used to dynamically add array fields
     // to forms.
     function duplicateRow(o) {
-        if (\$(o).data('duped') == 1) {
+        var \$tr = \$(o).closest("tr");
+        if (\$tr.data('duped') == 1 || \$(o).val() == '' || \$(o).val() == ' ') {
             return;
         }
-        var \$tr = \$(o).closest("tr");
         var \$clone = \$tr.clone();
         \$tr.after(\$clone);
+        \$tr.data('duped', 1);
+        \$clone.find("input:text").val(' ');
+        \$clone.find("td.fieldname").html('');
     }   
 </script>
+[% INCLUDE header_libraries_site %]

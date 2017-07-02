@@ -1,6 +1,6 @@
 [% INCLUDE header title=object.name() %]
 
-<span class=object_name>[% object.name() %]</span>
+<span class=object_name>[% object.name({format=>'title'}) %]</span>
 [% IF object.user_id() == user.id() %]
     <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
     <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
