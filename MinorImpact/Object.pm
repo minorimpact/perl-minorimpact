@@ -135,7 +135,12 @@ sub back {
 }
 
 sub id { my $self = shift || return; return $self->{data}->{id}; }
-sub name { my $self = shift || return; return $self->get('name'); }
+sub name { 
+    my $self = shift || return; 
+    my $params = shit || {};
+
+    return $self->get('name', $params); 
+}
 sub user_id { my $self = shift || return; return $self->get('user_id'); }   
 
 sub selectList {
@@ -192,6 +197,9 @@ sub get {
         my @value = $self->{object_data}->{$name}->value();
         #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
+            if ($params->{truncate} =~/^\d+$/) {
+                $value = trunc($value, $params->{truncate});
+            }
             if ($params->{markdown}) {
                 $value =  markdown($value);
             }

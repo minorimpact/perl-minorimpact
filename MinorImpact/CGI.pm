@@ -102,7 +102,8 @@ sub index {
             map { $tags{$_}++; } $object->getTags();
         }
         @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
-        splice(@tags, 0, -5);
+        splice(@tags, 5);
+        #@tags = map { "$_(" . $tags{$_} . ")"; } @tags;
 
         $TT->process('tablist', {  
                                 objects   => [@objects],
@@ -137,8 +138,9 @@ sub index {
             foreach my $object (@objects) {
                 map { $tags{$_}++; } $object->getTags();
             }
-            @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
-            splice(@tags, 0, -5);
+            @tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
+            splice(@tags, 5);
+            #@tags = map {- length($_); } @tags;
             $TT->process('list', {  
                                     objects   => [@objects],
                                     tags      => [@tags],

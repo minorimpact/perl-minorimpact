@@ -21,8 +21,9 @@ use Exporter 'import';
             "indexOf",
             "parseTags",
             "toMysqlDate", 
+            "trim",
+            "trunc",
             "uniq", 
-            "trim"
           );
 
 sub dumper {
@@ -153,6 +154,20 @@ sub trim {
     $string =~ s/^\s+//;
     $string =~ s/\s+$//;
     return $string;
+}
+
+sub trunc {
+    my $string = shift || return;
+    my $len = shift || 50;
+
+    return $string if (length($string) < $len);
+    my $str = substr($string, 0, ($len-3));
+    my $strl = length($str);
+    my $test = substr($str, -10);
+    if ($test =~/ /) {
+        $str = substr($str, 0, -(indexOf(' ', (reverse split(//, $test)))+1));
+    }
+    return "$str...";
 }
 
 sub uniq {
