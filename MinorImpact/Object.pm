@@ -127,6 +127,13 @@ sub _new {
     return $self;
 }
 
+sub back {
+    my $self = shift || return;
+    
+    my $script_name = MinorImpact::scriptName();
+    return "$script_name";
+}
+
 sub id { my $self = shift || return; return $self->{data}->{id}; }
 sub name { my $self = shift || return; return $self->get('name'); }
 sub user_id { my $self = shift || return; return $self->get('user_id'); }   
@@ -864,12 +871,24 @@ FORM
         $CGI->param($field,$params->{default_values}->{$field});
     }
 
-    # Add a field for whatever the last thing they were looking at was.
-    my $cookie_object_id = $CGI->cookie('object_id');
-    if ($cookie_object_id) {
-        my $cookie_object = new MinorImpact::Object($cookie_object_id);
-        $CGI->param($cookie_object->typeName()."_id", $cookie_object->id()) if ($cookie_object);
+    # Add fields for the last things they were looking at.
+    unless ($self) {
+        my $view_history = MinorImpact::CGI::viewHistory();
+        foreach my $field (keys %$view_history) {
+            my $value = $view_history->{$field};
+            #MinorImpact::log(8, "\$view_history->{$field} = '$value'");
+            $CGI->param($field, $value) unless ($CGI->param($field));
+        }
     }
+
+    #my $cookie_object_id = $CGI->cookie('object_id');
+    #if ($cookie_object_id) {
+    #    my $cookie_object = new MinorImpact::Object($cookie_object_id);
+    #    if ($cookie_object) {
+    #        my $field = $cookie_object->typeName()."_id";
+    #        $CGI->param($field, $cookie_object->id()) unless ($CGI->param($field));
+    #    }
+    #}
 
     my $fields;
     if ($self) {

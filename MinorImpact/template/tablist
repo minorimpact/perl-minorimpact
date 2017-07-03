@@ -1,7 +1,7 @@
 Content-type: text/html
 
 <!-- default.tablist -->
-<div id=list_menu><a href=index.cgi?type_id=[% type_id %]&a=add>Add [% type_name %]</a></div>
+[% INCLUDE list_menu %]
 <table class=list>
 [% FOREACH o IN objects %]
     [% o.toString({format=>'list'}) %]

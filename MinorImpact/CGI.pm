@@ -42,22 +42,24 @@ sub index {
             };
             $error = $@ if ($@);
         } elsif ($action eq 'edit') {
-            MinorImpact::log(8, "submitted action eq 'edit'");
             eval {
                 $object->update($params);
             };
             $error = $@ if ($@);
         }
         if ($object && !$error) {
-            $self->redirect("$script_name?id=" . $object->id());
+            my $back = $object->back() || "$script_name?id=" . $object->id();
+            $self->redirect($back);
         }
     }
+
+    my $local_params = {}; #cloneHash($params);
+    $local_params->{tab_id} = $tab_id;
+    $local_params->{object} = $object;
+    $local_params->{type_id} = $type_id;
+    $local_params->{format} = $format;
+
     if ($params->{actions}{$action}) {
-        my $local_params = {}; #cloneHash($params);
-        $local_params->{tab_id} = $tab_id;
-        $local_params->{object} = $object;
-        $local_params->{type_id} = $type_id;
-        $local_params->{format} = $format;
         my $sub = $params->{actions}{$action};
         return $sub->($self, $local_params);
     } elsif ($action eq 'add') {
@@ -86,58 +88,20 @@ sub index {
                                 object=>$object,
                             }) || die $TT->error();
     } elsif ($action eq 'delete' && $object) {
-        $object->delete() if ($object);
-        $self->redirect();
+        my $back = $object->back();
+        $object->delete();
+        $self->redirect($back);
     } elsif ($action eq 'tablist' && $object && $type_id) {
         # Show a list of objects of a certain type that refer to the current object.
-        MinorImpact::log(8, "action=tablist");
         my @objects = $object->getChildren({object_type_id=>$type_id, sort=>1});
-        #my @objects = MinorImpact::Object::search({object_type_id=>$type_id, sort=>1});
         my $type_name = MinorImpact::Object::typeName($type_id);
         $TT->process('tablist', {  
                                 objects=>[@objects],
-                                home=>$self->{conf}{default}{home_script},
-                                script_name=>$script_name,
                                 type_id=>$type_id,
                                 type_name=>$type_name,
-                                user=>$user,
                                 }) || die $TT->error();
     } elsif ($object) { # $action eq 'view'
-        # Display one particular object.
-        my $tab_number = 0;
-        MinorImpact::log(8, "action eq 'view'");
-
-        # TODO: figure out some way for these to be alphabetized
-        foreach my $child_type_id ($object->getChildTypes()) {
-            last if ($child_type_id == $tab_id);
-            $tab_number++;
-        }
-        MinorImpact::log(8, "action eq 'view'");
-
-        my $javascript = <<JAVASCRIPT;
-        \$(function () {
-            \$("#tabs").tabs({
-                active: $tab_number,
-                beforeLoad: function( event, ui ) {
-                    ui.panel.html("<div>Loading...</div>");
-                }
-            });
-        });
-JAVASCRIPT
-
-
-        my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>$object->id());
-        print "Set-Cookie: $object_cookie\n";
-
-        $TT->process('index', {
-                                    error=>$error,
-                                    javascript=>$javascript,
-                                    object=>$object,
-                                    home=>$self->{conf}{default}{home_script},
-                                    script_name=>$script_name,
-                                    tab_number=>$tab_number,
-                                    user=>$user,
-                                }) || die $TT->error();
+        return view($self, $local_params);
     } elsif ( $action eq 'logout' ) {
         logout($self);
     } elsif ($action eq 'user' ) {
@@ -159,12 +123,9 @@ JAVASCRIPT
         } else { # $format eq 'html'
             my $type_name = MinorImpact::Object::typeName($type_id);
             $TT->process('list', {  
-                                    home=>$self->{conf}{default}{home_script},
                                     objects=>[@objects],
-                                    script_name=>$script_name,
                                     type_id=>$type_id,
                                     type_name=>$type_name,
-                                    user=>$user,
                                 }) || die $TT->error();
         }
     }
@@ -276,15 +237,19 @@ sub view {
     my $self = shift || return;
     my $params = shift || {};
 
+    my $script_name = $self->scriptName();
+    my $TT = $self->getTT();
+    my $CGI = $self->getCGI();
+
     my $user = $self->getUser();
     my $object = $params->{object} || return;
     my $tab_id = $params->{tab_id} || 0;
     my $error = $oarams->{error};
-    my $script_name = MinorImpact::scriptName();
 
     my $tab_number = 0;
 
     # TODO: figure out some way for these to be alphabetized
+    $tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
     foreach my $child_type_id ($object->getChildTypes()) {
         last if ($child_type_id == $tab_id);
         $tab_number++;
@@ -301,6 +266,10 @@ sub view {
         });
 JAVASCRIPT
 
+    viewHistory($object->typeName() . "_id", $object->id());
+    my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>$object->id());
+    print "Set-Cookie: $object_cookie\n";
+
     $TT->process('index', {
                             error=>$error,
                             javascript=>$javascript,
@@ -310,7 +279,36 @@ JAVASCRIPT
                             tab_number=>$tab_number,
                             }) || die $TT->error();
 
+    #$object->updateAllDates();
+}
+
+sub viewHistory {
+    my $field = shift;
+    my $value = shift;
+
+
+    my $CGI = MinorImpact::getCGI();
+    my $history;
+    my $view_history = $CGI->cookie('view_history');
+    #MinorImpact::log(8, "\$CGI->cookie('view_history') = '$view_history'"); 
+    foreach my $pair (split(';', $view_history)) {
+        my ($f, $v) = $pair =~/^([^=]+)=(.*)$/;
+        $history->{$f} = $v if ($f);
+    }
+
+    if (!$field && !defined($value)) {
+        return $history;
+    } elsif ($field && !defined($value)) {
+        return $history->{$field};
+    }
+    $history->{$field} = $value;
+
+    $view_history = join(";", map { "$_=" . $history->{$_}; } keys %$history);
+    #MinorImpact::log(8, "view_history='$view_history'");
+    my $cookie =  $CGI->cookie(-name=>'view_history', -value=>$view_history);
+    print "Set-Cookie: $cookie\n";
 }
 
 
+    
 1;
