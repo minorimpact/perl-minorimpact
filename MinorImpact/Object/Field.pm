@@ -159,6 +159,7 @@ sub formRow {
     #MinorImpact::log(7, "start");
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
+    $local_params->{debug} .= "Object::Field::formRow();";
 
     my @values = @{$local_params->{value}};
     @values = $self->value({id_only=>1}) unless (scalar(@values));
@@ -197,6 +198,7 @@ sub _input {
     if ($self->type() =~/object\[(\d+)\]$/) {
         my $object_type_id = $1;
         my $local_params = cloneHash($params);
+        $local_params->{debug} .= "Object::Field::_input();";
         $local_params->{object_type_id} = $object_type_id;
         $local_params->{fieldname} = $name;
         $local_params->{selected} = $value;

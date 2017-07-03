@@ -34,6 +34,7 @@ GetOptions( \%options,
             "help|?|h",
             "password|p=s",
             "plural=s",
+            "system",
             "type|type_id|t=s",
             "user|u=s",
             "verbose",
@@ -110,8 +111,9 @@ sub main {
 
         my $name = $options{type};
         my $plural = $options{plural} ||"${name}s";
+        my $system = ($options{system}?1:0);
 
-        $DB->do("INSERT INTO object_type (name, plural, create_date) VALUES (?, ?, NOW())", undef, ($name, $plural)) || die $DB->errstr;
+        $DB->do("INSERT INTO object_type (name, plural, system, create_date) VALUES (?, ?, ?, NOW())", undef, ($name, $system, $plural)) || die $DB->errstr;
 
     } elsif ($options{action} eq 'delfield') {
         my $type_id = MinorImpact::Object::type_id($options{type}) || die "Can't get id for $options{type}";
@@ -181,9 +183,10 @@ type.pl [options]
   -c, --config=FILE     Read connection information from FILE.
   -f, --force           Never request conformation.
   -h, --help            Usage information.
-  -t, --type=TYPE       Work with TYPE object definition.
   -p, --password=PASSWORD
                         Connect with PASSWORD.  Will prompt if not specified.
+      --system          TYPE will considered a 'system' object.
+  -t, --type=TYPE       Work with TYPE object definition.
   -u, --user=USER       Connect as USER.  default: $ENV{USER}
   -v, --verbose         Verbose output.
 

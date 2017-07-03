@@ -1,6 +1,8 @@
 <!-- TEMPLATE:default.list_menu -->
 <div id=list_menu>
-<a href=index.cgi?type_id=[% type_id %]&a=add>Add [% type_name %]</a>
+[% IF user %]
+    <a href=index.cgi?type_id=[% type_id %]&a=add>Add [% type_name %]</a>
+[% END %]
 [% IF tags %]
     [% INCLUDE list_menu_tags %]
 [% END %]

@@ -120,7 +120,9 @@ sub index {
     } else { # $action eq 'list'
         # Show all the objects of a certain type, or the default type.
         $type_id ||= MinorImpact::Object::getType();
-        my @objects = MinorImpact::Object::search({object_type_id=>$type_id, sort=>1});
+        my $local_params = {object_type_id=>$type_id, sort=>1};
+        $local_params->{user_id} = $user->id() if ($user);
+        my @objects = MinorImpact::Object::search($local_params);
         if (scalar(@objects) == 0) {
             $self->redirect("$script_name?a=add&type_id=$type_id");
         }

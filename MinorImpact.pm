@@ -51,6 +51,7 @@ sub new {
         }
         $self = {};
         bless($self, $package);
+        $SELF = $self;
 
         my $dsn = "DBI:mysql:database=$config->{db}->{database};host=$config->{db}->{db_host};port=$config->{db}->{port}";
         $self->{DB} = DBI->connect($dsn, $config->{db}->{db_user}, $config->{db}->{db_password}, {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
@@ -63,14 +64,14 @@ sub new {
         }
         $self->{CGI} = new CGI;
         $self->{conf} = $config;
-        $slf->{conf}{default}{home_script} ||= "index.cgi";
+        $self->{conf}{default}{home_script} ||= "index.cgi";
+        $self->{conf}{application} = $options;
 
-        $SELF = $self;
         $self->{starttime} = [gettimeofday];
     }
     checkDatabaseTables($self->{DB});
 
-    if ($options->{validUser} || $options->{user_id} || $options->{admin}) {
+    if ($options->{validUser} || $options->{valid_user} || $options->{user_id} || $options->{admin}) {
         my ($script_name) = scriptName();
         my $user = $self->getUser();
         if ($user) {
@@ -96,28 +97,44 @@ sub new {
 }
 
 sub getUser {
-    #MinorImpact::log(7, "starting");
-    my $self = shift || return;
+    my $self = shift || {};
     my $params = shift || {};
 
-    my $CGI = $self->{CGI};
+    MinorImpact::log(7, "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+    if (!$self) {
+        $self = new MinorImpact();
+    }
+
+    # We only need to check the cache and validate once per session.  Now that we're doing
+    #   permission checking per object, this will save us a shitload.
+    return $self->{USER} if ($self->{USER});
+
+    my $CGI = MinorImpact::getCGI();
 
     # If the user has logged in before, and we can verify it's the same session,
     #   we can get the user_id from cache or cookie and don't require credentials
     #   again.
     my $user_id = $CGI->cookie("user_id") || MinorImpact::cache({key=>'user_id'});
     if ($user_id) {
-        #MinorImpact::log(8, "user_id=$user_id");
+        MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
 
         my $client_ip = MinorImpact::cache({key=>"client_ip:$user_id"});
-        #MinorImpact::log(8, "client_ip=$client_ip");
+        MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $client_ip) {
-            #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+            MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
             if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
-                #MinorImpact::log(7, "ending");
+                MinorImpact::log(7, "ending - cached ip matched current ip");
+                $self->{USER} = $user;
                 return $user;
             } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
+                MinorImpact::log(7, "ending - cached ssh_client matches current session");
+                $self->{USER} = $user;
                 return $user;
             }
         }
@@ -143,11 +160,13 @@ sub getUser {
                 MinorImpact::cache({key=>"user_id", value=>$user_id, timeout=>$timeout});
             }
             #MinorImpact::log(7, "ending");
+            $self->{USER} = $user;
             return $user;
         }
     }
 
-    # Not sure what this is supposed to do.
+    # Not sure what this is supposed to do.  Maybe it auto validates from the command line
+    #   if the logged in user is a valid user in the system?  Seems dangerous.
     #if ($ENV{'USER'}) {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
@@ -277,6 +296,7 @@ sub checkDatabaseTables {
             `description` text,
             `plural` varchar(50) DEFAULT NULL,
             `url` varchar(255) DEFAULT NULL,
+            `system` tinyint(1) DEFAULT 0,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),

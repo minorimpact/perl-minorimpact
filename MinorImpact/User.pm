@@ -1,26 +1,30 @@
 package MinorImpact::User;
 
-use MinorImpact::Timeline;
+use MinorImpact;
 
 sub new {
     my $package = shift;
     my $params = shift;
 
+    MinorImpact::log(7, "starting");
+
     my $self = {};
-    bless($self, $package);
 
     $self->{DB} = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
 
     checkDatabaseTables($self->{DB});
 
     my $user_id = $params;
+    MinorImpact::log(8, "\$user_id='$params'");
 
     if ($user_id =~/^\d+$/) {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || return;
     } else {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || return;
     }
+    bless($self, $package);
 
+    MinorImpact::log(8, "created user: '" .$self->name() . "'");
     return $self;
 }
 
@@ -53,15 +57,19 @@ sub validate_user {
     return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
 }
 
-sub add_user {
+sub addUser {
     my $params = shift || return;
+    
+    MinorImpact::log(7, "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
-    if ($params->{username} && $params->{password}) {
+    if ($DB && $params->{username} && $params->{password}) {
         $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
+        MinorImpact::log(8, "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
     }
+    die "Couldn't add user " . $params->{username};
     return;
 }
 
@@ -82,26 +90,6 @@ sub get {
     my $name = shift || return;
 
     return $self->{data}->{$name};
-}
-
-sub getTimelines {
-    my $self = shift || return;
-    my @timelines = ();
-
-    foreach my $timeline_id (Timeline::_search({user_id=>$self->id()})) {
-        push(@timelines, new Timeline($timeline_id));
-    }
-    return @timelines;
-}
-
-sub getProjects {
-    my $self = shift || return;
-    my @projects = ();
-
-    foreach my $id (Project::_search({user_id=>$self->id()})) {
-        push(@projects, new Project($id));
-    }
-    return @projects;
 }
 
 sub update {

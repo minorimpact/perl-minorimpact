@@ -21,14 +21,13 @@ sub new {
     return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id});
 
     eval {
-        my $type_name;
+        my $data;
         if (ref($id) eq "HASH") {
-            my $data = $DB->selectrow_hashref("SELECT name FROM object_type ot WHERE ot.id=?", undef, ($id->{type_id})) || die $MinorImpact::SELF->{DB}->errstr;
-            $type_name = $data->{name}; 
+            $data = $DB->selectrow_hashref("SELECT name, system FROM object_type ot WHERE ot.id=?", undef, ($id->{type_id})) || die $MinorImpact::SELF->{DB}->errstr;
         } else {
-            my $data = $DB->selectrow_hashref("SELECT ot.name FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
-            $type_name = $data->{name};
+            $data = $DB->selectrow_hashref("SELECT ot.name, ot.system FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
         }
+        my $type_name = $data->{name}; 
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
         $object = $type_name->new($id) if ($type_name);
     };
@@ -42,8 +41,11 @@ sub new {
     unless ($object) {
         $object = MinorImpact::Object::_new($package, $id);
     }
+    #
     #MinorImpact::log(8, "\$object doesn't exist") unless ($object);
     #MinorImpact::log(7, "ending($id)");
+
+    die "permission denied" unless ($object->validateUser());
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     return $object;
@@ -72,6 +74,10 @@ sub _new {
         die "error:invalid name" unless ($params->{name});
         die "error:invalid user id" unless ($user_id);
         die "error:invalid type id" unless ($params->{type_id});
+        # TODO: isn't this just duplicating the fields() and update() functionatlity? Sure, we should independent
+        #   verification before we create the object (maybe? Hiw is this being done during update?) but then how is this different
+        #   than just creating the object and passing the values to update()?  Maybe because without the rest of the data added to the
+        #   database, update doesn't work?  Look into all of this.
         my $data = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($params->{type_id}));
         foreach my $row (@$data) {
             my $field_name = $row->{name};
@@ -141,7 +147,17 @@ sub name {
 
     return $self->get('name', $params); 
 }
-sub user_id { my $self = shift || return; return $self->get('user_id'); }   
+
+# LEGACY
+sub user_id { 
+    my $self = shift || return; 
+    return $self->userID(); 
+}
+
+sub userID { 
+    my $self = shift || return; 
+    return $self->get('user_id'); 
+}   
 
 sub selectList {
     my $self = shift || return;
@@ -149,17 +165,21 @@ sub selectList {
 
     #MinorImpact::log(7, "starting");
     my $local_params = cloneHash($params);
+    $local_params->{debug} .= "Object::selectList();";
     if (ref($self) eq 'HASH') {
         $local_params = cloneHash($self);
-        if ($params->{selected}) {
-            $self = new MinorImpact::Object($params->{selected});
-            $local_params->{user_id} = $self->user_id() if ($self && !$local_params->{user_id});
+        $local_params->{debug} .= "Object::selectList();";
+        if ($local_params->{selected}) {
+            $self = new MinorImpact::Object($local_params->{selected});
+            $local_params->{user_id} = $self->userID() if ($self && !$local_params->{user_id});
+            delete($local_params->{user_id}) if ($self->isSystem());
         } else {
             undef $self;
         }
     } elsif (ref($self)) {
-        $local_params->{user_id} = $self->user_id() unless ($local_params->{user_id});
+        $local_params->{user_id} ||= $self->userID();
         $local_params->{selected} = $self->id() unless ($local_params->{selected});
+        delete($local_params->{user_id}) if ($self->isSystem());
     }
 
     my $select = "<select id='$local_params->{fieldname}' name='$local_params->{fieldname}'";
@@ -169,7 +189,13 @@ sub selectList {
     $select .= ">\n";
     $select .= "<option></option>\n" unless ($local_params->{required});
     $local_params->{sort} = 1;
-    my @objects = search($local_params);
+    if ($local_params->{object_type_id} && $local_params->{user_id}) {
+        # TODO: I've added system objects, so I don't want to limit the results to just
+        #   what's owned by the current user, so I need to query the database about this
+        #   type and change my tune if these belong to everyone.
+        delete($local_params->{user_id}) if (MinorImpact::Object::isSystem($local_params->{object_type_id}));
+    }
+    my @objects = MinorImpact::Object::search($local_params);
     foreach my $object (@objects) {
         $select .= "<option value='" . $object->id() . "'";
         if ($local_params->{selected} && $local_params->{selected} == $object->id()) {
@@ -292,7 +318,7 @@ sub fields {
         $object_type_id = $self->{object_type_id};
     } elsif (ref($self)) {
         return $self->{object_data} if ($self->{object_data});
-        $object_type_id = $self->type_id();
+        $object_type_id = $self->typeID();
     } else {
         $object_type_id = $self;
     }
@@ -347,7 +373,7 @@ sub getType {
 
     # Figure out the id of the object type they're looking for.
     if (ref($self)) {
-        $type_id = $self->type_id();
+        $type_id = $self->typeID();
     } else {
         $type_id = $self;
         if (!$type_id) {
@@ -404,20 +430,30 @@ sub typeName {
         undef($self);
         $type_id = $params->{object_type_id} || $params->{type_id};
     } elsif (ref($self)) {
-        $type_id = $params->{object_type_id} || $params->{type_id} || $self->type_id();
+        $type_id = $params->{object_type_id} || $params->{type_id} || $self->typeID();
     } elsif($self) {
         $type_id = $self;
+        undef($self);
     }
 
-    my $DB = MinorImpact::getDB();
-    my $where = "name=?";
-    if ($type_id =~/^[0-9]+$/) {
-        $where = "id=?";
+
+    my $type_name;
+    my $plural_name;
+    if ($self) {
+        $type_name = $self->{type_data}->{name};
+        $plural_name = $self->{type_data}->{plural};
+    } else {
+        my $DB = MinorImpact::getDB();
+        my $where = "name=?";
+        if ($type_id =~/^[0-9]+$/) {
+            $where = "id=?";
+        }
+
+        my $sql = "select name, plural from object_type where $where";
+        #MinorImpact::log(8, "sql=$sql, ($type_id)");
+        ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
     }
 
-    my $sql = "select name, plural from object_type where $where";
-    #MinorImpact::log(8, "sql=$sql, ($type_id)");
-    my ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
     if (!$plural_name) {
         $plural_name = $type_name . "s";
     }
@@ -437,8 +473,9 @@ sub _reload {
     #MinorImpact::log(7, "starting(" . $object_id . ")");
          
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
-    undef($self->{object_data});
+    $self->{type_data} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->typeID()));
 
+    undef($self->{object_data});
     $self->{object_data} = $self->fields();
 
     my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
@@ -480,7 +517,7 @@ sub delete {
 
     $self->log(7, "starting");
 
-    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
+    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         $self->{DB}->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $self->id()));
     }
@@ -514,7 +551,7 @@ sub _search {
     $where .= " AND " . $params->{where} if ($params->{where});
 
     foreach my $param (keys %$params) {
-        next if ($param =~/^(id_only|sort|limit|page)$/);
+        next if ($param =~/^(id_only|sort|limit|page|debug)$/);
         #MinorImpact::log(8, "search key='$param'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
@@ -566,7 +603,7 @@ sub _search {
     }
 
     my $sql = "$select $where";
-    MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "'");
+    MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "' " . $params->{debug});
 
     my $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
 
@@ -591,10 +628,10 @@ sub search {
     my $local_params = cloneHash($params);
     # TODO: Right now you can only search for things that belong to the currently logged in
     #   user.  That's not usefull in the long run.
-    if (!$local_params->{user_id}) {
-        my $user = $MinorImpact::SELF->getUser();
-        $local_params->{user_id} = $user->id() || redirect("index.cgi");
-    }
+    #if (!$local_params->{user_id}) {
+    #    my $user = MinorImpact::getUser();
+    #    $local_params->{user_id} = $user->id() || redirect("index.cgi");
+    #}
 
     if ($local_params->{text}) {
         my $text = $local_params->{text};
@@ -618,8 +655,10 @@ sub search {
     my @objects;
     foreach my $id (@ids) {
         #MinorImpact::log(8, "\$id=" . $id);
-        my $object = new MinorImpact::Object($id);
-        push(@objects, $object);
+        eval {
+            my $object = new MinorImpact::Object($id);
+            push(@objects, $object) if ($object->validateUser());
+        };
     }
     if ($params->{sort}) {
         @objects = sort {$a->cmp($b); } @objects;
@@ -639,7 +678,7 @@ sub search {
     # Return a hash of arrays organized by type.
     my $objects;
     foreach my $object (@objects) {
-        push(@{$objects->{$object->type_id()}}, $object);
+        push(@{$objects->{$object->typeID()}}, $object);
     }
     #MinorImpact::log(7, "ending");
     return $objects;
@@ -653,7 +692,7 @@ sub getChildTypes {
     $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
 
     my @childTypes;
-    my $data = $self->{DB}->selectall_arrayref("select DISTINCT object_type_id from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
+    my $data = $self->{DB}->selectall_arrayref("select DISTINCT object_type_id from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
         if ($params->{id_only}) {
@@ -674,14 +713,16 @@ sub getChildren {
     #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $local_params = cloneHash($params);
     $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
+    $local_params->{debug} .= "Object::getChildren();";
+    #my $user_id = $self->userID();
 
     my @children;
-    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->type_id() . "]'", {Slice=>{}});
+    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
         next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
         my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";
-        MinorImpact::log(3, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "'");
+        MinorImpact::log(3, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "' ". $local_params->{debug});
         foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
             if ($local_params->{id_only}) {
                 push(@children, $r2->{object_id});
@@ -825,7 +866,7 @@ sub toData {
         $data->{id} = $self->id();
         $data->{name} = $self->name();
         $data->{description} = $self->get('description');
-        $data->{type_id} = $self->type_id();
+        $data->{type_id} = $self->typeID();
         my $fields = $self->fields();
         foreach my $name (keys %$fields) {
             my $field = $fields->{$name};
@@ -867,13 +908,15 @@ sub form {
         undef($self);
     }
 
-    my $user_id = $MinorImpact::SELF->getUser()->id();
     my $CGI = MinorImpact::getCGI();
+    my $user = MinorImpact::getUser() || die "Invalid user.";
+    my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
+    $local_params->{debug} .= "Object::form();";
     my $type;
     if ($self) {
-        $local_params->{object_type_id} = $self->type_id();
+        $local_params->{object_type_id} = $self->typeID();
     } elsif (!($local_params->{object_type_id} || $local_params->{type_id})) {
         die "Can't create a form with no object_type_id.\n";
     }
@@ -1028,6 +1071,44 @@ sub getTagCounts {
     return $VAR1;
 }
 
+sub isSystem {
+    my $self = shift || {};
 
+    # TODO: You know that point where you get too tired to care any more, and however good something ends
+    #   up being depends entirely on how high you were able get before that point?  I think I'm there.
+    #   This whole system relies on objects being both substantiated and unsubstantiated, using the same
+    #   functions in both cases simply using context to work out whether or not I'm a real boy or a ghost.
+    #   In this case, I'm getting meta information about the type of object that will be created based on...
+    #   shit.  That's not even what's happening here, this is base object, so anything calling this doesn't
+    #   event know what type of object it's *going* to be? Wait, that can't be true, right? What the fuck is
+    #   going on here?!
+    if ($self =~/^\d+$/) {
+        my $DB = MinorImpact::getDB();
+        my $data = $DB->selectrow_hashref("SELECT name, system FROM object_type ot WHERE ot.id=?", undef, ($self)) || die $DB->errstr;
+        return $data->{system};
+    } elsif (ref($self)) {
+        return ($self->{type_data}->{system}?1:0);
+    }
+}
+
+sub validateUser {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(8, "starting(" . $self->id() . ")");
+
+    return true if ($self->isSystem());
+
+    if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
+        my $object = new MinorImpact::Object($params->{proxy_object_id}) || die "Cannot create proxy object for validation.";
+        return $object->validateUser($params);
+    }
+
+    my $test_user = $params->{user} || MinorImpact::getUser();
+    return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
+    #MinorImpact::log(8, "\$test_user->id()='" .$test_user->id() . "'");
+
+    return ($test_user->id() && $self->userID() && ($test_user->id() eq $self->userID()));
+}
 
 1;
