@@ -801,7 +801,7 @@ sub toString {
     } elsif ($params->{format} eq 'text') {
         $string = $self->name();
     } elsif ($params->{format} eq 'list') {
-        $string = "<tr><td>" . $self->toString() . "</td></tr>";
+        $TT->process('object_list', { object => $self }, \$string) || die $TT->error();
     } else {
         my $template = $params->{template} || 'object';
         $TT->process('object', { object => $self }, \$string) || die $TT->error();

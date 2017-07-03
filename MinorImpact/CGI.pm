@@ -28,8 +28,9 @@ sub index {
         $object = new MinorImpact::Object($object_id) if ($object_id);
     };
     $action = "view" if ($action eq "list" && $object);
+    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
 
-    if ($CGI->param('submit')) {
+    if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         if ($action eq 'add') {
             MinorImpact::log(8, "submitted action eq 'add'");
@@ -148,7 +149,7 @@ sub index {
     }
 }
 
-sub legin {
+sub login {
     my $self = shift || return;
 
     my $CGI = $self->getCGI();

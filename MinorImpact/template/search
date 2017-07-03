@@ -4,13 +4,13 @@
 [% IF search %]
     <table class=list>
     [% FOREACH type IN objects.keys %]
+        <tr><td class=fieldname valign=top>[% typeName(type) %]</td><td valign=top>
+        <table class=list>
         [% FOREACH object IN objects.$type %]
-            <tr><td>
-                [% IF loop.first %]
-                    [% typeName(type) %]
-                [% END %]
-            </td><td>[% object.toString() %]</td></tr>
+            [% object.toString({format=>'list'}) %]
         [% END %]
+        </table>
+        </td></tr>
     [% END %]
     </table>
 [% ELSE %]
