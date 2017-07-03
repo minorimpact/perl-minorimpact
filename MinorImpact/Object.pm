@@ -522,8 +522,16 @@ sub _search {
             $where .= " AND object.user_id=?";
             push(@fields, $params->{user_id});
         } elsif ($param eq "tag") {
-            $where .= " AND object_tag.name=?";
-            push(@fields, $params->{tag});
+            my $tag_where;
+            foreach my $tag (split(",", $params->{tag})) {
+                if (!$tag_where) {
+                    $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
+                } else {
+                    $tag_where = "SELECT object_id FROM object_tag WHERE name=? AND object_id IN ($tag_where)";
+                }
+                unshift(@fields, $tag);
+            }
+            $where .= " AND object_tag.object_id IN ($tag_where)" if ($tag_where);
         } elsif ($param eq "description") {
             $where .= " AND object.description like ?";
             push(@fields, "\%$params->{description}\%");
@@ -579,6 +587,18 @@ sub search {
         my $user = $MinorImpact::SELF->getUser();
         $local_params->{user_id} = $user->id() || redirect("index.cgi");
     }
+
+    if ($local_params->{text}) {
+        my $text = $local_params->{text};
+        while (my ($match, $tag) = $text =~/ ?(tag:(\w+)) ?/ig) {
+            $text =~s/$match/ /;
+            $local_params->{tag} .= "$tag,";
+        }
+        $text = trim($text);
+        $local_params->{text} = $text;
+        $local_params->{tag} =~s/,$//;
+    }
+
     my @ids = _search($local_params);
     # TODO: There's no sorting or type tree or pagination allowed if someone just wants a raw list
     #   of IDs.  Does it make sense to change things?  Is it more likely they're going to do this
@@ -586,6 +606,7 @@ sub search {
     #   unless you also want the overhead of  creating the full object;  you can't have your cake
     #   and eat it too."
     return @ids if ($params->{id_only});
+
     my @objects;
     foreach my $id (@ids) {
         #MinorImpact::log(8, "\$id=" . $id);
@@ -768,7 +789,7 @@ sub toString {
         }
 
         foreach my $tag ($self->getTags()) {
-            $string .= "<a class=tag href=tags.cgi?search_tag=$tag>#$tag</a>";
+            $string .= "<a class=tag href='search.cgi?search=tag:$tag'>#$tag</a>";
         }
     } elsif ($params->{format} eq 'row') {
         foreach my $key (keys %{$self->{data}}) {
