@@ -1,0 +1,8 @@
+<!-- TEMPLATE:default.header_menu -->
+[% IF user %]
+    [% IF home %]
+        <a href=[% home %]>Home</a>
+    [% END %]
+    [% INCLUDE header_search %]
+[% END %]
+
