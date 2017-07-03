@@ -1,8 +1,6 @@
 [% INCLUDE header %]
 
-<form>
-    Search: <input type=text name=search value='[% search %]'><input type=submit value='search'>
-</form>
+<!-- TEMPLATE:default.search -->
 [% IF search %]
     <table class=list>
     [% FOREACH type IN objects.keys %]

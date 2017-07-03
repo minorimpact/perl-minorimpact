@@ -1,3 +1,4 @@
+<!-- TEMPLATE:default.footer -->
 [% INCLUDE add_reference_dialog %]
 </body>
 </html>

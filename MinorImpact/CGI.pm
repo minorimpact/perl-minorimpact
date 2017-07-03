@@ -95,10 +95,19 @@ sub index {
         # Show a list of objects of a certain type that refer to the current object.
         my @objects = $object->getChildren({object_type_id=>$type_id, sort=>1});
         my $type_name = MinorImpact::Object::typeName($type_id);
+        my @tags;
+        my %tags;
+        foreach my $object (@objects) {
+            map { $tags{$_}++; } $object->getTags();
+        }
+        @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
+        splice(@tags, 0, -5);
+
         $TT->process('tablist', {  
-                                objects=>[@objects],
-                                type_id=>$type_id,
-                                type_name=>$type_name,
+                                objects   => [@objects],
+                                tags      => [@tags],
+                                type_id   => $type_id,
+                                type_name => $type_name,
                                 }) || die $TT->error();
     } elsif ($object) { # $action eq 'view'
         return view($self, $local_params);
@@ -122,16 +131,24 @@ sub index {
             print to_json(\@data);
         } else { # $format eq 'html'
             my $type_name = MinorImpact::Object::typeName($type_id);
+            my @tags;
+            my %tags;
+            foreach my $object (@objects) {
+                map { $tags{$_}++; } $object->getTags();
+            }
+            @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
+            splice(@tags, 0, -5);
             $TT->process('list', {  
-                                    objects=>[@objects],
-                                    type_id=>$type_id,
-                                    type_name=>$type_name,
+                                    objects   => [@objects],
+                                    tags      => [@tags],
+                                    type_id   => $type_id,
+                                    type_name => $type_name,
                                 }) || die $TT->error();
         }
     }
 }
 
-sub login {
+sub legin {
     my $self = shift || return;
 
     my $CGI = $self->getCGI();
@@ -155,7 +172,8 @@ sub logout {
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
-    print $CGI->header(-cookie=>[$object_cookie, $user_cookie], -location=>"login.cgi");
+    my $object_cookie =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
+    print $CGI->header(-cookie=>[$object_cookie, $user_cookie, $view_history], -location=>"login.cgi");
 }
 
 sub object_types {
@@ -274,8 +292,6 @@ JAVASCRIPT
                             error=>$error,
                             javascript=>$javascript,
                             object=>$object,
-                            projects=>[@projects],
-                            project=>$project,
                             tab_number=>$tab_number,
                             }) || die $TT->error();
 

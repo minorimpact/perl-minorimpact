@@ -529,7 +529,7 @@ sub _search {
                 } else {
                     $tag_where = "SELECT object_id FROM object_tag WHERE name=? AND object_id IN ($tag_where)";
                 }
-                unshift(@fields, $tag);
+                push(@fields, $tag);
             }
             $where .= " AND object_tag.object_id IN ($tag_where)" if ($tag_where);
         } elsif ($param eq "description") {
@@ -996,5 +996,30 @@ sub fieldID {
         return @{$data}[0]->{id};
     }
 }
+
+# This is stupid, it's always going to be '1' per tag for a given object. But I'm leaving it for the selectall_hashref example.
+sub getTagCounts {
+    my $self = shift || return;
+
+    my $DB = MinorImpact::getDB();
+    my $VAR1 = $DB->selectall_hashref("select name, count(*) as tag_count from object_tag where object_id=? group by name", 'name', undef, ($self->id())) || die $DB->errstr;
+    #$VAR1 = {
+    #      'friend' => {
+    #                    'tag_count' => '1',
+    #                    'name' => 'friend'
+    #                  },
+    #      'work' => {
+    #                  'tag_count' => '1',
+    #                  'name' => 'work'
+    #                },
+    #      'roommate' => {
+    #                      'tag_count' => '1',
+    #                      'name' => 'roommate'
+    #                    }
+    #    };
+    return $VAR1;
+}
+
+
 
 1;

@@ -1,5 +1,6 @@
 [% INCLUDE header %]
 
+<!-- TEMPLATE:default.list -->
 [% INCLUDE list_menu %]
 <table class=list>
 [% FOREACH o IN objects %]

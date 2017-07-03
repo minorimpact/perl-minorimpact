@@ -1,6 +1,6 @@
 Content-type: text/html
 
-<!-- default.tablist -->
+<!-- TEMPLATE:default.tablist -->
 [% INCLUDE list_menu %]
 <table class=list>
 [% FOREACH o IN objects %]

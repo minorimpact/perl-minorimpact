@@ -2,8 +2,8 @@ Content-type: text/html
 
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+<!-- TEMPLATE:default.header -->
 <head>
-    <!-- default header -->
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
     <link rel="stylesheet" type="text/css" href="/minorimpact.css">
     <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
@@ -34,6 +34,7 @@ Content-type: text/html
         <tr>
             <td valign=top>
                 <div id=section_menu>
+                    [% INCLUDE header_links %]
                     [% INCLUDE header_links_site %]
                 </div> <!-- section_menu -->
             </td>
