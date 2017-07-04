@@ -1,16 +1,17 @@
 [% INCLUDE header %]
 
 <!-- TEMPLATE:default.search -->
-[% IF search %]
+[% IF search && objects.keys.size %]
     <table class=list>
     [% FOREACH type IN objects.keys %]
-        <tr><td class=fieldname valign=top>[% typeName(type) %]</td><td valign=top>
-        <table class=list>
-        [% FOREACH object IN objects.$type %]
-            [% object.toString({format=>'list'}) %]
-        [% END %]
-        </table>
-        </td></tr>
+        <tr>
+            <td class=fieldname valign=top>
+                [% typeName(type) %]
+            </td>
+            <td valign=top>
+                [% INCLUDE list_object objects = objects.$type %]
+            </td>
+        </tr>
     [% END %]
     </table>
 [% ELSE %]

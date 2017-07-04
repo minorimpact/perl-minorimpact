@@ -2,10 +2,7 @@
 
 <!-- TEMPLATE:default.list -->
 [% INCLUDE list_menu %]
-<table class=list>
-[% FOREACH o IN objects %]
-    [% o.toString({format=>'list'}) %]
-[% END %]
-</table>
+
+[% INCLUDE list_object %]
 
 [% INCLUDE footer %]

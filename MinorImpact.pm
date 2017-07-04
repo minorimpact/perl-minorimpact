@@ -100,7 +100,7 @@ sub getUser {
     my $self = shift || {};
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     if (ref($self) eq 'HASH') {
         $params = $self;
@@ -121,19 +121,19 @@ sub getUser {
     #   again.
     my $user_id = $CGI->cookie("user_id") || MinorImpact::cache({key=>'user_id'});
     if ($user_id) {
-        MinorImpact::log(8, "user_id=$user_id");
+        #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
 
         my $client_ip = MinorImpact::cache({key=>"client_ip:$user_id"});
-        MinorImpact::log(8, "client_ip=$client_ip");
+        #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $client_ip) {
-            MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+            #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
             if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
-                MinorImpact::log(7, "ending - cached ip matched current ip");
+                #MinorImpact::log(7, "ending - cached ip matched current ip");
                 $self->{USER} = $user;
                 return $user;
             } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
-                MinorImpact::log(7, "ending - cached ssh_client matches current session");
+                #MinorImpact::log(7, "ending - cached ssh_client matches current session");
                 $self->{USER} = $user;
                 return $user;
             }
@@ -144,7 +144,7 @@ sub getUser {
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
     if ($username && $password) {
-        MinorImpact::log(3, "validating " . $username);
+        #MinorImpact::log(3, "validating " . $username);
         my $user = new MinorImpact::User($username);
         if ($user && $user->validate_user($password)) {
             my $user_id = $user->id();
@@ -185,7 +185,10 @@ sub redirect {
     #$location =~s/[^a-z0-9.\-_?\/:=]//;
     #$location = uri_escape($location);
     my $domain = "https://$ENV{HTTP_HOST}";
-    if ($location =~/^\//) {
+    my $script_name = MinorImpact::scriptName();
+    if ($location =~/^\?/) {
+        $location = "$domain/cgi-bin/$script_name$location";
+    } elsif ($location =~/^\//) {
         $location = "$domain/$location";
     } elsif ($location !~/^\//) {
         $location = "$domain/cgi-bin/$location";
@@ -438,22 +441,26 @@ sub cgi {
     my $self = shift || return;
     my $params = shift || {};
 
+    my $CGI = MinorImpact::getCGI();
+    my $action = $CGI->param('a') || $CGI->param('action');
     my $script = $params->{script} || 'index';
 
-    if ($script eq 'index') {
-        MinorImpact::CGI::index($self, $params);
-    } elsif ($script eq 'login') {
+    if ($script eq 'login') {
         MinorImpact::CGI::login($self);
-    } elsif ($script eq 'logout') {
+    } elsif ($script eq 'logout' || $action eq 'logout') {
         MinorImpact::CGI::logout($self);
-    } elsif ($script eq 'object_types') {
+    } elsif ($script eq 'object_types' || $action eq 'object_types') {
         MinorImpact::CGI::object_types($self);
-    } elsif ($script eq 'search') {
+    } elsif ($action eq 'save_search') {
+        MinorImpact::CGI::save_search($self, $params->{params});
+    } elsif ($script eq 'search' || $action eq 'search') {
         MinorImpact::CGI::search($self, $params->{params});
-    } elsif ($script eq 'tags') {
+    } elsif ($script eq 'tags' || $action eq 'tags') {
         MinorImpact::CGI::tags($self, $params->{params});
-    } elsif ($script eq 'user') {
+    } elsif ($script eq 'user' || $action eq 'user') {
         MinorImpact::CGI::user($self);
+    } elsif ($script eq 'index') {
+        MinorImpact::CGI::index($self, $params);
     }
 }
 

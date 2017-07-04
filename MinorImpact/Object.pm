@@ -5,6 +5,7 @@ use JSON;
 use Text::Markdown 'markdown';
 
 use MinorImpact;
+use MinorImpact::Container;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
 
@@ -118,7 +119,7 @@ sub _new {
 
         if ($params->{tags}) {
             foreach my $tag (parseTags($params->{tags})) {
-                $self->{DB}->do("INSERT INTO object_tag(object_id, name) VALUES (?, ?)", undef, ($object_id, $tag));
+                $self->{DB}->do("INSERT INTO object_tag(object_id, name) VALUES (?, ?)", undef, ($object_id, $tag)) if (trim(\$tag));
             }
         }
     } elsif ($params =~/^\d+$/) {
@@ -378,8 +379,7 @@ sub getType {
         $type_id = $self;
         if (!$type_id) {
             if ($MinorImpact::SELF->{conf}{default}{default_object_type}) {
-                my $type = $MinorImpact::SELF->{conf}{default}{default_object_type};
-                return MinorImpact::Object::typeID($type);
+                return MinorImpact::Object::typeID($MinorImpact::SELF->{conf}{default}{default_object_type});
             }
             # If type isn't specified, return the first 'toplevel' object, something that no other object
             # references.
@@ -583,8 +583,7 @@ sub _search {
         } elsif ($param eq "text" || $param eq "search") {
             my $text = $params->{text} || $params->{search};
             if ($text) {
-                $where .= " AND (object.name LIKE ? OR object.description LIKE ? OR object_data.value LIKE ? OR object_text.value LIKE ?)";
-                push(@fields, "\%$text\%");
+                $where .= " AND (object.name LIKE ? OR object_data.value LIKE ? OR object_text.value LIKE ?)";
                 push(@fields, "\%$text\%");
                 push(@fields, "\%$text\%");
                 push(@fields, "\%$text\%");
@@ -838,7 +837,9 @@ sub toString {
         }
 
         foreach my $tag ($self->getTags()) {
-            $string .= "<a class=tag href='search.cgi?search=tag:$tag'>#$tag</a>";
+            my $t;
+            $TT->process('tag', {tag=>$tag}, \$t) || die $TT->error();
+            $string .= $t;
         }
     } elsif ($params->{format} eq 'row') {
         foreach my $key (keys %{$self->{data}}) {
@@ -925,8 +926,8 @@ sub form {
 
     my $form = <<FORM;
     <form method=POST>
-        <input type=hidden name=id value="${\ ($self?$self->id():''); }">
-        <input type=hidden name=a value="${\ ($self?'edit':'add'); }">
+        <input type=hidden name=id      value="${\ ($self?$self->id():''); }">
+        <input type=hidden name=a       value="${\ ($self?'edit':'add'); }">
         <input type=hidden name=type_id value="$object_type_id">
         <table class=edit>
 FORM
@@ -1095,7 +1096,7 @@ sub validateUser {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(8, "starting(" . $self->id() . ")");
+    #MinorImpact::log(8, "starting(" . $self->id() . ")");
 
     return true if ($self->isSystem());
 

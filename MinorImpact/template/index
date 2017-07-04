@@ -1,6 +1,6 @@
 [% INCLUDE header title=object.name() %]
 
-<!-- default.index -->
+<!-- TEMPLATE:default.index -->
 [% IF object.back() %]
 <a href='[% object.back() %]'>back</a><br />
 [% END %]

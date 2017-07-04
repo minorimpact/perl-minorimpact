@@ -1,7 +1,8 @@
 [% INCLUDE header %]
 
+<!-- TEMPLATE:default.add -->
 [% IF object %]
-    <a class='back' href=index.cgi?id=[% object.id() %]>back</a>
+    <a class='back' href='[% object.back() %]'>back</a>
 [% END %]
 <span class=object_name>New [% type_name %]</span>
 

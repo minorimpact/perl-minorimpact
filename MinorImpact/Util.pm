@@ -16,6 +16,7 @@ use Time::Local;
 use Exporter 'import';
 @EXPORT = ( "cloneHash",
             "dumper",
+            "extractTags",
             "fleshDate",
             "fromMysqlDate", 
             "indexOf",
@@ -45,6 +46,29 @@ sub cloneHash {
         }
     }
     return $new_hash;
+}
+
+sub extractTags {
+    my %tags;
+    foreach my $t (@_) {
+        my $text = ref($t)?$$t:$t;
+        $text =~s/\r\n/\n/g;
+        while(my ($tag) = $text =~/tag:(\w+)/) {
+            $tags{$tag}++;
+            $text =~s/tag:$tag//;
+        }
+        while(my ($tag) = $text =~/(?<!#)#(\w+)/) {
+            $tags{$tag}++;
+            $text =~s/#$tag//;
+        }
+        $text =~s/##/#/g;
+        while(my ($tag) = $text =~/^(\w+)$/m) {
+            $tags{$tag}++;
+            $text =~s/$tag\n//;
+        }
+        $$t = $text if (ref($t));
+    }
+    return sort keys %tags;
 }
 
 sub fleshDate {
@@ -117,6 +141,7 @@ sub parseTags {
         foreach my $tag (split(/\W+/, $tags)) {
             $tag = lc($tag);
             $tag =~s/\W//g;
+            $tag =~s/^#+//;
             $tags{$tag}++ if ($tag);
         }
     }
@@ -151,9 +176,11 @@ sub toMysqlDate {
 
 sub trim {
     my $string = shift || return;
-    $string =~ s/^\s+//;
-    $string =~ s/\s+$//;
-    return $string;
+    my $text = ref($string)?$$string:$string;
+    $text =~ s/^\s+//;
+    $text =~ s/\s+$//;
+    $$string = $text if (ref($string));
+    return $text;
 }
 
 sub trunc {

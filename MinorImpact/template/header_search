@@ -1,5 +1,12 @@
-<table>
-<tr>
-    <td valign=top><form id=search_form action="search.cgi" onsubmit="window.location='search.cgi?search=' + this.search.value;"><input type=text id=search name=search value='[% search %]'></form></td>
-</tr>
-</table>
+<script>
+function submitForm(form) {
+    if (form.save.checked) {
+        var save_name = prompt ("Save Name");
+        form.a.value = 'save_search';
+        form.save_name.value = save_name;
+    }
+    return true;
+}
+</script>
+<form id=search_form method=POST action='[% script_name %]' onsubmit='return submitForm(this);'>
+<input type=hidden name=a value=search><input type=hidden id=save_name name=save_name><input type=text id=search name=search value='[% search %]'><input type=submit value=search><input type=checkbox name=save>Save</form>

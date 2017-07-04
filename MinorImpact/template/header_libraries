@@ -32,7 +32,7 @@
         \$("#object_type_id").change(function() {
             reloadObjects();
         });
-        \$.getJSON("/cgi-bin/object_types.cgi?",function(data) {
+        \$.getJSON("/cgi-bin/index.cgi?a=object_types",function(data) {
             for (var i=0; i<data.length; i++) {
                 var object_type = data[i];
                 var select = "<option value=" + object_type.id;

@@ -17,6 +17,7 @@ sub index {
     my $action = $CGI->param('action') || $CGI->param('a') || "list";
     my $tab_id = $CGI->param('tab_id') || 0;
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
+    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
     my $last_object_id = $CGI->cookie("object_id");
     my $type_id = $CGI->param('type_id');
     my $format = $CGI->param('format') || 'html';
@@ -120,8 +121,22 @@ sub index {
     } else { # $action eq 'list'
         # Show all the objects of a certain type, or the default type.
         $type_id ||= MinorImpact::Object::getType();
-        my $local_params = {object_type_id=>$type_id, sort=>1};
+
+        # If we're looking at a container objects, then build out the search
+        #   query from that.
+        my $local_params;
+       
+        #MinorImpact::log(8, "\$container_id=$container_id");
+        my $container = new MinorImpact::Object($container_id) if ($container_id);
+        if ($container) {
+            $local_params = $container->searchParams();
+        }
+
+        $local_params->{object_type_id} = $type_id;
+        $local_params->{sort} = 1;
+        $local_params->{debug} .= "CGI::index(a=list);";
         $local_params->{user_id} = $user->id() if ($user);
+
         my @objects = MinorImpact::Object::search($local_params);
         if (scalar(@objects) == 0) {
             $self->redirect("$script_name?a=add&type_id=$type_id");
@@ -154,26 +169,26 @@ sub index {
 }
 
 sub login {
-    my $self = shift || return;
+    my $MINORIMPACT = shift || return;
 
-    my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
+    my $CGI = $MINORIMPACT->getCGI();
+    my $TT = $MINORIMPACT->getTT();
     
     my $username = $CGI->param('username');
     my $redirect = $CGI->param('redirect');
     
-    my $user = $self->getUser();
+    my $user = $MINORIMPACT->getUser();
     if ($user) {
-        $self->redirect();
+        $MINORIMPACT->redirect();
     }
     
     $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
 }
 
 sub logout {
-    my $self = shift || return;
+    my $MINORIMPACT = shift || return;
 
-    my $CGI = $self->getCGI();
+    my $CGI = $MINORIMPACT->getCGI();
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
@@ -192,18 +207,38 @@ sub object_types {
     print to_json(\@json);
 }
 
+sub save_search {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting");
+    my $CGI = MinorImpact::getCGI();
+    my $user = MinorImpact::getUser();
+
+    my $name = $CGI->param('save_name') || return search($MINORIMPACT, $params);
+    my $search = $CGI->param('search') || $MINORIMPACT->redirect();
+    MinorImpact::log(8, "\$search='$search'");
+
+    my $container_data = {name => $name, search => $search, user_id => $user->id()};
+    my $container = new MinorImpact::Container($container_data);
+
+    MinorImpact::log(7, "ending");
+    $MINORIMPACT->redirect("?cid=" . $container->id());
+}
+
+
 sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
     my $local_params = cloneHash($params);
+    $local_params->{debug} .= "MinorImpact::CGI::search();";
 
     my $user = $MINORIMPACT->getUser();
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
     my $script_name = MinorImpact::scriptName();
 
-    my $project_id = $CGI->param('project_id');
     my $object_id = $CGI->param('object_id') || $CGI->cookie('object_id');
 
     my $search = $CGI->param('search');
@@ -216,8 +251,8 @@ sub search {
         $objects = MinorImpact::Object::search($local_params);
     }
     $TT->process('search', {
-                            objects=>$objects,
-                            search=>$search,
+                            objects  => $objects,
+                            search   => $search,
                             typeName => sub { MinorImpact::Object::typeName(@_, {plural=>1}) },
                         }) || die $TT->error();
 }

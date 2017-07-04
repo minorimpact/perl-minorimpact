@@ -1,6 +1,7 @@
 [% INCLUDE header %]
 
-<a class='back' href=index.cgi?id=[% object.id() %]>back</a>
+<!-- TEMPLATE:default.edit -->
+<a class='back' href='[% object.back() %]'>back</a>
 <span class=object_name>[% object.name() %]</span>
 
 [% form %]

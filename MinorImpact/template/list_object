@@ -1,0 +1,6 @@
+<!-- TEMPLATE:default.list_object -->
+<table class=list>
+[% FOREACH o IN objects %]
+    [% o.toString({format=>'list'}) %]
+[% END %]
+</table>
