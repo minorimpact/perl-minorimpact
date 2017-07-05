@@ -420,9 +420,10 @@ sub types {
 }
 
 sub typeName {
-    #MinorImpact::log(7, "starting");
     my $self = shift || return;
     my $params = shift || {};
+
+    #MinorImpact::log(7, "starting");
 
     my $type_id;
     if (ref($self) eq 'HASH') {
@@ -435,11 +436,11 @@ sub typeName {
         $type_id = $self;
         undef($self);
     }
-
+    #MinorImpact::log(8, "\$type_id='$type_id'");
 
     my $type_name;
     my $plural_name;
-    if ($self) {
+    if ($self && $type_id == $self->typeID()) {
         $type_name = $self->{type_data}->{name};
         $plural_name = $self->{type_data}->{plural};
     } else {
@@ -540,15 +541,20 @@ sub _search {
     my $params = shift || {};
 
     #MinorImpact::log(7, "starting");
-    my $DB = $MinorImpact::SELF->{DB};
+    my $DB = MinorImpact::getDB();
 
     $params->{object_type_id} = $params->{object_type} if ($params->{object_type} && !$params->{object_type_id});
-    my $select = "SELECT DISTINCT(object.id) FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id)";
+    my $select = "SELECT DISTINCT(object.id) FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id)";
     my $where = "WHERE object.id > 0 ";
     my @fields;
 
     $select .= $params->{select} if ($params->{select});
-    $where .= " AND " . $params->{where} if ($params->{where});
+    if ($params->{where}) {
+        my $w = $params->{where};
+        $w =~s/\s*and\s+//i;
+        $where .= " AND $w";
+        push (@fields, @{$params->{where_fields}});
+    }
 
     foreach my $param (keys %$params) {
         next if ($param =~/^(id_only|sort|limit|page|debug)$/);
@@ -715,33 +721,42 @@ sub getChildren {
     $local_params->{debug} .= "Object::getChildren();";
     #my $user_id = $self->userID();
 
-    my @children;
-    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
-    foreach my $row (@$data) {
-        next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
+    $local_params->{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
+    $local_params->{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
+    return MinorImpact::Object::search($local_params);
 
-        my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";
-        MinorImpact::log(3, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "' ". $local_params->{debug});
-        foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
-            if ($local_params->{id_only}) {
-                push(@children, $r2->{object_id});
-            } else {
-                #MinorImpact::log(8, "creating new object '" . $r2->{object_id} . "'");
-                push(@children, new MinorImpact::Object($r2->{object_id}));
-            }
-        }
-        #MinorImpact::log(8, "found " . scalar(@results) . " so far");
-    }
+    #my @children;
+    #my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
+    #foreach my $row (@$data) {
+    #    next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
-    if ($local_params->{sort}) {
-        if ($local_params->{id_only}) {
-            @children = sort @children;
-        } else {
-            @children = sort {$a->cmp($b); } @children;
-        }
-    }
+    #    $local_params->{where} = " AND object_data.object_field_id=$row->{id} AND object_data.value=" . $self->id();
+    #    push (@children, MinorImpact::Object::search($local_params));
+    #    next;
+    #
+    #    ##my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";
+    #    #my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data JOIN object_field ON (object_field.id=object_data.object_field_id) WHERE object_data.object_field_id=? AND object_data.value=?";
+    #    #MinorImpact::log(3, "$sql, \@fields='" . $row->{id} . "', '" . $self->id() . "' ". $local_params->{debug});
+    #    #foreach my $r2 (@{$self->{DB}->selectall_arrayref($sql, {Slice=>{}}, ($row->{id}, $self->id()))}) {
+    #    #    if ($local_params->{id_only}) {
+    #    #        push(@children, $r2->{object_id});
+    #    #    } else {
+    #    #        #MinorImpact::log(8, "creating new object '" . $r2->{object_id} . "'");
+    #    #        push(@children, new MinorImpact::Object($r2->{object_id}));
+    #    #    }
+    #    #}
+    #    ##MinorImpact::log(8, "found " . scalar(@results) . " so far");
+    #}
+    #
+    #if ($local_params->{sort}) {
+    #    if ($local_params->{id_only}) {
+    #        @children = sort @children;
+    #    } else {
+    #        @children = sort {$a->cmp($b); } @children;
+    #    }
+    #}
     #MinorImpact::log(8, "returning " . scalar(@children));
-    return @children;
+    #return @children;
 }
 
 # Renders an object to a string in a specified format.

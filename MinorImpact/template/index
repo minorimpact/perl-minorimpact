@@ -16,7 +16,7 @@
 <div id=tabs>
 <ul>
 [% FOREACH child_type IN object.getChildTypes() %]
-    <li><a href='[% script_name %]?id=[% object.id() %]&type_id=[% child_type %]&a=tablist'>[% object.typeName({object_type_id=>child_type, plural=>1}) %]</a></li>
+    <li><a href='[% script_name %]?id=[% object.id() %]&type_id=[% child_type %]&a=tablist&cid=[% cid %]'>[% object.typeName({object_type_id=>child_type, plural=>0}) %]</a></li>
 [% END %]
 </ul>
 </div>

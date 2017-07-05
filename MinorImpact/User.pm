@@ -6,7 +6,7 @@ sub new {
     my $package = shift;
     my $params = shift;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -15,7 +15,7 @@ sub new {
     checkDatabaseTables($self->{DB});
 
     my $user_id = $params;
-    MinorImpact::log(8, "\$user_id='$params'");
+    #MinorImpact::log(8, "\$user_id='$params'");
 
     if ($user_id =~/^\d+$/) {
         $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || return;
@@ -24,7 +24,7 @@ sub new {
     }
     bless($self, $package);
 
-    MinorImpact::log(8, "created user: '" .$self->name() . "'");
+    #MinorImpact::log(8, "created user: '" .$self->name() . "'");
     return $self;
 }
 

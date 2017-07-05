@@ -95,7 +95,12 @@ sub index {
         $self->redirect($back);
     } elsif ($action eq 'tablist' && $object && $type_id) {
         # Show a list of objects of a certain type that refer to the current object.
-        my @objects = $object->getChildren({object_type_id=>$type_id, sort=>1});
+        my $local_params = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::index(a=tablist);"};
+        my $container = new MinorImpact::Object($container_id) if ($container_id);
+        if ($container) {
+            $local_params = { %$local_params, %{$container->searchParams()} };
+        }
+        my @objects = $object->getChildren($local_params);
         my $type_name = MinorImpact::Object::typeName($type_id);
         my @tags;
         my %tags;
@@ -226,7 +231,6 @@ sub save_search {
     $MINORIMPACT->redirect("?cid=" . $container->id());
 }
 
-
 sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
@@ -298,6 +302,7 @@ sub view {
     my $script_name = $self->scriptName();
     my $TT = $self->getTT();
     my $CGI = $self->getCGI();
+    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
 
     my $user = $self->getUser();
     my $object = $params->{object} || return;
@@ -329,10 +334,11 @@ JAVASCRIPT
     print "Set-Cookie: $object_cookie\n";
 
     $TT->process('index', {
-                            error=>$error,
-                            javascript=>$javascript,
-                            object=>$object,
-                            tab_number=>$tab_number,
+                            cid        => $container_id,
+                            error      => $error,
+                            javascript => $javascript,
+                            object     => $object,
+                            tab_number => $tab_number,
                             }) || die $TT->error();
 
     #$object->updateAllDates();
