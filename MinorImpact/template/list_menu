@@ -6,6 +6,7 @@
 [% IF tags %]
     [% INCLUDE list_menu_tags %]
 [% END %]
+[% INCLUDE list_menu_containers %]
 [% INCLUDE list_menu_site %]
 </div>
 

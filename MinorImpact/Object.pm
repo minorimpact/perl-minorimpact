@@ -8,6 +8,7 @@ use MinorImpact;
 use MinorImpact::Container;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
+use MinorImpact::Object::Search;
 
 my $OBJECT_CACHE;
 
@@ -196,7 +197,7 @@ sub selectList {
         #   type and change my tune if these belong to everyone.
         delete($local_params->{user_id}) if (MinorImpact::Object::isSystem($local_params->{object_type_id}));
     }
-    my @objects = MinorImpact::Object::search($local_params);
+    my @objects = MinorImpact::Object::Search::search($local_params);
     foreach my $object (@objects) {
         $select .= "<option value='" . $object->id() . "'";
         if ($local_params->{selected} && $local_params->{selected} == $object->id()) {
@@ -537,7 +538,7 @@ sub delete {
     $self->log(7, "ending");
 }
 
-sub _search {
+sub _search_del {
     my $params = shift || {};
 
     #MinorImpact::log(7, "starting");
@@ -625,18 +626,12 @@ sub log {
     return;
 }
 
-sub search {
+sub search_del {
     my $params = shift || {};
 
     #MinorImpact::log(7, "starting");
 
     my $local_params = cloneHash($params);
-    # TODO: Right now you can only search for things that belong to the currently logged in
-    #   user.  That's not usefull in the long run.
-    #if (!$local_params->{user_id}) {
-    #    my $user = MinorImpact::getUser();
-    #    $local_params->{user_id} = $user->id() || redirect("index.cgi");
-    #}
 
     if ($local_params->{text}) {
         my $text = $local_params->{text};
@@ -650,18 +645,25 @@ sub search {
     }
 
     my @ids = _search($local_params);
-    # TODO: There's no sorting or type tree or pagination allowed if someone just wants a raw list
-    #   of IDs.  Does it make sense to change things?  Is it more likely they're going to do this
-    #   on their own if they're that type of consumer?  Is it logical to say "you can't sort them
-    #   unless you also want the overhead of  creating the full object;  you can't have your cake
-    #   and eat it too."
+    # We'll sort them since somewone requested it, but it's kind of
+    #   pointless without the whole object.
+    @ids = sort @ids if ($params->{sort});
+
+    # There's no pagination or type_trees, since these are just
+    #   IDs.  You need to have access to all the data to get
+    #   fancy options.
     return @ids if ($params->{id_only});
+
 
     my @objects;
     foreach my $id (@ids) {
         #MinorImpact::log(8, "\$id=" . $id);
         eval {
             my $object = new MinorImpact::Object($id);
+            # This is where we limit what comes back to just what
+            #   the current user has access to.  We may want to 
+            #   override this in the future with an admin flag
+            #   and an admin user.
             push(@objects, $object) if ($object->validateUser());
         };
     }
@@ -723,7 +725,7 @@ sub getChildren {
 
     $local_params->{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
     $local_params->{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
-    return MinorImpact::Object::search($local_params);
+    return MinorImpact::Object::Search::search($local_params);
 
     #my @children;
     #my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
@@ -731,7 +733,7 @@ sub getChildren {
     #    next if ($local_params->{object_type_id} && ($local_params->{object_type_id} != $row->{object_type_id}));
 
     #    $local_params->{where} = " AND object_data.object_field_id=$row->{id} AND object_data.value=" . $self->id();
-    #    push (@children, MinorImpact::Object::search($local_params));
+    #    push (@children, MinorImpact::Object::Search::search($local_params));
     #    next;
     #
     #    ##my $sql = "SELECT object_data.object_id, object_field.object_type_id FROM object_data, object_field WHERE object_field.id=object_data.object_field_id and object_data.object_field_id=? and object_data.value=?";

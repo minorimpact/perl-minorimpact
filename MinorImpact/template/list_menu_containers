@@ -1,0 +1,4 @@
+<!-- TEMPLATE:default.list_menu_containers -->
+[% FOREACH container IN containers %]
+    [% INCLUDE container %]
+[% END %]

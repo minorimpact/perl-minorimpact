@@ -1,3 +1,4 @@
+<!-- TEMPLATE:default.object -->
 [% IF object.isSystem() %]
     [% object.name() %]
 [% ELSE %]

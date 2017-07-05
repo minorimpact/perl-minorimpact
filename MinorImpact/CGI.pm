@@ -55,25 +55,26 @@ sub index {
         }
     }
 
-    my $local_params = {}; #cloneHash($params);
-    $local_params->{tab_id} = $tab_id;
-    $local_params->{object} = $object;
-    $local_params->{type_id} = $type_id;
-    $local_params->{format} = $format;
+    #my $local_params = {};
+    #$local_params->{tab_id} = $tab_id;
+    #$local_params->{object} = $object;
+    #$local_params->{type_id} = $type_id;
+    #$local_params->{format} = $format;
 
+    MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
-        return $sub->($self, $local_params);
+        return $sub->($self, $params);
     } elsif ($action eq 'add') {
         my $form;
         $type_id ||= MinorImpact::Object::getType();
         my $type_name = MinorImpact::Object::typeName({object_type_id=>$type_id});
-        my $params = {object_type_id=>$type_id};
+        my $local_params = {object_type_id=>$type_id};
         eval {
-            $form = $type_name->form($params);
+            $form = $type_name->form($local_params);
         };
         if ($@) {
-            $form = MinorImpact::Object::form($params);
+            $form = MinorImpact::Object::form($local_params);
         }
 
         $TT->process('add', {
@@ -100,6 +101,8 @@ sub index {
         if ($container) {
             $local_params = { %$local_params, %{$container->searchParams()} };
         }
+        $local_params->{debug} .= "MinorImpact::Container::searchParams();";
+
         my @objects = $object->getChildren($local_params);
         my $type_name = MinorImpact::Object::typeName($type_id);
         my @tags;
@@ -124,12 +127,9 @@ sub index {
     } elsif ($action eq 'user' ) {
         user($self);
     } else { # $action eq 'list'
-        # Show all the objects of a certain type, or the default type.
-        $type_id ||= MinorImpact::Object::getType();
-
         # If we're looking at a container objects, then build out the search
         #   query from that.
-        my $local_params;
+        my $local_params = cloneHash($params);
        
         #MinorImpact::log(8, "\$container_id=$container_id");
         my $container = new MinorImpact::Object($container_id) if ($container_id);
@@ -137,12 +137,15 @@ sub index {
             $local_params = $container->searchParams();
         }
 
+        # Show all the objects of a certain type, or the default type.
+        $type_id ||= MinorImpact::Object::getType();
+
         $local_params->{object_type_id} = $type_id;
         $local_params->{sort} = 1;
         $local_params->{debug} .= "CGI::index(a=list);";
         $local_params->{user_id} = $user->id() if ($user);
 
-        my @objects = MinorImpact::Object::search($local_params);
+        my @objects = MinorImpact::Object::Search::search($local_params);
         if (scalar(@objects) == 0) {
             $self->redirect("$script_name?a=add&type_id=$type_id");
         }
@@ -155,6 +158,8 @@ sub index {
             print to_json(\@data);
         } else { # $format eq 'html'
             my $type_name = MinorImpact::Object::typeName($type_id);
+            my @containers = $user->getContainers();
+
             my @tags;
             my %tags;
             foreach my $object (@objects) {
@@ -164,10 +169,12 @@ sub index {
             splice(@tags, 5);
             #@tags = map {- length($_); } @tags;
             $TT->process('list', {  
-                                    objects   => [@objects],
-                                    tags      => [@tags],
-                                    type_id   => $type_id,
-                                    type_name => $type_name,
+                                    container_id => $container_id,
+                                    containers   => [ @containers ],
+                                    objects      => [ @objects ],
+                                    tags         => [ @tags ],
+                                    type_id      => $type_id,
+                                    type_name    => $type_name,
                                 }) || die $TT->error();
         }
     }
@@ -220,7 +227,7 @@ sub save_search {
     my $CGI = MinorImpact::getCGI();
     my $user = MinorImpact::getUser();
 
-    my $name = $CGI->param('save_name') || return search($MINORIMPACT, $params);
+    my $name = $CGI->param('save_name') || return MinorImpact::Object::Search::search($MINORIMPACT, $params);
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     MinorImpact::log(8, "\$search='$search'");
 
@@ -236,6 +243,7 @@ sub search {
     my $params = shift || {};
 
     my $local_params = cloneHash($params);
+    delete($local_params->{tag});
     $local_params->{debug} .= "MinorImpact::CGI::search();";
 
     my $user = $MINORIMPACT->getUser();
@@ -252,7 +260,7 @@ sub search {
         $local_params->{text} = $search;
         $local_params->{type_tree} = 1;
         $local_params->{sort} = 1;
-        $objects = MinorImpact::Object::search($local_params);
+        $objects = MinorImpact::Object::Search::search($local_params);
     }
     $TT->process('search', {
                             objects  => $objects,
@@ -277,7 +285,7 @@ sub tags {
     if ($search_tag) {
         $local_params->{tag} = $search_tag;
         $local_params->{type_tree} = 1;
-        $objects = MinorImpact::Object::search($local_params);
+        $objects = MinorImpact::Object::Search::search($local_params);
     }
     $TT->process('tags', {
                             objects=>$objects, 

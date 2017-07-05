@@ -31,13 +31,20 @@ sub new {
 sub searchParams {
     my $self = shift || return;
 
-    my $params = {debug=>"MinorImpact::Container::searchParams();"};
+    MinorImpact::log(7, "starting(" . $self->id() . ")");
+    my $params = { debug => 'MinorImpact::Container::searchParams();' }; 
     foreach my $tag ($self->get('tag')) {
         $params->{tag} .= "$tag,";
     }
     $params->{tag} =~s/[, ]*$//;
-    $params->{text} = $self->get('text');
-
+    MinorImpact::log(8, "\$params->{tag}='" . $params->{tag} . "'");
+    foreach my $text ($self->get('text')) {
+        $params->{text} .= " $text";
+    }
+    trim($params->{text});
+    MinorImpact::log(8, "\$params->{text}='" . $params->{text} . "'");
+    
+    MinorImpact::log(7, "ending");
     return $params;
 }
 

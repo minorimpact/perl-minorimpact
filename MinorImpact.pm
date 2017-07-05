@@ -347,10 +347,8 @@ sub checkDatabaseTables {
         $DB->do("DESC `object_tag`");
     };
     if ($@) {
-        $DB->do("CREATE TABLE `object_tag` (
-  `object_id` int(11) NOT NULL,
-  `name` varchar(50) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1");
+        $DB->do("CREATE TABLE `object_tag` ( `object_id` int(11) NOT NULL, `name` varchar(50) DEFAULT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1");
+        $DB->do("create unique index idx_id_name on object_tag (object_id, name)");
     }
 
     eval {
@@ -452,11 +450,11 @@ sub cgi {
     } elsif ($script eq 'object_types' || $action eq 'object_types') {
         MinorImpact::CGI::object_types($self);
     } elsif ($action eq 'save_search') {
-        MinorImpact::CGI::save_search($self, $params->{params});
+        MinorImpact::CGI::save_search($self, $params);
     } elsif ($script eq 'search' || $action eq 'search') {
-        MinorImpact::CGI::search($self, $params->{params});
+        MinorImpact::CGI::search($self, $params);
     } elsif ($script eq 'tags' || $action eq 'tags') {
-        MinorImpact::CGI::tags($self, $params->{params});
+        MinorImpact::CGI::tags($self, $params);
     } elsif ($script eq 'user' || $action eq 'user') {
         MinorImpact::CGI::user($self);
     } elsif ($script eq 'index') {

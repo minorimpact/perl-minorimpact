@@ -49,6 +49,17 @@ sub checkDatabaseTables {
     }
 }
 
+sub getContainers {
+    my $self = shift || return;
+
+    my $params = { 
+                    debug          => 'MinorImpact::User::getContainers()',
+                    object_type_id => MinorImpact::Object::typeID('MinorImpact::Container'), 
+                    user_id        => $self->id(),
+               };
+    return MinorImpact::Object::Search::search($params);
+}
+
 sub validate_user {
     my $self = shift || return;
 

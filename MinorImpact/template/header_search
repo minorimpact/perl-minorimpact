@@ -1,12 +1,26 @@
+<!-- TEMPLATE:default.header_search -->
+<div class=search_form>
+<form id=search_form method=POST action='[% script_name %]'>[% # onsubmit='return submitForm(this);'> %]
+<input type=hidden name=a value=search>
+<input type=hidden id=save_name name=save_name>
+<input type=text id=search name=search value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'>
+<input type=submit value=search>
+<input type=button id=save_button name=save_button value='Save' onclick='submitForm();'>
+</form>
 <script>
+[% IF search %]
+document.getElementById("save_button").disabled = false;
+[% ELSE %]
+document.getElementById("save_button").disabled = true;
+[% END %]
 function submitForm(form) {
-    if (form.save.checked) {
+    var form = document.getElementById('search_form');
+    if (form.search.value.length) {
         var save_name = prompt ("Save Name");
         form.a.value = 'save_search';
         form.save_name.value = save_name;
     }
-    return true;
+    form.submit();
 }
 </script>
-<form id=search_form method=POST action='[% script_name %]' onsubmit='return submitForm(this);'>
-<input type=hidden name=a value=search><input type=hidden id=save_name name=save_name><input type=text id=search name=search value='[% search %]'><input type=submit value=search><input type=checkbox name=save>Save</form>
+</div>
