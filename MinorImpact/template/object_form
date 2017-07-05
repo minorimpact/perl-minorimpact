@@ -1,0 +1,27 @@
+<!-- TEMPLATE:default.object_form -->
+<script>
+    [% javascript %]
+</script>
+<form method=POST>
+    <input type=hidden name=id      value='[% object ? object.id() : '' %]'>
+    <input type=hidden name=a       value='[% object ? 'edit' : 'add' %]'>
+    <input type=hidden name=type_id value='[% object_type_id %]'>
+    <table class=edit>
+    [% IF not no_name %]
+        <tr>
+            <td class=fieldname>Name</td>
+            <td><input type=text name=name value='[% name %]'></td>
+        </tr>
+    [% END %]
+    [% form_fields %]
+        <!-- CUSTOM -->
+        <tr>
+            <td class=fieldname>Tags</td>
+            <td><input type=text name=tags value='[% tags %]'></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><input type=submit name=submit></td>
+        </tr>
+    </table>
+</form

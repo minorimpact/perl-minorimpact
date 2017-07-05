@@ -53,18 +53,20 @@ sub extractTags {
     foreach my $t (@_) {
         my $text = ref($t)?$$t:$t;
         $text =~s/\r\n/\n/g;
-        while(my ($tag) = $text =~/tag:(\w+)/) {
+        foreach my $tag ($text =~/tag:(\w+)/g) {
             $tags{$tag}++;
             $text =~s/tag:$tag//;
         }
-        while(my ($tag) = $text =~/(?<!#)#(\w+)/) {
+        foreach my $tag ($text =~/(?<!#)#(\w+)/g) {
             $tags{$tag}++;
             $text =~s/#$tag//;
         }
         $text =~s/##/#/g;
-        while(my ($tag) = $text =~/^(\w+)$/m) {
+        my $line = 0;
+        foreach my $tag ($text =~/^(\w+)$/mg) {
+            next unless ($line++);
             $tags{$tag}++;
-            $text =~s/$tag\n//;
+            $text =~s/^$tag$//m;
         }
         $$t = $text if (ref($t));
     }

@@ -725,6 +725,7 @@ sub getChildren {
 
     $local_params->{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
     $local_params->{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
+
     return MinorImpact::Object::Search::search($local_params);
 
     #my @children;
@@ -918,6 +919,7 @@ sub form {
     my $self = shift || {};
     my $params = shift || {};
     #MinorImpact::log(7, "starting");
+    
 
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -927,6 +929,7 @@ sub form {
     }
 
     my $CGI = MinorImpact::getCGI();
+    my $TT = MinorImpact::getTT();
     my $user = MinorImpact::getUser() || die "Invalid user.";
     my $user_id = $user->id();
 
@@ -941,21 +944,8 @@ sub form {
     my $object_type_id = $local_params->{object_type_id} || $local_params->{type_id};
 
 
-    my $form = <<FORM;
-    <form method=POST>
-        <input type=hidden name=id      value="${\ ($self?$self->id():''); }">
-        <input type=hidden name=a       value="${\ ($self?'edit':'add'); }">
-        <input type=hidden name=type_id value="$object_type_id">
-        <table class=edit>
-FORM
-    unless ($params->{no_name}) {
-     $form .= <<FORM;
-        <tr>   
-                <td class=fieldname>Name</td>
-                <td><input type=text name=name value="${\ ($CGI->param('name') || ($self && $self->name())); }"></td>
-            </tr>
-FORM
-     }
+    my $form;
+ 
     # Suck in any default values passed in the parameters.
     foreach my $field (keys %{$params->{default_values}}) {
         $CGI->param($field,$params->{default_values}->{$field});
@@ -971,15 +961,6 @@ FORM
         }
     }
 
-    #my $cookie_object_id = $CGI->cookie('object_id');
-    #if ($cookie_object_id) {
-    #    my $cookie_object = new MinorImpact::Object($cookie_object_id);
-    #    if ($cookie_object) {
-    #        my $field = $cookie_object->typeName()."_id";
-    #        $CGI->param($field, $cookie_object->id()) unless ($CGI->param($field));
-    #    }
-    #}
-
     my $fields;
     if ($self) {
         $fields = $self->{object_data};
@@ -987,6 +968,7 @@ FORM
         $fields = MinorImpact::Object::fields($object_type_id);
     }
     my $script;
+    my $form_fields;
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
         my $field_type = $field->type();
@@ -1007,23 +989,18 @@ FORM
         $local_params->{required} = $field->get('required');
         $local_params->{name} = $name;
         $local_params->{value} = \@values;
-        $form .= $field->formRow($local_params);
+        $form_fields .= $field->formRow($local_params);
     }
-    $form .= <<FORM;
-            <!-- CUSTOM -->
-            <tr>   
-                <td class=fieldname>Tags</td>
-                <td><input type=text name=tags value='${\ ($CGI->param('tags') || ($self && join(' ', $self->getTags()))); }'></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td><input type=submit name=submit></td>
-            </tr>
-        </table>
-    </form>
-FORM
 
-    $form = "<script>$script</script>$form(" . ref($self) . ")";
+    $TT->process('object_form', {
+                                    form_fields    => $form_fields,
+                                    javascript     => $script,
+                                    object         => $self,
+                                    object_type_id => $object_type_id,
+                                    name           => ($CGI->param('name') || ($self && $self->name())),
+                                    no_name        => $local_params->{no_name},
+                                    tags           => ($CGI->param('tags') || ($self && join(' ', $self->getTags()))),
+                                }, \$form) || die $TT->error();
     #MinorImpact::log(7, "ending");
     return $form;
 }

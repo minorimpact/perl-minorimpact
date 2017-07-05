@@ -97,6 +97,8 @@ sub del {
     my $self = shift || return;
     my $params = shift || {};
 
+    my $CGI = $self->getCGI();
+
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
     my $back = $object->back();

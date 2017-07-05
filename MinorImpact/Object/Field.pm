@@ -157,6 +157,8 @@ sub formRow {
     my $params = shift || {};
 
     #MinorImpact::log(7, "start");
+    my $TT = MinorImpact::getTT();
+
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
     $local_params->{debug} .= "Object::Field::formRow();";
@@ -169,19 +171,20 @@ sub formRow {
 
     $local_params->{row_value} = $values[$i];
     my $row;
-    $row .= "<tr><td class=fieldname>$field_name</td><td>\n";
-    $row .= $self->_input($local_params);
-    $row .= "*" if ($self->get('required'));
-    $row .= "</td><td class=small><span class=small>" . $self->get('description') . "</span></td></tr>\n";
+    $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
 
     if ($self->isArray()) {
         while (++$i <= (scalar(@values)-1)) {
             $local_params->{row_value} = $values[$i];
-            $row .= "<tr><td></td><td align=left>" . $self->_input($local_params) . "</td></tr>";
+            my $row_form;
+            $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
+            $row .= $row_form;
         }
         $local_params->{duplicate} = 1;
         delete($local_params->{row_value});
-        $row .= "<tr><td></td><td>" . $self->_input($local_params) . "</td></tr>";
+        my $row_form;
+        $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
+        $row .= $row_form;
     }
     #MinorImpact::log(7, "ending");
     return $row;

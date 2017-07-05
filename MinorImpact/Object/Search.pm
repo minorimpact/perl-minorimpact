@@ -98,11 +98,13 @@ sub _search {
     my $DB = MinorImpact::getDB();
 
     $params->{object_type_id} = $params->{object_type} if ($params->{object_type} && !$params->{object_type_id});
-    my $select = "SELECT DISTINCT(object.id) FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id)";
-    my $where = "WHERE object.id > 0 ";
+    my $select = "SELECT DISTINCT(object.id) ";
+    my $from   = "FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id) ";
+    my $where  = "WHERE object.id > 0 ";
     my @fields;
 
     $select .= $params->{select} if ($params->{select});
+    $from .= $params->{from} if ($params->{from});
     if ($params->{where}) {
         my $w = $params->{where};
         $w =~s/\s*and\s+//i;
@@ -111,8 +113,9 @@ sub _search {
     }
 
     foreach my $param (keys %$params) {
-        next if ($param =~/^(id_only|sort|limit|page|debug)$/);
-        #MinorImpact::log(8, "search key='$param'");
+        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields)$/);
+        next unless (defined($params->{$param}));
+        #MinorImpact::log(8, "building query \$params->{$param}='" . $params->{$param} . "'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $params->{name});
@@ -154,14 +157,15 @@ sub _search {
             #MinorImpact::log(8, "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($params->{object_type_id}, $param);
             if ($object_field_id) {
-                $where .= " AND (object_data.object_field_id=? AND object_data.value=?)";
+                $from .= "JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id) ";
+                $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
                 push(@fields, $object_field_id);
                 push(@fields, $params->{$param});
             }
         }
     }
 
-    my $sql = "$select $where";
+    my $sql = "$select $from $where";
     MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "' " . $params->{debug});
 
     my $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);

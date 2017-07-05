@@ -387,6 +387,8 @@ sub getTT {
     my $self = shift || {};
     my $params = shift || {};
 
+    #MinorImpact::log(7, "starting");
+
     if (ref($self) eq "HASH") {
         $params = $self;
         $self = $MinorImpact::SELF;
@@ -417,13 +419,15 @@ sub getTT {
         }
     }
 
-    $TT = Template->new({
+    my $TT = Template->new({
         INCLUDE_PATH => [ $template_directory, $global_template_directory ],
         INTERPOLATE => 1,
         VARIABLES => $variables,
     }) || die $TT->error();
 
     $self->{TT} = $TT;
+    
+    #MinorImpact::log(7, "ending");
     return $TT;
 }
 

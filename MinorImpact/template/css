@@ -1,5 +1,6 @@
 Content-type: text/css
 
+/* TEMPLATE:default.css */
 #map { height: 250px; width: 500px; }
 body { 
     font-family: sans-serif; 
@@ -67,4 +68,4 @@ p { margin-bottom: 0px; padding-bottom: 0px; }
 span.tag { font-size: smaller; }
 .small { font-size: small; text-align:left; }
 
-
+[% INCLUDE css_site %]
