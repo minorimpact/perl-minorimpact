@@ -20,13 +20,13 @@ sub index {
     } elsif ($action eq 'delete' && $object) {
         del($self, $params);
     } elsif ($action eq 'tablist' && $object && $type_id) {
-        tablist($self);
+        tablist($self, $params);
     } elsif ($object) { # $action eq 'view'
-        return view($self, $params);
+        view($self, $params);
     } elsif ( $action eq 'logout' ) {
-        logout($self);
+        logout($sel, $paramsf);
     } elsif ($action eq 'user' ) {
-        user($self);
+        user($sel, $paramsf);
     } else { # $action eq 'list'
         list($self, $params);
     }
@@ -131,12 +131,14 @@ sub list {
     my $self = shift || return;
     my $params = shift || {};
 
+    #MinorImpact::log(7, "starting");
+
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
 
     my $container_id = $CGI->param('container_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
-    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    my $type_id = $CGI->param('type_id') || $CGI->param('type'); # || $self->redirect();
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
 
     my $object;
@@ -197,6 +199,7 @@ sub list {
                             }) || die $TT->error();
     }
 }
+
 sub login {
     my $MINORIMPACT = shift || return;
 
@@ -365,9 +368,12 @@ sub view {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $script_name = $self->scriptName();
+    MinorImpact::log(7, "starting");
+
     my $TT = $self->getTT();
     my $CGI = $self->getCGI();
+    my $script_name = $self->scriptName();
+
     my $object_id = $CGI->param('object_id') || $CGI->param('id') || $self->redirect();
     my $container_id = $CGI->param('container_id') || $CGI->param('cid');
     my $tab_id = $CGI->param('tab_id') || 0;

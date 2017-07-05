@@ -440,8 +440,13 @@ sub cgi {
     my $params = shift || {};
 
     my $CGI = MinorImpact::getCGI();
-    my $action = $CGI->param('a') || $CGI->param('action');
+    my $action = $CGI->param('a') || $CGI->param('action') || 'list';
     my $script = $params->{script} || 'index';
+    my $object_id = $CGI->param('id') || $CGI->param('object_id');
+
+    $action = 'view' if ($object_id && $action eq 'list');
+
+    MinorImpact::log(8, "\$action='$action',\$script='$script'");
 
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
@@ -455,9 +460,9 @@ sub cgi {
     } elsif ($action eq 'list') {
         MinorImpact::CGI::list($self, $params);
     } elsif ($script eq 'login') {
-        MinorImpact::CGI::login($self);
+        MinorImpact::CGI::login($self, $params);
     } elsif ($script eq 'logout' || $action eq 'logout') {
-        MinorImpact::CGI::logout($self);
+        MinorImpact::CGI::logout($self, $params);
     } elsif ($script eq 'object_types' || $action eq 'object_types') {
         MinorImpact::CGI::object_types($self);
     } elsif ($action eq 'save_search') {
