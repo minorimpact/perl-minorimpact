@@ -453,6 +453,8 @@ sub cgi {
         $sub->($self, $params);
     } elsif ($action eq 'add') {
         MinorImpact::CGI::add($self, $params);
+    } elsif ($action eq 'css') {
+        MinorImpact::CGI::css($self, $params);
     } elsif ($action eq 'delete') {
         MinorImpact::CGI::del($self, $params);
     } elsif ($action eq 'edit') {
@@ -469,6 +471,8 @@ sub cgi {
         MinorImpact::CGI::save_search($self, $params);
     } elsif ($script eq 'search' || $action eq 'search') {
         MinorImpact::CGI::search($self, $params);
+    } elsif ($action eq 'tablist') {
+        MinorImpact::CGI::tablist($self, $params);
     } elsif ($script eq 'tags' || $action eq 'tags') {
         MinorImpact::CGI::tags($self, $params);
     } elsif ($script eq 'user' || $action eq 'user') {

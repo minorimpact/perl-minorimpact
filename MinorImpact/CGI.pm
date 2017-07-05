@@ -9,25 +9,25 @@ sub index {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
+    #MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ($action eq 'add') {
         add($self, $params);
-    } elsif ($action eq 'edit' && $object) {
+    } elsif ($action eq 'edit') {
         edit($self, $params);
-    } elsif ($action eq 'delete' && $object) {
+    } elsif ($action eq 'delete') {
         del($self, $params);
-    } elsif ($action eq 'tablist' && $object && $type_id) {
+    } elsif ($action eq 'tablist') {
         tablist($self, $params);
-    } elsif ($object) { # $action eq 'view'
+    } elsif ($action eq 'view') {
         view($self, $params);
     } elsif ( $action eq 'logout' ) {
         logout($sel, $paramsf);
     } elsif ($action eq 'user' ) {
         user($sel, $paramsf);
-    } else { # $action eq 'list'
+    } else {
         list($self, $params);
     }
 }
@@ -85,6 +85,14 @@ sub add {
                     }) || die $TT->error();
 }
 
+sub css {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $TT = $self->getTT();
+    $TT->process('css');
+}
+
 sub del {
     my $self = shift || return;
     my $params = shift || {};
@@ -135,6 +143,7 @@ sub list {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
+    my $user = $self->getUser();
 
     my $container_id = $CGI->param('container_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
@@ -293,13 +302,13 @@ sub tablist {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
-    my $user = $self->getUser() || $self->redirect();
+    my $user = $self->getUser() || return;
 
-    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
-    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    my $object_id = $CGI->param('id') || $CGI->param('object_id') || return;
+    my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
     my $container_id = $CGI->param('cid') || $CGI->param('container_id');
 
-    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    my $object = new MinorImpact::Object($object_id) || return;
     $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
     $self->redirect() unless ($type_id);
     my $type_name = MinorImpact::Object::typeName($type_id);

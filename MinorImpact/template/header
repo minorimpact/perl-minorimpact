@@ -5,12 +5,7 @@ Content-type: text/html
 <!-- TEMPLATE:default.header -->
 <head>
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
-    <link rel="stylesheet" type="text/css" href="/minorimpact.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.structure.css">
-    <link rel="stylesheet" type="text/css" href="/jquery-ui-1.11.4/jquery-ui.theme.css">
-    <script src="/jquery-2.1.4.js"></script>
-    <script src="/jquery-ui-1.11.4/jquery-ui.js"></script>
+    [% INCLUDE header_libraries %]
     [% IF other %]
     <!-- start \$other -->
         [% other %]
@@ -26,7 +21,6 @@ Content-type: text/html
         [% javascript %]
     </script>
     [% END %]
-    [% INCLUDE header_libraries %]
 </head>
 <body>
     <div id=header>
