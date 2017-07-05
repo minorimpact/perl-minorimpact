@@ -443,7 +443,18 @@ sub cgi {
     my $action = $CGI->param('a') || $CGI->param('action');
     my $script = $params->{script} || 'index';
 
-    if ($script eq 'login') {
+    if ($params->{actions}{$action}) {
+        my $sub = $params->{actions}{$action};
+        $sub->($self, $params);
+    } elsif ($action eq 'add') {
+        MinorImpact::CGI::add($self, $params);
+    } elsif ($action eq 'delete') {
+        MinorImpact::CGI::del($self, $params);
+    } elsif ($action eq 'edit') {
+        MinorImpact::CGI::edit($self, $params);
+    } elsif ($action eq 'list') {
+        MinorImpact::CGI::list($self, $params);
+    } elsif ($script eq 'login') {
         MinorImpact::CGI::login($self);
     } elsif ($script eq 'logout' || $action eq 'logout') {
         MinorImpact::CGI::logout($self);
@@ -457,6 +468,8 @@ sub cgi {
         MinorImpact::CGI::tags($self, $params);
     } elsif ($script eq 'user' || $action eq 'user') {
         MinorImpact::CGI::user($self);
+    } elsif ($action eq 'view') {
+        MinorImpact::CGI::view($self, $params);
     } elsif ($script eq 'index') {
         MinorImpact::CGI::index($self, $params);
     }

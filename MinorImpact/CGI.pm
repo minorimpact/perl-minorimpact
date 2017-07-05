@@ -9,44 +9,55 @@ sub index {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $user = $self->getUser();
-    my $TT = $self->getTT();
-    my $CGI = $self->getCGI();
-    my $script_name = MinorImpact::scriptName();
+    MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
+    if ($params->{actions}{$action}) {
+        my $sub = $params->{actions}{$action};
+        $sub->($self, $params);
+    } elsif ($action eq 'add') {
+        add($self, $params);
+    } elsif ($action eq 'edit' && $object) {
+        edit($self, $params);
+    } elsif ($action eq 'delete' && $object) {
+        del($self, $params);
+    } elsif ($action eq 'tablist' && $object && $type_id) {
+        tablist($self);
+    } elsif ($object) { # $action eq 'view'
+        return view($self, $params);
+    } elsif ( $action eq 'logout' ) {
+        logout($self);
+    } elsif ($action eq 'user' ) {
+        user($self);
+    } else { # $action eq 'list'
+        list($self, $params);
+    }
+}
 
-    my $action = $CGI->param('action') || $CGI->param('a') || "list";
-    my $tab_id = $CGI->param('tab_id') || 0;
-    my $object_id = $CGI->param('id') || $CGI->param('object_id');
-    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
-    my $last_object_id = $CGI->cookie("object_id");
-    my $type_id = $CGI->param('type_id');
-    my $format = $CGI->param('format') || 'html';
+sub add {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log(7, "starting");
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+    my $user = $self->getUser() || $self->redirect();
+
+    my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
+    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
+    $type_id ||= MinorImpact::Object::getType();
 
     my $object;
-    my $error;
-
-    eval {
-        $object = new MinorImpact::Object($object_id) if ($object_id);
-    };
-    $action = "view" if ($action eq "list" && $object);
-    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
-
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         if ($action eq 'add') {
-            MinorImpact::log(8, "submitted action eq 'add'");
+            #MinorImpact::log(8, "submitted action eq 'add'");
             $params->{user_id} = $user->id();
-            #my $type_name = $type->name();
-            #$object = $type_name->new($params);
             $params->{type_id} = $type_id;
             eval {
                 $object = new MinorImpact::Object($params);
             };
-            $error = $@ if ($@);
-        } elsif ($action eq 'edit') {
-            eval {
-                $object->update($params);
-            };
+            MinorImpact::log(3, "error: $@");
             $error = $@ if ($@);
         }
         if ($object && !$error) {
@@ -55,131 +66,137 @@ sub index {
         }
     }
 
-    #my $local_params = {};
-    #$local_params->{tab_id} = $tab_id;
-    #$local_params->{object} = $object;
-    #$local_params->{type_id} = $type_id;
-    #$local_params->{format} = $format;
+    my $type_name = MinorImpact::Object::typeName({object_type_id=>$type_id});
+    my $local_params = {object_type_id=>$type_id};
+    MinorImpact::log(8, "\$type_name='$type_name'");
+    my $form;
+    eval {
+        $form = $type_name->form($local_params);
+    };
+    if ($@) {
+        $form = MinorImpact::Object::form($local_params);
+    }
 
-    MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
-    if ($params->{actions}{$action}) {
-        my $sub = $params->{actions}{$action};
-        return $sub->($self, $params);
-    } elsif ($action eq 'add') {
-        my $form;
-        $type_id ||= MinorImpact::Object::getType();
-        my $type_name = MinorImpact::Object::typeName({object_type_id=>$type_id});
-        my $local_params = {object_type_id=>$type_id};
+    $TT->process('add', {
+                        error=>$error,
+                        form => $form,
+                        object=>$object,
+                        type_name => $type_name,
+                    }) || die $TT->error();
+}
+
+sub del {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
+    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    my $back = $object->back();
+
+    $object->delete();
+    $self->redirect($back);
+}
+
+sub edit {
+    my $self = shift || return;
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+
+    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
+    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+
+    if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
+        my $params = $CGI->Vars;
         eval {
-            $form = $type_name->form($local_params);
+            $object->update($params);
         };
-        if ($@) {
-            $form = MinorImpact::Object::form($local_params);
-        }
+        $error = $@ if ($@);
 
-        $TT->process('add', {
-                            error=>$error,
-                            form => $form,
-                            object=>$object,
-                            type_name => $type_name,
-                        }) || die $TT->error();
-    } elsif ($action eq 'edit' && $object) {
-            my $form = $object->form();
-            $TT->process('edit', { 
-                                error=>$error,
-                                form=>$form,
-                                object=>$object,
-                            }) || die $TT->error();
-    } elsif ($action eq 'delete' && $object) {
-        my $back = $object->back();
-        $object->delete();
-        $self->redirect($back);
-    } elsif ($action eq 'tablist' && $object && $type_id) {
-        # Show a list of objects of a certain type that refer to the current object.
-        my $local_params = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::index(a=tablist);"};
-        my $container = new MinorImpact::Object($container_id) if ($container_id);
-        if ($container) {
-            $local_params = { %$local_params, %{$container->searchParams()} };
+        if ($object && !$error) {
+            my $back = $object->back() || "$script_name?id=" . $object->id();
+            $self->redirect($back);
         }
-        $local_params->{debug} .= "MinorImpact::Container::searchParams();";
+    }
 
-        my @objects = $object->getChildren($local_params);
+    my $form = $object->form();
+    $TT->process('edit', { 
+                        error=>$error,
+                        form=>$form,
+                        object=>$object,
+                    }) || die $TT->error();
+}
+
+sub list {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+
+    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
+    my $format = $CGI->param('format') || 'html';
+    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    my $object_id = $CGI->param('object_id') || $CGI->param('id');
+
+    my $object;
+    eval {
+        $object = new MinorImpact::Object($object_id) if ($object_id);
+        return view($self, $params) if ($object);
+    };
+
+    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
+    $type_id ||= MinorImpact::Object::getType();
+
+    my $local_params = cloneHash($params);
+       
+    # If we're looking at a container objects, then build out the search
+    #   query from that.
+    #MinorImpact::log(8, "\$container_id=$container_id");
+    my $container = new MinorImpact::Object($container_id) if ($container_id);
+    if ($container) {
+        $local_params = $container->searchParams();
+    }
+
+    $local_params->{object_type_id} = $type_id;
+    $local_params->{sort} = 1;
+    $local_params->{debug} .= "CGI::index(a=list);";
+    $local_params->{user_id} = $user->id() if ($user);
+
+    my @objects = MinorImpact::Object::Search::search($local_params);
+    if (scalar(@objects) == 0) {
+        $self->redirect("$script_name?a=add&type_id=$type_id");
+    }
+
+    if ($format eq 'json') {
+        my @data;
+        foreach my $o (@objects) {
+            push(@data, $o->toData());
+        }
+        print "Content-type: text/plain\n\n";
+        print to_json(\@data);
+    } else { # $format eq 'html'
         my $type_name = MinorImpact::Object::typeName($type_id);
+        my @containers = $user->getContainers();
+
         my @tags;
         my %tags;
         foreach my $object (@objects) {
             map { $tags{$_}++; } $object->getTags();
         }
-        @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
+        @tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
         splice(@tags, 5);
-        #@tags = map { "$_(" . $tags{$_} . ")"; } @tags;
-
-        $TT->process('tablist', {  
-                                objects   => [@objects],
-                                tags      => [@tags],
-                                type_id   => $type_id,
-                                type_name => $type_name,
-                                }) || die $TT->error();
-    } elsif ($object) { # $action eq 'view'
-        return view($self, $local_params);
-    } elsif ( $action eq 'logout' ) {
-        logout($self);
-    } elsif ($action eq 'user' ) {
-        user($self);
-    } else { # $action eq 'list'
-        # If we're looking at a container objects, then build out the search
-        #   query from that.
-        my $local_params = cloneHash($params);
-       
-        #MinorImpact::log(8, "\$container_id=$container_id");
-        my $container = new MinorImpact::Object($container_id) if ($container_id);
-        if ($container) {
-            $local_params = $container->searchParams();
-        }
-
-        # Show all the objects of a certain type, or the default type.
-        $type_id ||= MinorImpact::Object::getType();
-
-        $local_params->{object_type_id} = $type_id;
-        $local_params->{sort} = 1;
-        $local_params->{debug} .= "CGI::index(a=list);";
-        $local_params->{user_id} = $user->id() if ($user);
-
-        my @objects = MinorImpact::Object::Search::search($local_params);
-        if (scalar(@objects) == 0) {
-            $self->redirect("$script_name?a=add&type_id=$type_id");
-        }
-        if ($format eq 'json') {
-            my @data;
-            foreach my $o (@objects) {
-                push(@data, $o->toData());
-            }
-            print "Content-type: text/plain\n\n";
-            print to_json(\@data);
-        } else { # $format eq 'html'
-            my $type_name = MinorImpact::Object::typeName($type_id);
-            my @containers = $user->getContainers();
-
-            my @tags;
-            my %tags;
-            foreach my $object (@objects) {
-                map { $tags{$_}++; } $object->getTags();
-            }
-            @tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
-            splice(@tags, 5);
-            #@tags = map {- length($_); } @tags;
-            $TT->process('list', {  
-                                    container_id => $container_id,
-                                    containers   => [ @containers ],
-                                    objects      => [ @objects ],
-                                    tags         => [ @tags ],
-                                    type_id      => $type_id,
-                                    type_name    => $type_name,
-                                }) || die $TT->error();
-        }
+        #@tags = map {- length($_); } @tags;
+        $TT->process('list', {  
+                                container_id => $container_id,
+                                containers   => [ @containers ],
+                                objects      => [ @objects ],
+                                tags         => [ @tags ],
+                                type_id      => $type_id,
+                                type_name    => $type_name,
+                            }) || die $TT->error();
     }
 }
-
 sub login {
     my $MINORIMPACT = shift || return;
 
@@ -204,7 +221,7 @@ sub logout {
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
-    my $object_cookie =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
+    my $view_history =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
     print $CGI->header(-cookie=>[$object_cookie, $user_cookie, $view_history], -location=>"login.cgi");
 }
 
@@ -251,8 +268,6 @@ sub search {
     my $TT = $MINORIMPACT->getTT();
     my $script_name = MinorImpact::scriptName();
 
-    my $object_id = $CGI->param('object_id') || $CGI->cookie('object_id');
-
     my $search = $CGI->param('search');
 
     my $objects;
@@ -267,6 +282,49 @@ sub search {
                             search   => $search,
                             typeName => sub { MinorImpact::Object::typeName(@_, {plural=>1}) },
                         }) || die $TT->error();
+}
+
+sub tablist {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+    my $user = $self->getUser() || $self->redirect();
+
+    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
+    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    my $container_id = $CGI->param('cid') || $CGI->param('container_id');
+
+    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
+    $self->redirect() unless ($type_id);
+    my $type_name = MinorImpact::Object::typeName($type_id);
+
+    # Show a list of objects of a certain type that refer to the current object.
+    my $local_params = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::index(a=tablist);"};
+    my $container = new MinorImpact::Object($container_id) if ($container_id);
+    if ($container) {
+        $local_params = { %$local_params, %{$container->searchParams()} };
+    }
+    $local_params->{debug} .= "MinorImpact::Container::searchParams();";
+
+    my @objects = $object->getChildren($local_params);
+    my @tags;
+    my %tags;
+    foreach my $object (@objects) {
+        map { $tags{$_}++; } $object->getTags();
+    }
+    @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
+    splice(@tags, 5);
+    #@tags = map { "$_(" . $tags{$_} . ")"; } @tags;
+
+    $TT->process('tablist', {  
+                            objects   => [ @objects ],
+                            tags      => [ @tags ],
+                            type_id   => $type_id,
+                            type_name => $type_name,
+                            }) || die $TT->error();
 }
 
 sub tags {
@@ -310,12 +368,13 @@ sub view {
     my $script_name = $self->scriptName();
     my $TT = $self->getTT();
     my $CGI = $self->getCGI();
+    my $object_id = $CGI->param('object_id') || $CGI->param('id') || $self->redirect();
     my $container_id = $CGI->param('container_id') || $CGI->param('cid');
+    my $tab_id = $CGI->param('tab_id') || 0;
 
     my $user = $self->getUser();
-    my $object = $params->{object} || return;
-    my $tab_id = $params->{tab_id} || 0;
-    my $error = $oarams->{error};
+    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    my $error = $params->{error};
 
     my $tab_number = 0;
 
@@ -379,6 +438,4 @@ sub viewHistory {
     print "Set-Cookie: $cookie\n";
 }
 
-
-    
 1;
