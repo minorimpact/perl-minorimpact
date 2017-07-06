@@ -10,6 +10,12 @@ use Exporter 'import';
 
 use MinorImpact::Util;
 
+my $ENCODE_MAP = {
+                ":" => "_COLON_",
+                "\\[" => "_LBRACKET_",
+                "\\]" => "_RBRACKET_",
+            };
+
 sub new {
     my $package = shift;
     my $params = shift || {};
@@ -26,9 +32,11 @@ sub decode {
     my $string = shift || return;
 
     my $ret = ref($string)?$$string:$string;
-    $ret =~s/_COLON_/:/g;
-    $ret =~s/_LBRACKET_/[/g;
-    $ret =~s/_RBRACKET_/]/g;
+
+    foreach my $c (keys %$ENCODE_MAP) {
+        my $e = $ENCODE_MAP->{$c};
+        $ret =~s/$e/$c/g;
+    }
 
     $$string = $ret if (ref($string));
     return $ret;
@@ -39,9 +47,10 @@ sub encode {
 
     my $ret = ref($string)?$$string:$string;
 
-    $ret =~s/:/_COLON_/g;
-    $ret =~s/\[/_LBRACKET_/g;
-    $ret =~s/\]/_RBRACKET_/g;
+    foreach my $c (keys %$ENCODE_MAP) {
+        my $e = $ENCODE_MAP->{$c};
+        $ret =~s/$c/$e/g;
+    }
 
     $$string = $ret if (ref($string));
     return $ret;
@@ -80,6 +89,7 @@ sub readConfig {
         next if (/^#/ || !$_);
         if (/^([^:]+):/ || /^\[(^\]]+)\]/) {
             $category = $1;
+            undef($key);
             next;
         } elsif (/^([^=]+)\s?=\s?(.+)$/) {
             $key = trim($1);
@@ -89,7 +99,7 @@ sub readConfig {
         }
         $value =~s/^"//;
         $value =~s/"$//;
-        next unless ($value);
+        next unless ($category && $key && $value);
         decode(\$category);
         decode(\$key);
         decode(\$value);
@@ -115,18 +125,26 @@ sub writeConfig {
 
     open(CONFIG, ">$config_file");
     foreach my $section (keys %$config) {
-        my $conf_section = $section;
-        encode(\$conf_section);
+        my $conf_section = encode($section);
 
         print CONFIG "$conf_section:\n";
         foreach my $key (keys %{$config->{$section}}) {
+            my $conf_key = encode($key);
             next unless ($key);
-            $value = $config->{$section}{$key};
-            chomp($key);
-            chomp($value);
-            encode(\$key);
-            encode(\$value);
-            print CONFIG "    $key = \"$value\"\n";
+            if (ref($config->{$section}{$key}) eq 'ARRAY') {
+                my $loop = 0;
+                foreach my $value (@{$config->{$section}{$key}}) {
+                    chomp($value);
+                    unless ($loop++) {
+                        print CONFIG "    $conf_key = \"" . encode($value) . "\"\n";
+                    } else {
+                        print CONFIG "           \"" . encode($value) . "\"\n";
+                    }
+                }
+            } else {
+                $value = $config->{$section}{$key};
+                print CONFIG "    $key = \"" . encode($value) . "\"\n";
+            }
         }
         print CONFIG "\n";
     }
