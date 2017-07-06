@@ -186,7 +186,10 @@ sub list {
         print to_json(\@data);
     } else { # $format eq 'html'
         my $type_name = MinorImpact::Object::typeName($type_id);
-        my @containers = $user->getContainers();
+        my @containers;
+        if ($user) {
+            @containers = $user->getContainers();
+        }
 
         my @tags;
         my %tags;
@@ -233,7 +236,7 @@ sub logout {
     my $MINORIMPACT = shift || return;
 
     my $CGI = $MINORIMPACT->getCGI();
-    my $user = $self->getUser({ force => 1 });
+    my $user = $MINORIMPACT->getUser();
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
@@ -253,6 +256,51 @@ sub object_types {
         push(@json, {id=>$object_type->{id}, name=>$object_type->{name}});
     }
     print to_json(\@json);
+}
+
+sub register {
+    my $MI = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting");
+
+    my $CGI = $MI->getCGI();
+    my $tt = $MI->getTT();
+
+    my $username = $CGI->param('username');
+    my $email = $CGI->param('email');
+    my $password = $CGI->param('password');
+    my $password2 = $CGI->param('password2');
+    my $submit = $CGI->param('submit');
+
+    my $error;
+    if ($submit) {
+        MinorImpact::log(8, "submit");
+        if (!$username) {
+            $error = "'$username' is not a valid username";
+        }
+        if (!$password) {
+            $error .= "Password cannot be blank";
+        }
+        if ($password ne $password2) {
+            $error .= "Passwords don't match";
+        }
+        if (!$error) {
+            eval {
+                MinorImpact::log(8, "addUser");
+                MinorImpact::User::addUser({username=>$username, password=>$password, email=>$email});
+                my $user = $MI->getUser({username=>$username, password=>$password});
+                if ($user) {
+                    $MI->redirect();
+                } else {
+                    $error = "Can't create new user.";
+                }
+            };
+            $error = $@ if ($@);
+        }
+    }
+    $tt->process('register', {username=>$username, email=>$email, error=>$error}) || die $tt->error();
+    MinorImpact::log(7, "ending");
 }
 
 sub save_search {

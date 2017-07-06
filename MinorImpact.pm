@@ -475,6 +475,8 @@ sub cgi {
         MinorImpact::CGI::logout($self, $params);
     } elsif ( $action eq 'object_types') {
         MinorImpact::CGI::object_types($self);
+    } elsif ( $action eq 'register') {
+        MinorImpact::CGI::register($self, $params);
     } elsif ( $action eq 'save_search') {
         MinorImpact::CGI::save_search($self, $params);
     } elsif ( $action eq 'search') {
