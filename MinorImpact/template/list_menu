@@ -1,7 +1,7 @@
 <!-- TEMPLATE:default.list_menu -->
 <div id=list_menu>
 [% IF user %]
-    <a href=index.cgi?type_id=[% type_id %]&a=add>Add [% type_name %]</a>
+    <a href=[% script_name %]?type_id=[% type_id %]&a=add>Add [% type_name %]</a>
 [% END %]
 [% IF tags %]
     [% INCLUDE list_menu_tags %]

@@ -68,23 +68,24 @@ sub new {
         $self->{conf}{application} = $options;
 
         $self->{starttime} = [gettimeofday];
-    }
-    checkDatabaseTables($self->{DB});
 
-    if ($options->{validUser} || $options->{valid_user} || $options->{user_id} || $options->{admin}) {
+        checkDatabaseTables($self->{DB});
+    }
+
+    if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
         my ($script_name) = scriptName();
         my $user = $self->getUser();
         if ($user) {
             if ($options->{user_id} && $user->id() != $options->{user_id}) {
                 MinorImpact::log(3, "logged in user doesn't match");
-                $self->redirect("login.cgi?redirect=$script_name");
+                $self->redirect("?a=login");
             } elsif ($options->{admin} && !$user->isAdmin()) {
                 MinorImpact::log(3, "not an admin user");
-                $self->redirect("login.cgi?redirect=$script_name");
+                $self->redirect("?a=login");
             }
         } else {
             MinorImpact::log(3, "no logged in user");
-            $self->redirect("login.cgi?redirect=$script_name");
+            $self->redirect("?a=login");
         }
     }
     if ($options->{https} && $ENV{HTTPS} ne 'on') {
@@ -173,6 +174,7 @@ sub getUser {
     #}
     MinorImpact::log(3, "no user found");
     #MinorImpact::log(7, "ending");
+    MinorImpact::redirect("?a=login") if ($params->{force});
     return;
 }
 
@@ -445,46 +447,46 @@ sub cgi {
 
     my $CGI = MinorImpact::getCGI();
     my $action = $CGI->param('a') || $CGI->param('action') || 'list';
-    my $script = $params->{script} || 'index';
+    #my $script = $params->{script} || 'index';
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
 
     $action = 'view' if ($object_id && $action eq 'list');
 
-    MinorImpact::log(8, "\$action='$action',\$script='$script'");
+    MinorImpact::log(8, "\$action='$action'");
 
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
-    } elsif ($action eq 'add') {
+    } elsif ( $action eq 'add') {
         MinorImpact::CGI::add($self, $params);
-    } elsif ($action eq 'css') {
+    } elsif ( $action eq 'add_reference') {
+        MinorImpact::CGI::add_reference($self, $params);
+    } elsif ( $action eq 'css') {
         MinorImpact::CGI::css($self, $params);
-    } elsif ($action eq 'delete') {
+    } elsif ( $action eq 'delete') {
         MinorImpact::CGI::del($self, $params);
-    } elsif ($action eq 'edit') {
+    } elsif ( $action eq 'edit') {
         MinorImpact::CGI::edit($self, $params);
-    } elsif ($action eq 'list') {
+    } elsif ( $action eq 'list') {
         MinorImpact::CGI::list($self, $params);
-    } elsif ($script eq 'login') {
+    } elsif ( $action eq 'login') {
         MinorImpact::CGI::login($self, $params);
-    } elsif ($script eq 'logout' || $action eq 'logout') {
+    } elsif ( $action eq 'logout') {
         MinorImpact::CGI::logout($self, $params);
-    } elsif ($script eq 'object_types' || $action eq 'object_types') {
+    } elsif ( $action eq 'object_types') {
         MinorImpact::CGI::object_types($self);
-    } elsif ($action eq 'save_search') {
+    } elsif ( $action eq 'save_search') {
         MinorImpact::CGI::save_search($self, $params);
-    } elsif ($script eq 'search' || $action eq 'search') {
+    } elsif ( $action eq 'search') {
         MinorImpact::CGI::search($self, $params);
-    } elsif ($action eq 'tablist') {
+    } elsif ( $action eq 'tablist') {
         MinorImpact::CGI::tablist($self, $params);
-    } elsif ($script eq 'tags' || $action eq 'tags') {
+    } elsif ( $action eq 'tags') {
         MinorImpact::CGI::tags($self, $params);
-    } elsif ($script eq 'user' || $action eq 'user') {
+    } elsif ( $action eq 'user') {
         MinorImpact::CGI::user($self);
-    } elsif ($action eq 'view') {
+    } elsif ( $action eq 'view' ) {
         MinorImpact::CGI::view($self, $params);
-    } elsif ($script eq 'index') {
-        MinorImpact::CGI::index($self, $params);
     }
 }
 

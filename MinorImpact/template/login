@@ -1,10 +1,14 @@
 [% INCLUDE header %]
-    <form method=POST>
-        <input type=hidden name=redirect value='[% redirect %]'>
-        <table>
-            <tr><td class=fieldname>Username</td><td><input type=text name=username value='[% username %]'></td></tr>
-            <tr><td class=fieldname>Password</td><td><input type=password name=password></td></tr>
-            <tr><td></td><td><input type=submit value='login'></td></tr>
-        </table>
-    </form>
+
+<!-- TEMPLATE:default.login -->
+
+<form class=login id=form_login method=POST>
+    <input type=hidden name=redirect value='[% redirect %]'>
+    <table>
+        <tr><td class=fieldname>Username</td><td><input type=text name=username value='[% username %]'></td></tr>
+        <tr><td class=fieldname>Password</td><td><input type=password name=password></td></tr>
+        <tr><td></td><td><input type=submit value='login'></td></tr>
+    </table>
+</form>
+
 [% INCLUDE footer %]

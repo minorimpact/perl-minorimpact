@@ -1,11 +1,11 @@
 [% IF user %]
 <table>
     <tr>
-        <td valign=top><a href="user.cgi?user_id=[% user.id %]">[% user.get('name') %]</a><a href=logout.cgi>Logout</a></td>
+        <td valign=top><a href="[% script_name %]?a=user">[% user.get('name') %]</a><a href='[% script_name %]?a=logout'>Logout</a></td>
     </tr>
 </table>
 [% ELSE %]
-        <a href=login.cgi>Log In</a>
-        <a href=register.cgi>Register</a>
+        <a href=[% script_name %]?a=login>Log In</a>
+        <a href=[% script_name %]?a=register>Register</a>
 [% END %]
 

@@ -1,2 +1,2 @@
 <!-- TEMPLATE:default.tag -->
-<a class=tag href='index.cgi?a=search&search=tag:[% tag %]'>#[% tag %]</a>
+<a class=tag href='[% script_name %]?a=search&search=tag:[% tag %]'>#[% tag %]</a>

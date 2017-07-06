@@ -2,5 +2,5 @@
 [% IF object.isSystem() %]
     [% object.name() %]
 [% ELSE %]
-    <a href=index.cgi?id=[% object.id() %]>[% object.name() %]</a>
+    <a href=[% script_name %]?id=[% object.id() %]>[% object.name() %]</a>
 [% END %]

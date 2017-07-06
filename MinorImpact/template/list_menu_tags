@@ -1,5 +1,5 @@
 <!-- TEMPLATE:default.list_menu_tags -->
 Top Tags: 
 [% FOREACH tag IN tags %]
-    <a href='search.cgi?search=tag:[% tag %]'>[% tag %]</a>
+    <a href='[% script_name %]?a=search&search=tag:[% tag %]'>[% tag %]</a>
 [% END %]

@@ -62,15 +62,16 @@ sub extractTags {
             $text =~s/#$tag//;
         }
         $text =~s/##/#/g;
-        my $line = 0;
-        foreach my $tag ($text =~/^(\w+)$/mg) {
-            next unless ($line++);
+        my $i = 0;
+        foreach my $tag (split("\n", $text)) {
+            # ignore the first line.
+            next unless ($i++ && $tag =~/^(\w+)$/);
             $tags{$tag}++;
             $text =~s/^$tag$//m;
         }
         $$t = $text if (ref($t));
     }
-    return sort keys %tags;
+    return sort map { lc($_); } keys %tags;
 }
 
 sub fleshDate {
@@ -147,7 +148,7 @@ sub parseTags {
             $tags{$tag}++ if ($tag);
         }
     }
-    return sort keys %tags;
+    return sort map { lc($_); } keys %tags;
 }
 
 sub toMysqlDate {

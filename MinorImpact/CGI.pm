@@ -5,33 +5,6 @@ use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 
-sub index {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    #MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
-    if ($params->{actions}{$action}) {
-        my $sub = $params->{actions}{$action};
-        $sub->($self, $params);
-    } elsif ($action eq 'add') {
-        add($self, $params);
-    } elsif ($action eq 'edit') {
-        edit($self, $params);
-    } elsif ($action eq 'delete') {
-        del($self, $params);
-    } elsif ($action eq 'tablist') {
-        tablist($self, $params);
-    } elsif ($action eq 'view') {
-        view($self, $params);
-    } elsif ( $action eq 'logout' ) {
-        logout($sel, $paramsf);
-    } elsif ($action eq 'user' ) {
-        user($sel, $paramsf);
-    } else {
-        list($self, $params);
-    }
-}
-
 sub add {
     my $self = shift || return;
     my $params = shift || {};
@@ -40,7 +13,7 @@ sub add {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
-    my $user = $self->getUser() || $self->redirect();
+    my $user = $self->getUser({ force => 1 });
 
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
     my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
@@ -85,6 +58,26 @@ sub add {
                     }) || die $TT->error();
 }
 
+sub add_reference {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $user = $MINORIMPACT->getUser({ force => 1 });
+    my $CGI = MinorImpact::getCGI();
+    my $DB = MinorImpact::getDB();
+
+    my $object_id = $CGI->param('object_id');
+    my $object_text_id = $CGI->param('object_text_id');
+    my $data = $CGI->param('data');
+
+    my $object = new MinorImpact::Object($object_id) || $MINORIMPACT->redirect();
+
+    print "Content-type: text/plain\n\n";
+    if ($object_text_id && $data && $object && $object->user_id() eq $user->id()) {
+        $DB->do("INSERT INTO object_reference(object_text_id, data, object_id, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_text_id, $data, $object->id())) || die $DB->errstr;
+    }
+}
+
 sub css {
     my $self = shift || return;
     my $params = shift || {};
@@ -98,6 +91,7 @@ sub del {
     my $params = shift || {};
 
     my $CGI = $self->getCGI();
+    my $user = $self->getUser({ force => 1 });
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
@@ -112,6 +106,7 @@ sub edit {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
+    my $user = $self->getUser({ force => 1 });
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
@@ -178,7 +173,8 @@ sub list {
 
     my @objects = MinorImpact::Object::Search::search($local_params);
     if (scalar(@objects) == 0) {
-        $self->redirect("$script_name?a=add&type_id=$type_id");
+        $self->redirect("?a=login") unless ($user);
+        $self->redirect("?a=add&type_id=$type_id");
     }
 
     if ($format eq 'json') {
@@ -213,6 +209,9 @@ sub list {
 
 sub login {
     my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting");
 
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
@@ -221,22 +220,28 @@ sub login {
     my $redirect = $CGI->param('redirect');
     
     my $user = $MINORIMPACT->getUser();
+
     if ($user) {
-        $MINORIMPACT->redirect();
+        $MINORIMPACT->redirect($redirect);
     }
     
     $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
+    MinorImpact::log(7, "ending");
 }
 
 sub logout {
     my $MINORIMPACT = shift || return;
 
     my $CGI = $MINORIMPACT->getCGI();
+    my $user = $self->getUser({ force => 1 });
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
-    my $view_history =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
-    print $CGI->header(-cookie=>[$object_cookie, $user_cookie, $view_history], -location=>"login.cgi");
+    my $view_cookie =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
+    print "Set-Cookie: $user_cookie\n";
+    print "Set-Cookie: $object_cookie\n";
+    print "Set-Cookie: $view_cookie\n";
+    $MINORIMPACT->redirect();
 }
 
 sub object_types {
@@ -256,7 +261,7 @@ sub save_search {
 
     MinorImpact::log(7, "starting");
     my $CGI = MinorImpact::getCGI();
-    my $user = MinorImpact::getUser();
+    my $user = $self->getUser({ force => 1 });
 
     my $name = $CGI->param('save_name') || return MinorImpact::Object::Search::search($MINORIMPACT, $params);
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
@@ -304,7 +309,7 @@ sub tablist {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
-    my $user = $self->getUser() || return;
+    my $user = $self->getUser();
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || return;
     my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
@@ -368,7 +373,7 @@ sub tags {
 sub user {
     my $MI = shift || return;
 
-    my $user = $MI->getUser();
+    my $user = $MI->getUser({ force => 1 });
     my $TT = $MI->getTT();
     my $script_name = MinorImpact::scriptName();
 
@@ -379,7 +384,7 @@ sub view {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $TT = $self->getTT();
     my $CGI = $self->getCGI();
