@@ -172,7 +172,7 @@ sub getUser {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
     #}
-    MinorImpact::log(3, "no user found");
+    #MinorImpact::log(8, "no user found");
     #MinorImpact::log(7, "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
@@ -182,10 +182,17 @@ sub redirect {
     my $self = shift || return;
     my $params = shift || {};
 
+    #MinorImpact::log(7, "starting");
+
     my $CGI = MinorImpact::getCGI();
 
-    #MinorImpact::log(7, "starting");
-    my $location = shift || $CGI->param('redirect') ||  'index.cgi';
+    if (ref($params) ne 'HASH') {
+        my $redirect = $params;
+        $params = {};
+        $params->{redirect} = $redirect;
+    }
+
+    my $location = $params->{redirect} || $CGI->param('redirect') ||  'index.cgi';
 
     #$location =~s/[^a-z0-9.\-_?\/:=]//;
     #$location = uri_escape($location);

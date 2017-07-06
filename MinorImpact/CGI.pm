@@ -173,7 +173,12 @@ sub list {
 
     my @objects = MinorImpact::Object::Search::search($local_params);
     if (scalar(@objects) == 0) {
-        $self->redirect("?a=login") unless ($user);
+        MinorImpact::log(7, "No objects found, redirecting.");
+        unless ($user) {
+            #MinorImpact::log(7, "No user found, redirecting to ?a=login.");
+            $self->redirect("?a=login") unless ($user);
+        }
+        #MinorImpact::log(8, "User '" . $user->id() ."', redirecting to add");
         $self->redirect("?a=add&type_id=$type_id");
     }
 
@@ -192,18 +197,18 @@ sub list {
         }
 
         my @tags;
-        my %tags;
-        foreach my $object (@objects) {
-            map { $tags{$_}++; } $object->getTags();
-        }
-        @tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
-        splice(@tags, 5);
+        #my %tags;
+        #foreach my $object (@objects) {
+        #    map { $tags{$_}++; } $object->getTags();
+        #}
+        #@tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
+        #splice(@tags, 5);
         #@tags = map {- length($_); } @tags;
         $TT->process('list', {  
                                 container_id => $container_id,
                                 containers   => [ @containers ],
                                 objects      => [ @objects ],
-                                tags         => [ @tags ],
+                                #tags         => [ @tags ],
                                 type_id      => $type_id,
                                 type_name    => $type_name,
                             }) || die $TT->error();
@@ -214,7 +219,7 @@ sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
@@ -229,7 +234,7 @@ sub login {
     }
     
     $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
 }
 
 sub logout {
