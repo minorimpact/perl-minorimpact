@@ -16,29 +16,17 @@
 });
 </script>
 
-<table width=100%>
-<tr>
-    <td align=left>
-        [% IF url_last %]<a class=paginate href='[% url_last %]'>Previous</a>[% END %]
-    </td>
-    <td align=right>
-        [% IF url_next %]<a class=paginate href='[% url_next %]'>Next</a>[% END %]
-    </td>
-    </tr>
-    <tr>
-    <td colspan=2 align=center>
+<div class="w3-bar w3-border w3-round">
+    [% IF url_last %] <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>[% END %]
+    [% IF url_next %] <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>[% END %]
+</div>
 <table class=list width=100%>
 [% FOREACH o IN objects %]
     [% o.toString({format=>'list'}) %]
 [% END %]
 </table>
-</td></tr>
-<tr>
-    <td align=left>
-        [% IF url_last %]<a class=paginate href='[% url_last %]'>Previous</a>[% END %]
-    </td>
-    <td align=right>
-        [% IF url_next %]<a class=paginate href='[% url_next %]'>Next</a>[% END %]
-    </td>
-    </tr>
+<div class="w3-bar w3-border w3-round">
+    [% IF url_last %] <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>[% END %]
+    [% IF url_next %] <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>[% END %]
+</div>
 

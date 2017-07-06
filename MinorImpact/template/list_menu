@@ -1,8 +1,6 @@
 <!-- TEMPLATE:default.list_menu -->
-<div id=list_menu>
-[% IF user %]
-    <a href=[% script_name %]?type_id=[% type_id %]&a=add>Add [% type_name %]</a>
-[% END %]
+<div id=list_menu class="w3-bar w3-light-grey">
+[% IF user %] <a href="[% script_name %]?type_id=[% type_id %]&a=add" class=w3-bar-item w3-button">Add [% type_name %]</a>[% END %]
 [% IF tags %]
     [% INCLUDE list_menu_tags %]
 [% END %]

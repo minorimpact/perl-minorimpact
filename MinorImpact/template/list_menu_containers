@@ -1,4 +1,10 @@
-<!-- TEMPLATE:default.list_menu_containers -->
-[% FOREACH container IN containers %]
-    [% INCLUDE container %]
-[% END %]
+<div class="w3-dropdown-click">
+    <button class="w3-button" onclick="openCollectionsDD();">
+        Collections <i class="fa fa-caret-down"></i>
+    </button>
+    <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
+        [% FOREACH container IN containers %]
+            [% INCLUDE container %]
+        [% END %]
+    </div>
+</div>

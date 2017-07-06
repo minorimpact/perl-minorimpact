@@ -1,3 +1,1 @@
-<!-- TEMPLATE:default.container -->
-<a class=container href='[% script_name %]?cid=[% container.id() %]'>[% container.name() %]</a>
-<a class=container_delete href='[% script_name %]?a=delete&id=[% container.id() %]'>X</a>
+<a href="[% script_name %]?cid=[% container.id() %]" class="w3-bar-item w3-button">[% container.name() %]</a>

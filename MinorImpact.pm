@@ -124,18 +124,13 @@ sub getUser {
     if ($user_id) {
         #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
-
         my $ip_list = MinorImpact::cache({ key => "client_ip:$user_id" });
         #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $ip_list) {
             foreach my $client_ip ( split(",", $ip_list) ) {
                 #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
-                if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
+                if ($client_ip && ($ENV{REMOTE_ADDR} eq $client_ip  || $ENV{SSH_CLIENT} eq $client_ip)) {
                     #MinorImpact::log(7, "ending - cached ip matched current ip");
-                    $self->{USER} = $user;
-                    return $user;
-                } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
-                    #MinorImpact::log(7, "ending - cached ssh_client matches current session");
                     $self->{USER} = $user;
                     return $user;
                 }
@@ -176,7 +171,7 @@ sub getUser {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
     #}
-    #MinorImpact::log(8, "no user found");
+    MinorImpact::log(8, "no user found");
     #MinorImpact::log(7, "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
@@ -190,6 +185,15 @@ sub redirect {
 
     my $CGI = MinorImpact::getCGI();
 
+    #MinorImpact::log(8, "\$self='" . $self . "'");
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    } elsif (!ref($self)) {
+        $params->{redirect} = $self;
+        undef($self);
+    }
+
     if (ref($params) ne 'HASH') {
         my $redirect = $params;
         $params = {};
@@ -197,9 +201,8 @@ sub redirect {
     }
 
     my $location = $params->{redirect} || $CGI->param('redirect') ||  'index.cgi';
+    #MinorImpact::log(8, "\$location='$location'");
 
-    #$location =~s/[^a-z0-9.\-_?\/:=]//;
-    #$location = uri_escape($location);
     my $domain = "https://$ENV{HTTP_HOST}";
     my $script_name = MinorImpact::scriptName();
     if ($location =~/^\?/) {
