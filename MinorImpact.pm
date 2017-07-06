@@ -180,9 +180,12 @@ sub getUser {
 
 sub redirect {
     my $self = shift || return;
+    my $params = shift || {};
+
+    my $CGI = MinorImpact::getCGI();
 
     #MinorImpact::log(7, "starting");
-    my $location = shift || $self->{CGI}->param('redirect') ||  'index.cgi';
+    my $location = shift || $CGI->param('redirect') ||  'index.cgi';
 
     #$location =~s/[^a-z0-9.\-_?\/:=]//;
     #$location = uri_escape($location);

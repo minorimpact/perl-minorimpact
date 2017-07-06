@@ -54,7 +54,6 @@ sub search {
     #   fancy options.
     return @ids if ($params->{id_only});
 
-
     my @objects;
     foreach my $id (@ids) {
         #MinorImpact::log(8, "\$id=" . $id);

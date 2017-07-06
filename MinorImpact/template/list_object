@@ -1,6 +1,44 @@
 <!-- TEMPLATE:default.list_object -->
-<table class=list>
+<script>
+
+\$("a.paginate").click(function(e) {
+    //alert(\$(this).attr('href'));
+    e.preventDefault();
+    var href = \$(this).attr('href');
+    var tabs = \$("#tabs");
+    var currentTabIndex = tabs.tabs("option", "active");
+    //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
+    var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
+    tab.find('.ui-tabs-anchor').attr('href', href);
+    // If cached initially. Remove cache then
+    tab.data( "loaded", false);
+    tabs.tabs("load", currentTabIndex);
+});
+</script>
+
+<table width=100%>
+<tr>
+    <td align=left>
+        [% IF url_last %]<a class=paginate href='[% url_last %]'>Previous</a>[% END %]
+    </td>
+    <td align=right>
+        [% IF url_next %]<a class=paginate href='[% url_next %]'>Next</a>[% END %]
+    </td>
+    </tr>
+    <tr>
+    <td colspan=2 align=center>
+<table class=list width=100%>
 [% FOREACH o IN objects %]
     [% o.toString({format=>'list'}) %]
 [% END %]
 </table>
+</td></tr>
+<tr>
+    <td align=left>
+        [% IF url_last %]<a class=paginate href='[% url_last %]'>Previous</a>[% END %]
+    </td>
+    <td align=right>
+        [% IF url_next %]<a class=paginate href='[% url_next %]'>Next</a>[% END %]
+    </td>
+    </tr>
+

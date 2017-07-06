@@ -29,8 +29,10 @@ Content-type: text/html
             <td valign=top>
                 <div id=section_menu>
                     [% INCLUDE header_menu %]
-                    [% INCLUDE header_menu_site %]
                 </div> <!-- section_menu -->
+            </td>
+            <td>
+                [% INCLUDE header_menu_site %]
             </td>
             <td valign=top>
                 <div id=user_menu>

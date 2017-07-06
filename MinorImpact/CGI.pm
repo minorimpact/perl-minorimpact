@@ -358,10 +358,13 @@ sub tablist {
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
     my $user = $self->getUser();
+    my $script_name = MinorImpact::scriptName();
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || return;
     my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
     my $container_id = $CGI->param('cid') || $CGI->param('container_id');
+    my $page = $CGI->param('page') || 1;
+    my $limit = $CGI->param('limit') || 25;
 
     my $object = new MinorImpact::Object($object_id) || return;
     $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
@@ -376,21 +379,30 @@ sub tablist {
     }
     $local_params->{debug} .= "MinorImpact::Container::searchParams();";
 
+    my $max = scalar($object->getChildren({ %$local_params, id_only => 1 }));
+    $local_params->{page} = $page;
+    $local_params->{limit} = $limit;
     my @objects = $object->getChildren($local_params);
-    my @tags;
-    my %tags;
-    foreach my $object (@objects) {
-        map { $tags{$_}++; } $object->getTags();
-    }
-    @tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
-    splice(@tags, 5);
-    #@tags = map { "$_(" . $tags{$_} . ")"; } @tags;
 
+    #my @tags;
+    #my %tags;
+    #foreach my $object (@objects) {
+    #    map { $tags{$_}++; } $object->getTags();
+    #}
+    #@tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
+    #splice(@tags, 5);
+
+    # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
+    #   I ma
+    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$container_id&type_id=$type_id&page=" . ($page - 1):'';
+    my $url_next = ($page<=int($max/$limit))?"$script_name?a=tablist&id=$object_id&cid=$container_id&type_id=$type_id&page=" . ($page + 1):'';
     $TT->process('tablist', {  
                             objects   => [ @objects ],
-                            tags      => [ @tags ],
+                            #tags      => [ @tags ],
                             type_id   => $type_id,
                             type_name => $type_name,
+                            url_last  => $url_last,
+                            url_next  => $url_next,
                             }) || die $TT->error();
 }
 
