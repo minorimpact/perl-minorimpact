@@ -125,18 +125,20 @@ sub getUser {
         #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
 
-        my $client_ip = MinorImpact::cache({key=>"client_ip:$user_id"});
+        my $ip_list = MinorImpact::cache({ key => "client_ip:$user_id" });
         #MinorImpact::log(8, "client_ip=$client_ip");
-        if ($user && $client_ip) {
-            #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
-            if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
-                #MinorImpact::log(7, "ending - cached ip matched current ip");
-                $self->{USER} = $user;
-                return $user;
-            } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
-                #MinorImpact::log(7, "ending - cached ssh_client matches current session");
-                $self->{USER} = $user;
-                return $user;
+        if ($user && $ip_list) {
+            foreach my $client_ip ( split(",", $ip_list) ) {
+                #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+                if ($client_ip && $ENV{REMOTE_ADDR} eq $client_ip) {
+                    #MinorImpact::log(7, "ending - cached ip matched current ip");
+                    $self->{USER} = $user;
+                    return $user;
+                } elsif ($client_ip && $ENV{SSH_CLIENT} eq $client_ip) {
+                    #MinorImpact::log(7, "ending - cached ssh_client matches current session");
+                    $self->{USER} = $user;
+                    return $user;
+                }
             }
         }
     }
@@ -151,7 +153,9 @@ sub getUser {
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
-            MinorImpact::cache({key=>"client_ip:$user_id", value=>$ENV{REMOTE_ADDR}||$ENV{SSH_CLIENT}, timeout=>$timeout});
+            my $client_ip = cache({ key => "client_ip:$user_id" });
+            my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
+            MinorImpact::cache({key=>"client_ip:$user_id", value=>($client_ip?"$client_ip,$new_ip":$new_ip), timeout=>$timeout});
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
                 print "Set-Cookie: $cookie\n";
@@ -265,7 +269,7 @@ sub cache {
     if ($method eq 'file') {
         my $cache_file = "/tmp/minorimpact.cache";
         my $config = readConfig($cache_file);
-        if (defined($value) && $value ne '') {
+        if (defined($value)) { # && $value ne '') {
             # write cache
             $config->{$key}{value} = $value;
             $config->{$key}{timeout} = time() + $timeout;

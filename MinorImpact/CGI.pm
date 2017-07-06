@@ -173,7 +173,7 @@ sub list {
 
     my @objects = MinorImpact::Object::Search::search($local_params);
     if (scalar(@objects) == 0) {
-        MinorImpact::log(7, "No objects found, redirecting.");
+        #MinorImpact::log(7, "No objects found, redirecting.");
         unless ($user) {
             #MinorImpact::log(7, "No user found, redirecting to ?a=login.");
             $self->redirect("?a=login") unless ($user);
