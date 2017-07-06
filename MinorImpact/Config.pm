@@ -22,6 +22,32 @@ sub new {
     return $self;
 }
 
+sub decode {
+    my $string = shift || return;
+
+    my $ret = ref($string)?$$string:$string;
+    $ret =~s/_COLON_/:/g;
+    $ret =~s/_LBRACKET_/[/g;
+    $ret =~s/_RBRACKET_/]/g;
+
+    $$string = $ret if (ref($string));
+    return $ret;
+}
+
+sub encode {
+    my $string = shift || return;
+
+    my $ret = ref($string)?$$string:$string;
+
+    $ret =~s/:/_COLON_/g;
+    $ret =~s/\[/_LBRACKET_/g;
+    $ret =~s/\]/_RBRACKET_/g;
+
+    $$string = $ret if (ref($string));
+    return $ret;
+}
+
+
 sub get {
     my $self = shift || return;
     my $category = shift || return;
@@ -31,7 +57,6 @@ sub get {
         $key = $category;
         $category = "default";
     }
-
 
     return $self->{config}{$category}{$key};
 }
@@ -53,7 +78,7 @@ sub readConfig {
         my $value;
         my $line = trim($_);
         next if (/^#/ || !$_);
-        if (/^([^:]+):/) {
+        if (/^([^:]+):/ || /^\[(^\]]+)\]/) {
             $category = $1;
             next;
         } elsif (/^([^=]+)\s?=\s?(.+)$/) {
@@ -65,8 +90,9 @@ sub readConfig {
         $value =~s/^"//;
         $value =~s/"$//;
         next unless ($value);
-        $category =~s/_COLON_/:/g;
-        $key =~s/_COLON_/:/g;
+        decode(\$category);
+        decode(\$key);
+        decode(\$value);
 
         if ($config->{$category}->{$key}) {
             if (ref($config->{$category}->{$key}) eq 'ARRAY') {
@@ -90,7 +116,7 @@ sub writeConfig {
     open(CONFIG, ">$config_file");
     foreach my $section (keys %$config) {
         my $conf_section = $section;
-        $conf_section =~s/:/_COLON_/g;
+        encode(\$conf_section);
 
         print CONFIG "$conf_section:\n";
         foreach my $key (keys %{$config->{$section}}) {
@@ -98,12 +124,14 @@ sub writeConfig {
             $value = $config->{$section}{$key};
             chomp($key);
             chomp($value);
-            $key =~s/:/_COLON_/g;
+            encode(\$key);
+            encode(\$value);
             print CONFIG "    $key = \"$value\"\n";
         }
         print CONFIG "\n";
     }
     close(CONFIG);
 }
+
 
 1;
