@@ -49,12 +49,12 @@ sub checkDatabaseTables {
     }
 }
 
-sub getContainers {
+sub getCollections {
     my $self = shift || return;
 
     my $params = { 
-                    debug          => 'MinorImpact::User::getContainers()',
-                    object_type_id => MinorImpact::Object::typeID('MinorImpact::Container'), 
+                    debug          => 'MinorImpact::User::getCollections()',
+                    object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
                     user_id        => $self->id(),
                };
     return MinorImpact::Object::Search::search($params);

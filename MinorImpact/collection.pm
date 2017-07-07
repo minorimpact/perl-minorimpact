@@ -1,4 +1,4 @@
-package MinorImpact::Container;
+package MinorImpact::collection;
 
 use MinorImpact;
 use MinorImpact::Object;
@@ -32,7 +32,7 @@ sub searchParams {
     my $self = shift || return;
 
     MinorImpact::log(7, "starting(" . $self->id() . ")");
-    my $params = { debug => 'MinorImpact::Container::searchParams();' }; 
+    my $params = { debug => 'collection::searchParams();' }; 
     foreach my $tag ($self->get('tag')) {
         $params->{tag} .= "$tag,";
     }

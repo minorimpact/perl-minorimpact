@@ -3,6 +3,7 @@ package MinorImpact::CGI;
 use JSON;
 
 use MinorImpact;
+use MinorImpact::collection;
 use MinorImpact::Util;
 
 sub add {
@@ -103,6 +104,7 @@ sub del {
 
 sub edit {
     my $self = shift || return;
+    my $params = shift || {};
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
@@ -124,11 +126,12 @@ sub edit {
         }
     }
 
-    my $form = $object->form();
+    my $form = $object->form($params);
     $TT->process('edit', { 
-                        error=>$error,
-                        form=>$form,
-                        object=>$object,
+                        error   => $error,
+                        form    => $form,
+                        no_name => $params->{no_name},
+                        object   =>$object,
                     }) || die $TT->error();
 }
 
@@ -142,7 +145,7 @@ sub list {
     my $TT = $self->getTT();
     my $user = $self->getUser();
 
-    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
+    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
     my $type_id = $CGI->param('type_id') || $CGI->param('type'); # || $self->redirect();
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
@@ -158,12 +161,12 @@ sub list {
 
     my $local_params = cloneHash($params);
        
-    # If we're looking at a container objects, then build out the search
+    # If we're looking at a collection objects, then build out the search
     #   query from that.
-    #MinorImpact::log(8, "\$container_id=$container_id");
-    my $container = new MinorImpact::Object($container_id) if ($container_id);
-    if ($container) {
-        $local_params = $container->searchParams();
+    #MinorImpact::log(8, "\$collection_id=$collection_id");
+    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
+    if ($collection) {
+        $local_params = $collection->searchParams();
     }
 
     $local_params->{object_type_id} = $type_id;
@@ -191,9 +194,9 @@ sub list {
         print to_json(\@data);
     } else { # $format eq 'html'
         my $type_name = MinorImpact::Object::typeName($type_id);
-        my @containers;
+        my @collections;
         if ($user) {
-            @containers = $user->getContainers();
+            @collections = $user->getCollections();
         }
 
         my @tags;
@@ -205,12 +208,12 @@ sub list {
         splice(@tags, 5);
         #@tags = map {- length($_); } @tags;
         $TT->process('list', {  
-                                container_id => $container_id,
-                                containers   => [ @containers ],
-                                objects      => [ @objects ],
-                                tags         => [ @tags ],
-                                type_id      => $type_id,
-                                type_name    => $type_name,
+                                collection_id => $collection_id,
+                                collections   => [ @collections ],
+                                objects       => [ @objects ],
+                                tags          => [ @tags ],
+                                type_id       => $type_id,
+                                type_name     => $type_name,
                             }) || die $TT->error();
     }
 }
@@ -321,11 +324,11 @@ sub save_search {
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     MinorImpact::log(8, "\$search='$search'");
 
-    my $container_data = {name => $name, search => $search, user_id => $user->id()};
-    my $container = new MinorImpact::Container($container_data);
+    my $collection_data = {name => $name, search => $search, user_id => $user->id()};
+    my $collection = new MinorImpact::collection($collection_data);
 
     MinorImpact::log(7, "ending");
-    $MINORIMPACT->redirect("?cid=" . $container->id());
+    $MINORIMPACT->redirect("?cid=" . $collection->id());
 }
 
 sub search {
@@ -371,7 +374,7 @@ sub tablist {
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || return;
     my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
-    my $container_id = $CGI->param('cid') || $CGI->param('container_id');
+    my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
     my $page = $CGI->param('page') || 1;
     my $limit = $CGI->param('limit') || 25;
 
@@ -382,11 +385,11 @@ sub tablist {
 
     # Show a list of objects of a certain type that refer to the current object.
     my $local_params = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::index(a=tablist);"};
-    my $container = new MinorImpact::Object($container_id) if ($container_id);
-    if ($container) {
-        $local_params = { %$local_params, %{$container->searchParams()} };
+    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
+    if ($collection) {
+        $local_params = { %$local_params, %{$collection->searchParams()} };
     }
-    $local_params->{debug} .= "MinorImpact::Container::searchParams();";
+    $local_params->{debug} .= "collection::searchParams();";
 
     my $max = scalar($object->getChildren({ %$local_params, id_only => 1 }));
     $local_params->{page} = $page;
@@ -403,8 +406,8 @@ sub tablist {
 
     # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
     #   I ma
-    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$container_id&type_id=$type_id&page=" . ($page - 1):'';
-    my $url_next = ($page<=int($max/$limit))?"$script_name?a=tablist&id=$object_id&cid=$container_id&type_id=$type_id&page=" . ($page + 1):'';
+    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&page=" . ($page - 1):'';
+    my $url_next = ($page<=int($max/$limit))?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&page=" . ($page + 1):'';
     $TT->process('tablist', {  
                             objects   => [ @objects ],
                             #tags      => [ @tags ],
@@ -460,7 +463,7 @@ sub view {
     my $script_name = $self->scriptName();
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id') || $self->redirect();
-    my $container_id = $CGI->param('container_id') || $CGI->param('cid');
+    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
     my $tab_id = $CGI->param('tab_id') || 0;
 
@@ -498,7 +501,7 @@ JAVASCRIPT
     print "Set-Cookie: $object_cookie\n";
 
     $TT->process('index', {
-                            cid        => $container_id,
+                            cid        => $collection_id,
                             javascript => $javascript,
                             object     => $object,
                             tab_number => $tab_number,

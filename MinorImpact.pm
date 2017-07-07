@@ -18,8 +18,14 @@ use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
 
-sub getDB { return $SELF->{DB}; }
-sub getCGI { return $SELF->{CGI}; }
+sub getDB { 
+    return $SELF->{DB}; 
+}
+
+sub getCGI { 
+    return $SELF->{CGI}; 
+}
+
 sub scriptName {
     my ($script_name) = $0 =~/\/([^\/]+.cgi)$/;
     return $script_name;
@@ -28,6 +34,13 @@ sub scriptName {
 sub new {
     my $package = shift;
     my $options = shift || {};
+
+    #(my $p = __PACKAGE__ ) =~ s#::#/#g;
+    #my $filename = $p . '.pm';
+    #(my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
+    #use lib "$path/$p";
+
+    #my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
     my $self = $SELF;
     #MinorImpact::log(8, "starting");
@@ -472,6 +485,7 @@ sub cgi {
     MinorImpact::log(8, "\$action='$action'");
 
     if ($params->{actions}{$action}) {
+        MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ( $action eq 'add') {

@@ -17,6 +17,7 @@ use Exporter 'import';
 @EXPORT = ( "cloneHash",
             "dumper",
             "extractTags",
+            "f",
             "fleshDate",
             "fromMysqlDate", 
             "indexOf",
@@ -72,6 +73,15 @@ sub extractTags {
         $$t = $text if (ref($t));
     }
     return sort map { lc($_); } keys %tags;
+}
+
+# This literally just prints an html header and a FUCK, 
+# so I can make something happen on a CGI page.
+sub f {
+    my $fuck = shift || "FUCK";
+
+    print "Content-type: text/html\n\n";
+    print $fuck;
 }
 
 sub fleshDate {

@@ -3,8 +3,8 @@
         Collections <i class="fa fa-caret-down"></i>
     </button>
     <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
-        [% FOREACH container IN containers %]
-            [% INCLUDE container %]
+        [% FOREACH collection IN collections %]
+            [% INCLUDE collection %]
         [% END %]
     </div>
 </div>

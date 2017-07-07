@@ -1,0 +1,1 @@
+<a href="[% script_name %]?cid=[% collection.id() %]" class="w3-bar-item w3-button">[% collection.name() %]</a>

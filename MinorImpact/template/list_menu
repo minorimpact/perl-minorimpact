@@ -3,7 +3,7 @@
 [% IF user %]
     <a href="[% script_name %]?type_id=[% type_id %]&a=add" class="w3-bar-item w3-button">Add [% type_name %]</a>
 [% END %]
-[% INCLUDE list_menu_containers %]
+[% INCLUDE list_menu_collections %]
 [% INCLUDE list_menu_tags %]
 [% INCLUDE list_menu_site %]
 </div>

@@ -5,7 +5,6 @@ use JSON;
 use Text::Markdown 'markdown';
 
 use MinorImpact;
-use MinorImpact::Container;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
