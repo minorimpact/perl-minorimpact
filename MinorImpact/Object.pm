@@ -224,6 +224,9 @@ sub get {
         my @value = $self->{object_data}->{$name}->value();
         #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
+            if ($params->{one_line}) {
+                ($value) = $value =~/^(.*)$/m;
+            }
             if ($params->{truncate} =~/^\d+$/) {
                 $value = trunc($value, $params->{truncate});
             }
