@@ -1,3 +1,4 @@
 <!-- TEMPLATE:default.header_menu -->
-<table><tr><td><a href=[% script_name %]>Home</a></td><td>[% INCLUDE header_search %]</td></tr></table>
+<a class="w3-bar-item w3-button" href=[% script_name %]>Home</a>
+[% INCLUDE header_search %]
 

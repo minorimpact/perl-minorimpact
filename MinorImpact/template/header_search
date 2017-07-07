@@ -1,11 +1,10 @@
 <!-- TEMPLATE:default.header_search -->
-<div class=search_form>
-<form id=search_form method=POST action='[% script_name %]'>[% # onsubmit='return submitForm(this);'> %]
+<form class="w3-bar-item" id=search_form method=POST action='[% script_name %]'>[% # onsubmit='return submitForm(this);'> %]
 <input type=hidden name=a value=search>
 <input type=hidden id=save_name name=save_name>
-<input type=text id=search name=search value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'>
-<input type=submit value=search>
-<input type=button id=save_button name=save_button value='Save' onclick='submitForm();'>
+<input class="w3-input w3-bar-item w3-border" type=text id=search name=search value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'>
+<input class="w3-submit w3-bar-item" type=submit value=search>
+<input class="w3-submit w3-bar-item" type=button id=save_button name=save_button value='Save' onclick='submitForm();'>
 </form>
 <script>
 [% IF search %]
@@ -23,4 +22,3 @@ function submitForm(form) {
     form.submit();
 }
 </script>
-</div>

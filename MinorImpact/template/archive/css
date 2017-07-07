@@ -1,0 +1,71 @@
+Content-type: text/css
+
+/* TEMPLATE:default.css */
+#map { height: 250px; width: 500px; }
+body { 
+    font-family: sans-serif; 
+}
+
+#header {
+    width:100%;
+    border-bottom:solid 1px black;
+    vertical-align:center;
+    padding:4px;
+    margin-bottom:10px;
+    width:95%;
+}
+#section_menu { font-size:large; float:left; width:90%; text-align:left;}
+#user_menu { font-size:normal; float:none; text-align: right;}
+
+#list {}
+#list_menu  {
+    font-weight: bold;
+}
+#list_name { font-size:large; font-weight:bold; }
+
+
+/* Object view */
+#view { padding-top: 20px; }
+#view_back:after { content:"\000A"; white-space: pre;}
+#view_menu a { font-size:smaller; }
+table.view { padding-top:20px; }
+table.view > tbody > tr > td.fieldname { vertical-align:top; width:10%; font-weight:bold; text-align:right; }
+#view_name { 
+    font-size: large;
+    font-weight:bold;
+}
+span.object_name { font-weight:bold; font-size:150%;}
+span.object_name:after { content:"\000A"; white-space: pre;}
+p.object_description { }
+a.back { font-size:80%; }
+a.back:after { content:"\000A"; white-space: pre;}
+
+#footer {
+    width:100%;
+    border-top:solid 1px black; 
+    vertical-align:center; 
+    padding:4px; 
+    font-size:75%; 
+    font-style:italic;
+    margin-top:10px; 
+    width: 95%;
+}
+
+.title { font-size:150%; font-weight:bold; }
+.error { font-size:125%; font-weight:bold; color:red; text-align:center; width: 100%;}
+table.list { width: 90%; border: solid 1px black; }
+table.edit { border:solid 1px black; width:90%; margin-top:20px; padding:5px; }
+table.edit > tbody > tr > td.fieldname { vertical-align:top; width:10%; font-weight:bold; text-align:right; }
+tr { text-align: left; }
+th { font-weight: bold; }
+table > tbody > tr > td {  }
+textarea { width:50%; height:100px; }
+textarea.paragraph { width:50%; height:100px; }
+a { padding-right:10px; }
+div#event { padding-top:20px; }
+span#event_date { font-weight:bold; }
+p { margin-bottom: 0px; padding-bottom: 0px; }
+span.tag { font-size: smaller; }
+.small { font-size: small; text-align:left; }
+
+[% INCLUDE css_site %]

@@ -99,7 +99,7 @@ sub _search {
     $params->{object_type_id} = $params->{object_type} if ($params->{object_type} && !$params->{object_type_id});
     my $select = "SELECT DISTINCT(object.id) ";
     my $from   = "FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id) ";
-    my $where  = "WHERE object.id > 0 ";
+    my $where  = "WHERE object.id > 0";
     my @fields;
 
     $select .= $params->{select} if ($params->{select});
@@ -128,6 +128,9 @@ sub _search {
         } elsif ($param eq "user_id") {
             $where .= " AND object.user_id=?";
             push(@fields, $params->{user_id});
+        } elsif ($param eq "system") {
+            $where .= " AND object_type.system = ? ";
+            push(@fields, $params->{system});
         } elsif ($param eq "tag") {
             my $tag_where;
             foreach my $tag (split(",", $params->{tag})) {

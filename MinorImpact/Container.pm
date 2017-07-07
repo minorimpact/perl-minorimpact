@@ -36,8 +36,9 @@ sub searchParams {
     foreach my $tag ($self->get('tag')) {
         $params->{tag} .= "$tag,";
     }
-    $params->{tag} =~s/[, ]*$//;
+    $params->{tag} =~s/[^\w]+$//;
     MinorImpact::log(8, "\$params->{tag}='" . $params->{tag} . "'");
+
     foreach my $text ($self->get('text')) {
         $params->{text} .= " $text";
     }

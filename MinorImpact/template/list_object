@@ -20,7 +20,7 @@
     [% IF url_last %] <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>[% END %]
     [% IF url_next %] <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>[% END %]
 </div>
-<table class=list width=100%>
+<table class="w3-table w3-striped">
 [% FOREACH o IN objects %]
     [% o.toString({format=>'list'}) %]
 [% END %]

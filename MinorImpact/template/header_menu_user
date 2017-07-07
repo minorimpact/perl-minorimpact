@@ -1,11 +1,8 @@
 [% IF user %]
-<table>
-    <tr>
-        <td valign=top><a href="[% script_name %]?a=user">[% user.get('name') %]</a><a href='[% script_name %]?a=logout'>Logout</a></td>
-    </tr>
-</table>
+    <a class="w3-bar-item w3-button" href="[% script_name %]?a=user">[% user.get('name') %]</a>
+    <a class="w3-bar-item w3-button" href='[% script_name %]?a=logout'>Logout</a></td>
 [% ELSE %]
-        <a href=[% script_name %]?a=login>Log In</a>
-        <a href=[% script_name %]?a=register>Register</a>
+    <a class="w3-bar-itea w3-buttonm" href=[% script_name %]?a=login>Log In</a>
+    <a class="w3-bar-item w3-button" href=[% script_name %]?a=register>Register</a>
 [% END %]
 

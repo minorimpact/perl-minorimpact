@@ -3,7 +3,7 @@ Content-type: text/html
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
 <!-- TEMPLATE:default.header -->
-<head>
+<head class="w3-container">
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
     [% INCLUDE header_css %]
     [% INCLUDE header_javascript %]
@@ -24,25 +24,11 @@ Content-type: text/html
     </script>
     [% END %]
 </head>
-<body>
-    <div id=header>
-        <table width=100%>
-        <tr>
-            <td valign=top>
-                <div id=section_menu>
-                    [% INCLUDE header_menu %]
-                </div> <!-- section_menu -->
-            </td>
-            <td>
-                [% INCLUDE header_menu_site %]
-            </td>
-            <td valign=top>
-                <div id=user_menu>
-                    [% INCLUDE header_menu_user %]
-                </div> <!-- user_menu -->
-            </td>
-        </tr>
-        </table>
-    </div> 
+<body class="w3-container">
+    <div id=header_menu class="w3-bar">
+        [% INCLUDE header_menu %]
+        [% INCLUDE header_menu_site %]
+        [% INCLUDE header_menu_user %]
+    </div>
 
     [% INCLUDE error %]

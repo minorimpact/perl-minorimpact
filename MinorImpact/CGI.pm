@@ -197,18 +197,18 @@ sub list {
         }
 
         my @tags;
-        #my %tags;
-        #foreach my $object (@objects) {
-        #    map { $tags{$_}++; } $object->getTags();
-        #}
-        #@tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
-        #splice(@tags, 5);
+        my %tags;
+        foreach my $object (@objects) {
+            map { $tags{$_}++; } $object->getTags();
+        }
+        @tags = reverse(sort { $tags{$a} cmp $tags{$b}; } keys %tags);
+        splice(@tags, 5);
         #@tags = map {- length($_); } @tags;
         $TT->process('list', {  
                                 container_id => $container_id,
                                 containers   => [ @containers ],
                                 objects      => [ @objects ],
-                                #tags         => [ @tags ],
+                                tags         => [ @tags ],
                                 type_id      => $type_id,
                                 type_name    => $type_name,
                             }) || die $TT->error();
@@ -314,9 +314,10 @@ sub save_search {
 
     MinorImpact::log(7, "starting");
     my $CGI = MinorImpact::getCGI();
-    my $user = $self->getUser({ force => 1 });
+    my $user = MinorImpact::getUser({ force => 1 });
 
-    my $name = $CGI->param('save_name') || return MinorImpact::Object::Search::search($MINORIMPACT, $params);
+    my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
+    #??? MinorImpact::Object::Search::search($MINORIMPACT, $params);
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     MinorImpact::log(8, "\$search='$search'");
 
@@ -347,6 +348,9 @@ sub search {
         $local_params->{text} = $search;
         $local_params->{type_tree} = 1;
         $local_params->{sort} = 1;
+        # Anything coming in through here is coming from a user, they 
+        #   don't need to search system objects.
+        $local_params->{system} = 0;
         $objects = MinorImpact::Object::Search::search($local_params);
     }
     $TT->process('search', {
@@ -457,12 +461,18 @@ sub view {
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id') || $self->redirect();
     my $container_id = $CGI->param('container_id') || $CGI->param('cid');
+    my $format = $CGI->param('format') || 'html';
     my $tab_id = $CGI->param('tab_id') || 0;
 
     my $user = $self->getUser();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
-    my $error = $params->{error};
 
+    if ($format eq 'json') {
+        my $data = $object->toData();
+        print "Content-type: text/plain\n\n";
+        print to_json($data);
+        exit;
+    }
     my $tab_number = 0;
 
     # TODO: figure out some way for these to be alphabetized
@@ -489,7 +499,6 @@ JAVASCRIPT
 
     $TT->process('index', {
                             cid        => $container_id,
-                            error      => $error,
                             javascript => $javascript,
                             object     => $object,
                             tab_number => $tab_number,
