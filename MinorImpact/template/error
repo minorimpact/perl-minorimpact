@@ -1,1 +1,1 @@
-[% IF error %]<div class=error>[% error %]</div>[% END %]
+[% IF error %]<div class="w3-panel">[% error %]</div>[% END %]

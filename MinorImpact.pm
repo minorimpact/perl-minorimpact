@@ -443,6 +443,7 @@ sub getTT {
     my $variables = {
                         home => $self->{conf}{default}{home_script},
                         script_name => MinorImpact::scriptName(),
+                        typeName => sub { MinorImpact::Object::typeName(shift); },
                         user => $self->getUser(),
                     };
     if ($params->{variables}) {
@@ -476,11 +477,11 @@ sub cgi {
     my $params = shift || {};
 
     my $CGI = MinorImpact::getCGI();
-    my $action = $CGI->param('a') || $CGI->param('action') || 'list';
+    my $action = $CGI->param('a') || $CGI->param('action') || 'index';
     #my $script = $params->{script} || 'index';
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
 
-    $action = 'view' if ($object_id && $action eq 'list');
+    #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));
 
     MinorImpact::log(8, "\$action='$action'");
 
@@ -498,8 +499,6 @@ sub cgi {
         MinorImpact::CGI::del($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::CGI::edit($self, $params);
-    } elsif ( $action eq 'list') {
-        MinorImpact::CGI::list($self, $params);
     } elsif ( $action eq 'login') {
         MinorImpact::CGI::login($self, $params);
     } elsif ( $action eq 'logout') {
@@ -510,16 +509,12 @@ sub cgi {
         MinorImpact::CGI::register($self, $params);
     } elsif ( $action eq 'save_search') {
         MinorImpact::CGI::save_search($self, $params);
-    } elsif ( $action eq 'search') {
-        MinorImpact::CGI::search($self, $params);
     } elsif ( $action eq 'tablist') {
         MinorImpact::CGI::tablist($self, $params);
-    } elsif ( $action eq 'tags') {
-        MinorImpact::CGI::tags($self, $params);
     } elsif ( $action eq 'user') {
         MinorImpact::CGI::user($self);
-    } elsif ( $action eq 'view' ) {
-        MinorImpact::CGI::view($self, $params);
+    } else {
+        MinorImpact::CGI::index($self, $params);
     }
 }
 

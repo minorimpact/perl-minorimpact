@@ -4,8 +4,10 @@
 [% IF object %]
     <a class='back' href='[% object.back() %]'>back</a>
 [% END %]
-<span class=object_name>New [% type_name %]</span>
+<span class=object_name>
+<div class='w3-container'>
+<h1>New [% type_name %]</h1>
 
 [% form %]
-
+</div>
 [% INCLUDE footer %]

@@ -1,0 +1,14 @@
+[% IF url_last or url_next %]
+<div class="w3-bar">
+    [% IF url_last %]
+    <div class="w3-left">
+        <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>
+    </div>
+    [% END %]
+    [% IF url_next %]
+    <div class="w3-right">
+        <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>
+    </div>
+    [% END %]
+</div>
+[% END %]

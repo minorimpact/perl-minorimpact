@@ -1,22 +1,13 @@
-[% INCLUDE header title="Tags" %]
-
-<form>
-Search: <input type=text name=search_tag value='[% search_tag %]'><input type=submit value='search'>
-</form>
-[%#    if ($search_tag) {
-        my $objects = MinorImpact::Object::search({tag=>$search_tag, type_tree=>1});
-%]
-<table class='list view'>
-[% FOREACH type_id IN objects.keys %]
-    [% FOREACH object IN objects.$type_id %]
-        <tr>
-            <td class=fieldname> [% IF loop.first %] [% object.typeName({object_type_id=>type_id, plural=>1}) %] [% END %]</td>
-            <td> [% object.toString() %] </td>
-        </tr>
-    [% END %]
+<!-- TEMPLATE:default.list_menu_tags -->
+[% IF tags %]
+<div class="w3-dropdown-click">
+    <button class="w3-button" onclick="openTagsDD();">
+        Tags <i class="fa fa-caret-down"></i>
+    </button>
+    <div id="tagsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
+        [% FOREACH tag IN tags %]
+            [% INCLUDE tag %]
+        [% END %]
+    </div>
+</div>
 [% END %]
-</table>
-
-[% INCLUDE footer %]
-
-

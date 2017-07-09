@@ -208,7 +208,7 @@ sub _input {
         delete($local_params->{name});
         $row .= "" .  MinorImpact::Object::selectList($local_params);
     } else {
-        $row .= "<input id='$name' type=text name='$name' value='$value'";
+        $row .= "<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
         if ($params->{duplicate}) {
             $row .= " onchange='duplicateRow(this);'";
         }

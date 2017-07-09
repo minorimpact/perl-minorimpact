@@ -27,7 +27,7 @@ sub _input {
     my $value = $params->{row_value};
 
     my $row;
-    $row .= "<textarea name='$name'";
+    $row .= "<textarea class='w3-input w3-border' name='$name'";
     if ($params->{duplicate}) {
         $row .= " onchange='duplicateRow(this);'";
     }

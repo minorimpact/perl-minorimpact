@@ -1,24 +1,43 @@
-[% INCLUDE header title=object.name() %]
+[% INCLUDE header %]
+
+<script>
+        \$(function () {
+            \$("#tabs").tabs({
+                active: [% tab_number or 0 %],
+                beforeLoad: function( event, ui ) {
+                    ui.panel.html("<div>Loading...</div>");
+                }
+            });
+        });
+</script>
 
 <!-- TEMPLATE:default.index -->
-[% IF object.back() %]
-<a href='[% object.back() %]'>back</a><br />
-[% END %]
-<span class=object_name>[% object.name({format=>'title'}) %]</span>
-[% IF object.user_id() == user.id() %]
-    <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
-    <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
+[% IF object %]
+    [% IF object.back() %]
+        <a href='[% object.back() %]'>back</a><br />
+    [% END %]
+    <dev class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
+    [% IF object.user_id() == user.id() %]
+        <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
+        <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
+    [% END %]
 [% END %]
 [% INCLUDE index_menu_site %]
 
-[% object.toString({format=>'column'}) %]
-
-<div id=tabs>
-<ul>
-[% FOREACH child_type IN object.getChildTypes() %]
-    <li><a href='[% script_name %]?id=[% object.id() %]&type_id=[% child_type %]&a=tablist&cid=[% cid %]'>[% object.typeName({object_type_id=>child_type, plural=>0}) %]</a></li>
+[% IF object %]
+    [% object.toString({format=>'column'}) %]
 [% END %]
-</ul>
-</div>
+
+[% IF types.size %]
+    <div id=tabs>
+    <ul>
+    [% FOREACH type_id IN types %]
+        <li><a href='[% script_name %]?id=[% object ? object.id() : '' %]&type_id=[% type_id %]&a=tablist&cid=[% cid %]&search=[% search %]'>[% typeName({object_type_id=>type_id, plural=>1}) %]</a></li>
+    [% END %]
+    </ul>
+    </div>
+[% ELSE %]
+    Nothing...
+[% END %]
 
 [% INCLUDE footer %]

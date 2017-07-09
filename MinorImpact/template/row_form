@@ -1,2 +1,2 @@
-<!-- TEMPLATE:default.row_form -->
-<tr><td class=fieldname>[% field.displayName() %]</td><td>[% input %][% field.get('required') ? '*' : '' %]</td><td class=small><span class=small>[% field.get('description') %]</span></td></tr>
+<label>[% field.displayName() %][% field.get('required') ? '*' : '' %]</label>
+[% input %]

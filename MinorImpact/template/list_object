@@ -1,32 +1,8 @@
 <!-- TEMPLATE:default.list_object -->
-<script>
-
-\$("a.paginate").click(function(e) {
-    //alert(\$(this).attr('href'));
-    e.preventDefault();
-    var href = \$(this).attr('href');
-    var tabs = \$("#tabs");
-    var currentTabIndex = tabs.tabs("option", "active");
-    //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
-    var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
-    tab.find('.ui-tabs-anchor').attr('href', href);
-    // If cached initially. Remove cache then
-    tab.data( "loaded", false);
-    tabs.tabs("load", currentTabIndex);
-});
-</script>
-
-<div class="w3-bar w3-border w3-round">
-    [% IF url_last %] <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>[% END %]
-    [% IF url_next %] <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>[% END %]
-</div>
+[% INCLUDE pagination %]
 <table class="w3-table w3-striped">
 [% FOREACH o IN objects %]
-    [% o.toString({format=>'list'}) %]
+    <p>[% o.toString({ format => 'list' }) %]</p>
 [% END %]
 </table>
-<div class="w3-bar w3-border w3-round">
-    [% IF url_last %] <a href="[% url_last %]" class="paginate w3-button">&#10094; Previous</a>[% END %]
-    [% IF url_next %] <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>[% END %]
-</div>
-
+[% INCLUDE pagination %]

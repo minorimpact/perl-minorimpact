@@ -210,6 +210,9 @@ sub trunc {
     return "$str...";
 }
 
+# returns only the unique values of an array.  But also
+#   MAINTAINS THE ORDER.  I rely on this in places, so
+#   don't fuck around with it.
 sub uniq {
     my %seen;
     return grep { !$seen{$_}++ } @_;

@@ -105,4 +105,33 @@
             x.className = x.className.replace(" w3-show", "");
         }
     }
+    [% IF 0 and search %]
+        document.getElementById("save_button").disabled = false;
+    [% ELSIF 0 %]
+        document.getElementById("save_button").disabled = true;
+    [% END %]
+    function submitForm(form) {
+        var form = document.getElementById('search_form');
+        if (form.search.value.length) {
+            var save_name = prompt ("Save Name");
+            form.a.value = 'save_search';
+            form.save_name.value = save_name;
+        }
+        form.submit();
+    }
+
+    \$("a.paginate").click(function(e) {
+        //alert(\$(this).attr('href'));
+        e.preventDefault();
+        var href = \$(this).attr('href');
+        var tabs = \$("#tabs");
+        var currentTabIndex = tabs.tabs("option", "active");
+        //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
+        var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
+        tab.find('.ui-tabs-anchor').attr('href', href);
+        // If cached initially. Remove cache then
+        tab.data( "loaded", false);
+        tabs.tabs("load", currentTabIndex);
+    });
+    [% INCLUDE header_javascript_site %]
 </script>

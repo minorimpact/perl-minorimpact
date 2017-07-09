@@ -136,9 +136,10 @@ sub _new {
 
 sub back {
     my $self = shift || return;
+    my $params = shift || {};
     
     my $script_name = MinorImpact::scriptName();
-    return "$script_name";
+    return "$script_name?" . $params->{url};
 }
 
 sub id { my $self = shift || return; return $self->{data}->{id}; }
@@ -183,7 +184,7 @@ sub selectList {
         delete($local_params->{user_id}) if ($self->isSystem());
     }
 
-    my $select = "<select id='$local_params->{fieldname}' name='$local_params->{fieldname}'";
+    my $select = "<select class='w3-select' id='$local_params->{fieldname}' name='$local_params->{fieldname}'";
     if ($local_params->{duplicate}) {
         $select .= " onchange='duplicateRow(this);'";
     }
@@ -413,7 +414,7 @@ sub types {
     my $DB = MinorImpact::getDB();
 
     my $select = "SELECT * FROM object_type";
-    my $where = "WHERE id > 0";
+    my $where = "WHERE id > 0 AND system = 0";
     return $DB->selectall_arrayref("$select $where", {Slice=>{}});
 }
 
@@ -745,7 +746,6 @@ sub form {
         die "Can't create a form with no object_type_id.\n";
     }
     my $object_type_id = $local_params->{object_type_id} || $local_params->{type_id};
-
 
     my $form;
  
