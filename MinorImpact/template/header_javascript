@@ -37,6 +37,20 @@
                 \$("#object_type_id").append(select);
             }
         });
+
+        \$("a.paginate").click(function(e) {
+            //alert(\$(this).attr('href'));
+            e.preventDefault();
+            var href = \$(this).attr('href');
+            var tabs = \$("#tabs");
+            var currentTabIndex = tabs.tabs("option", "active");
+            //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
+            var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
+            tab.find('.ui-tabs-anchor').attr('href', href);
+            // If cached initially. Remove cache then
+            tab.data( "loaded", false);
+            tabs.tabs("load", currentTabIndex);
+        });
     });
 
     function reloadObjects() {
@@ -119,19 +133,5 @@
         }
         form.submit();
     }
-
-    \$("a.paginate").click(function(e) {
-        //alert(\$(this).attr('href'));
-        e.preventDefault();
-        var href = \$(this).attr('href');
-        var tabs = \$("#tabs");
-        var currentTabIndex = tabs.tabs("option", "active");
-        //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
-        var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
-        tab.find('.ui-tabs-anchor').attr('href', href);
-        // If cached initially. Remove cache then
-        tab.data( "loaded", false);
-        tabs.tabs("load", currentTabIndex);
-    });
     [% INCLUDE header_javascript_site %]
 </script>

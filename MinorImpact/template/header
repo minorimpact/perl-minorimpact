@@ -34,7 +34,9 @@ Content-type: text/html
                 [% INCLUDE header_menu_user %]
         </div>
         <div class="w3-col s6 w3-mobile">
-            [% INCLUDE header_search %]
+            [% IF no_search != 1 %]
+                [% INCLUDE header_search %]
+            [% END %]
         </div>
     </div>
     [% INCLUDE error %]

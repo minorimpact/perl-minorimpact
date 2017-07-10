@@ -1,5 +1,7 @@
 package MinorImpact;
 
+use Cache::Memcached;
+use CHI;
 use CGI;
 use Cwd;
 use Data::Dumper;
@@ -129,15 +131,16 @@ sub getUser {
     return $self->{USER} if ($self->{USER});
 
     my $CGI = MinorImpact::getCGI();
+    my $CACHE = MinorImpact::getCache();
 
     # If the user has logged in before, and we can verify it's the same session,
     #   we can get the user_id from cache or cookie and don't require credentials
     #   again.
-    my $user_id = $CGI->cookie("user_id") || MinorImpact::cache({key=>'user_id'});
+    my $user_id = $CGI->cookie("user_id") || $CACHE->get('user_id');
     if ($user_id) {
         #MinorImpact::log(8, "user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
-        my $ip_list = MinorImpact::cache({ key => "client_ip:$user_id" });
+        my $ip_list = $CACHE->get("client_ip:$user_id");
         #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $ip_list) {
             foreach my $client_ip ( split(",", $ip_list) ) {
@@ -161,16 +164,16 @@ sub getUser {
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
-            my $client_ip = cache({ key => "client_ip:$user_id" });
+            my $client_ip = $CACHE->get("client_ip:$user_id");
             my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
-            MinorImpact::cache({key=>"client_ip:$user_id", value=>($client_ip?"$client_ip,$new_ip":$new_ip), timeout=>$timeout});
+            $CACHE->set("client_ip:$user_id", ($client_ip?"$client_ip,$new_ip":$new_ip), $timeout);
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
                 print "Set-Cookie: $cookie\n";
             } else {
                 # TODO: This only supports a single command line connection at a time.  Might be a
                 #   problem in the future.
-                MinorImpact::cache({key=>"user_id", value=>$user_id, timeout=>$timeout});
+                $CACHE->set("user_id", $user_id, $timeout);
             }
             #MinorImpact::log(7, "ending");
             $self->{USER} = $user;
@@ -296,6 +299,13 @@ sub cache {
                 $value = $config->{$key}{value};
             }
         }
+    } elsif ($method eq 'memcached') {
+        my $cache = MinorImpact::getMemcached();
+        if (defined($value)) {
+            $cache->set($key, $value, $timeout);
+        } else {
+            $value = $cache->get($key);
+        }
     }
     return $value;
 }
@@ -412,6 +422,41 @@ sub checkDatabaseTables {
             )");
     }
     #MinorImpact::log(7, "ending");
+}
+
+sub getCache {
+    my $self = shift || {};
+    my $params = shift || {};
+
+    #MinorImpact::log(7, "starting");
+    if (ref($self) eq "HASH") {
+        $params = $self;
+        $self = $MinorImpact::SELF;
+    }
+
+    my $method = $params->{method} || 'file';
+
+    #MinorImpact::log(8, "\$method='$method'");
+
+    if ($self->{CACHE}{$method}) {
+        return $self->{CACHE}{$method};
+    }
+
+    my $cache;
+    if ($method eq 'file') {
+        $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
+    } elsif ($method eq 'memcached') {
+        return unless ($self->{conf}{default}{memcached_server});
+        #MinorImpact::log(8, "memcached_server='" . $self->{conf}{default}{memcached_server} . "'");
+        #$cache = new CHI( driver => "Memcached::libmemcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ], #l1_cache => { driver => 'FastMmap', root_dir => '/path/to/root' }
+        #$cache = new CHI( driver => "Cache::Memcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] );
+        $cache = new Cache::Memcached({ servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] });
+    }
+
+    $self->{CACHE}{$method} = $cache if ($cache);
+
+    #MinorImpact::log(7, "ending");
+    return $cache;
 }
 
 # Return the templateToolkit object;

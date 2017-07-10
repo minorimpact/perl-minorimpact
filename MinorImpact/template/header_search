@@ -1,6 +1,6 @@
 <form class="w3-container" id=search_form method=POST>
 <input type=hidden id=save_name name=save_name>
 <input class="w3-input w3-bar-item w3-border" type=text id=search name=search value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'>
-<input class="w3-submit" type=submit value=search>
-<input class="w3-submit" type=button id=save_button name=save_button value='Save' onclick='submitForm();'>
+<button class="w3-btn">Search</button>
+<button class="w3-btn" id=save_button name=save_button onclick='submitForm();'>Save</button>
 </form>

@@ -1,14 +1,16 @@
-[% INCLUDE header %]
+[% INCLUDE header no_search = 1 %]
 
 <!-- TEMPLATE:default.login -->
 
-<form class=login id=form_login method=POST>
+<div class='w3-container'>
+<form class='w3-container' id=form_login method=POST>
     <input type=hidden name=redirect value='[% redirect %]'>
-    <table>
-        <tr><td class=fieldname>Username</td><td><input type=text name=username value='[% username %]'></td></tr>
-        <tr><td class=fieldname>Password</td><td><input type=password name=password></td></tr>
-        <tr><td></td><td><input type=submit value='Log In'></td></tr>
-    </table>
+        <label>Username</label>
+        <input class='w3-input w3-border' type=text name=username value='[% username %]' required>
+        <label>Password</label>
+        <input class='w3-input w3-border' type=password name=password required>
+        <button class='w3-btn w3-grey'>Log in</button>
 </form>
+</div>
 
 [% INCLUDE footer %]

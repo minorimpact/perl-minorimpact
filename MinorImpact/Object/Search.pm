@@ -1,5 +1,6 @@
 package MinorImpact::Object::Search;
 
+use Digest::MD5 qw(md5 md5_hex);
 use Data::Dumper;
 
 use MinorImpact;
@@ -170,7 +171,20 @@ sub _search {
     my $sql = "$select $from $where";
     MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "' " . $params->{debug});
 
-    my $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
+    my $objects;
+    my $hash = md5_hex($sql);
+    #MinorImpact::log(8, "hash='" . $hash . "'");
+
+    my $cache = MinorImpact::getCache({ method => 'memcached' });
+    if ($cache) {
+        #MinorImpact::log(8, "ref=" . ref($cache->get_keys()));
+        $objects = $cache->get("search_$hash");
+    }
+
+    unless ($objects) {
+        $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
+        $cache->set("search_$hash", $objects) if ($cache);
+    }
 
     #MinorImpact::log(7, "ending");
     return map { $_->{id}; } @$objects;
