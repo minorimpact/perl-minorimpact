@@ -178,7 +178,7 @@ sub _search {
     my $cache = MinorImpact::getCache({ method => 'memcached' });
     if ($cache) {
         #MinorImpact::log(8, "ref=" . ref($cache->get_keys()));
-        $objects = $cache->get("search_$hash");
+        #$objects = $cache->get("search_$hash");
     }
 
     unless ($objects) {

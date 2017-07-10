@@ -1,6 +1,7 @@
 package MinorImpact::User;
 
 use MinorImpact;
+use MinorImpact::Util;
 
 sub new {
     my $package = shift;
@@ -51,13 +52,16 @@ sub checkDatabaseTables {
 
 sub getCollections {
     my $self = shift || return;
+    my $params = shift || {};
 
-    my $params = { 
-                    debug          => 'MinorImpact::User::getCollections()',
-                    object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
-                    user_id        => $self->id(),
-               };
-    return MinorImpact::Object::Search::search($params);
+    my $local_params = cloneHash($params);
+    $local_params = { 
+                        %$local_params,
+                        debug          => 'MinorImpact::User::getCollections();',
+                        object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
+                        user_id        => $self->id(),
+                    };
+    return MinorImpact::Object::Search::search($local_params);
 }
 
 sub validate_user {
