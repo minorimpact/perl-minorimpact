@@ -131,7 +131,7 @@ sub getUser {
     return $self->{USER} if ($self->{USER});
 
     my $CGI = MinorImpact::getCGI();
-    my $CACHE = MinorImpact::getCache();
+    my $CACHE = MinorImpact::getCache({ method => 'memcached' });
 
     # If the user has logged in before, and we can verify it's the same session,
     #   we can get the user_id from cache or cookie and don't require credentials
@@ -166,7 +166,9 @@ sub getUser {
 
             my $client_ip = $CACHE->get("client_ip:$user_id");
             my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
-            $CACHE->set("client_ip:$user_id", ($client_ip?"$client_ip,$new_ip":$new_ip), $timeout);
+            $client_ip = "$client_ip,$new_ip";
+            $client_ip =~s/^\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 64);
+            $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
                 print "Set-Cookie: $cookie\n";
