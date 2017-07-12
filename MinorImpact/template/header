@@ -6,6 +6,7 @@ Content-type: text/html
 <head>
     <meta name="viewport" content="initial-scale=1.0">
     <title>[%IF title %][% title %][% ELSIF object %][% object.name() %][% ELSE %][% script_name %][% END %]</title>
+    [% INCLUDE header_libraries %]
     [% INCLUDE header_css %]
     [% INCLUDE header_javascript %]
     [% INCLUDE header_site %]

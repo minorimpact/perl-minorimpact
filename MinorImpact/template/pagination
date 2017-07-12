@@ -7,7 +7,7 @@
     [% END %]
     [% IF url_next %]
     <div class="w3-right">
-        <a href="[% url_next %]" class="paginate w3-button">&#10095; Next</a>
+        <a href="[% url_next %]" class="paginate w3-button">Next &#10095;</a>
     </div>
     [% END %]
 </div>

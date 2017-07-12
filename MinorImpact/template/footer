@@ -1,4 +1,10 @@
 <!-- TEMPLATE:default.footer -->
 [% INCLUDE add_reference_dialog %]
+
+<script>
+[% INCLUDE footer_javascript %]
+</script>
+
 </body>
+
 </html>

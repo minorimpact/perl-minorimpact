@@ -264,7 +264,7 @@ sub log {
     chomp($message);
 
     my $log = "$date|$$|$level|$sub|$message\n";
-    open(LOG, ">>$file");
+    open(LOG, ">>$file") || die;
     print LOG $log;
     #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
     #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
@@ -436,7 +436,8 @@ sub getCache {
         $self = $MinorImpact::SELF;
     }
 
-    my $method = $params->{method} || 'file';
+    my $local_params = cloneHash($params);
+    my $method = $local_params->{method} || 'file';
 
     #MinorImpact::log(8, "\$method='$method'");
 
@@ -448,7 +449,8 @@ sub getCache {
     if ($method eq 'file') {
         $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
     } elsif ($method eq 'memcached') {
-        return unless ($self->{conf}{default}{memcached_server});
+        delete($local_params->{method});
+        return getCache($local_params) unless ($self->{conf}{default}{memcached_server});
         #MinorImpact::log(8, "memcached_server='" . $self->{conf}{default}{memcached_server} . "'");
         #$cache = new CHI( driver => "Memcached::libmemcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ], #l1_cache => { driver => 'FastMmap', root_dir => '/path/to/root' }
         #$cache = new CHI( driver => "Cache::Memcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] );
@@ -558,6 +560,8 @@ sub cgi {
         MinorImpact::CGI::save_search($self, $params);
     } elsif ( $action eq 'tablist') {
         MinorImpact::CGI::tablist($self, $params);
+    } elsif ( $action eq 'tags') {
+        MinorImpact::CGI::tags($self, $params);
     } elsif ( $action eq 'user') {
         MinorImpact::CGI::user($self);
     } else {
