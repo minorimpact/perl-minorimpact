@@ -1,0 +1,9 @@
+[% INCLUDE header %]
+
+<div class="w3-container" style="margin-top:10px">
+    [% FOREACH collection IN collections.sort %]
+        [% INCLUDE collection %]
+    [% END %]
+</div>
+
+[% INCLUDE footer %]

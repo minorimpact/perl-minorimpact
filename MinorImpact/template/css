@@ -1,6 +1,6 @@
 Content-type: text/css
 
 /* TEMPLATE:default.css */
-.w3-dropdown-content { z-index:999; }
+.w3-dropdown-content { z-index:5; }
 
 [% INCLUDE css_site %]

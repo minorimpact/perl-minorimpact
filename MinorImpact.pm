@@ -542,6 +542,8 @@ sub cgi {
         MinorImpact::CGI::add($self, $params);
     } elsif ( $action eq 'add_reference') {
         MinorImpact::CGI::add_reference($self, $params);
+    } elsif ( $action eq 'collections') {
+        MinorImpact::CGI::collections($self, $params);
     } elsif ( $action eq 'css') {
         MinorImpact::CGI::css($self, $params);
     } elsif ( $action eq 'delete') {

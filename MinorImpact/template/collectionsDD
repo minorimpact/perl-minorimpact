@@ -1,8 +1,7 @@
 [% IF collections %]
 <div class="w3-dropdown-click">
-    <button class="w3-button" onclick="openCollectionsDD();">
-        Collections <i class="fa fa-caret-down"></i>
-    </button>
+    <button class="w3-btn w3-hide-small" onclick="openCollectionsDD();">Collections <i class="fa fa-caret-down"></i></button>
+    <button class="w3-btn w3-hide-large w3-hide-medium" onclick="openCollectionsDDRight();"><i class="fa fa-bookmark fa-2x"></i><i class="fa fa-caret-down"></i></button>
     <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
         [% FOREACH collection IN collections %]
             [% INCLUDE collection %]

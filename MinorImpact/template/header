@@ -27,18 +27,44 @@ Content-type: text/html
     [% END %]
 </head>
 <body>
-<header class="w3-container w3-blue">
-    <div class="w3-row">
-        <div id=header_menu class="w3-col s6 w3-mobile">
-                [% INCLUDE header_menu %]
-                [% INCLUDE header_menu_site %]
-                [% INCLUDE header_menu_user %]
-        </div>
-        <div class="w3-col s6 w3-mobile">
+<div class="w3-top w3-blue">
+    <div class="w3-bar" style="">
+        [% IF user %]
+        <button class="w3-bar-item w3-button w3-hide-large" onclick="sidebar_open();"><i class='fa fa-navicon fa-2x'></i></button>
+        <a class="w3-bar-item w3-button" href=[% script_name %]><i class='fa fa-home fa-2x'></i></a>
             [% IF no_search != 1 %]
-                [% INCLUDE header_search %]
+                <form id=search_form method=POST>
+                    <input type=hidden id=save_name name=save_name>
+                    <input class="w3-input w3-small  w3-bar-item w3-border" type=text id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="Search..."> 
+                    <button class="w3-btn w3-bar-item w3-hide" ><i class="fa fa-search fa-2x"></i></button>
+                    [% IF search %]<button class="w3-btn w3-bar-item w3-hide-small" id=save_button name=save_button onclick='submitForm();' title="Save Search"><i class="fa fa-save fa-2x"></i></button>[% END %]
+                </form>
             [% END %]
-        </div>
+            [% INCLUDE collectionsDD %]
+        [% ELSE %]
+            <a class="w3-bar-itea w3-button" href=[% script_name %]?a=login>Log In</a>
+            <a class="w3-bar-item w3-button" href=[% script_name %]?a=register>Register</a>
+        [% END %]
     </div>
-    [% INCLUDE error %]
-</header>
+
+    <div class="w3-row">
+        [% INCLUDE header_menu_site %]
+    </div>
+</div>
+<div class="w3-sidebar w3-bar-block w3-collapse w3-animate-left" id="sidebar" style="display:none;width:200px;z-index:4">
+    <div class="w3-container">
+        <button class="w3-button w3-hide-large" onclick="sidebar_close();"><i class="fa fa-close fa-2x"></i></button>
+        [% IF user %]
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=user">[% user.get('name') %]</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=tags">Tags</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=collections">Collections</a>
+            [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();">Save Search</a>[% END %]
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=logout">Logout</a>
+        [% ELSE %]
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=login">Login</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=register">Register</a>
+        [% END %]
+    </div>
+</div>
+<div class="w3-overlay w3-hide-large" onclick="sidebar_close()" style="cursor:pointer" title="close side menu" id="overlay"></div>
+<div class="w3-main w3-container w3-padding-0" style="margin-left:200px;margin-top:47px">

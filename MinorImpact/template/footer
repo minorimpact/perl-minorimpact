@@ -1,4 +1,5 @@
 <!-- TEMPLATE:default.footer -->
+</div>
 [% INCLUDE add_reference_dialog %]
 
 <script>

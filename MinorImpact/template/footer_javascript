@@ -87,6 +87,16 @@
     function openCollectionsDD() {
         var x = document.getElementById("collectionsDD");
         if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = null;
+            x.className += " w3-show";
+        } else { 
+            x.className = x.className.replace(" w3-show", "");
+        }
+    }
+    function openCollectionsDDRight() {
+        var x = document.getElementById("collectionsDD");
+        if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = 0;
             x.className += " w3-show";
         } else { 
             x.className = x.className.replace(" w3-show", "");
@@ -95,6 +105,16 @@
     function openTagsDD() {
         var x = document.getElementById("tagsDD");
         if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = null;
+            x.className += " w3-show";
+        } else { 
+            x.className = x.className.replace(" w3-show", "");
+        }
+    }
+    function openTagsDDRight() {
+        var x = document.getElementById("tagsDD");
+        if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = 0;
             x.className += " w3-show";
         } else { 
             x.className = x.className.replace(" w3-show", "");
@@ -105,13 +125,23 @@
     [% ELSIF 0 %]
         document.getElementById("save_button").disabled = true;
     [% END %]
-    function submitForm(form) {
+    function submitForm() {
         var form = document.getElementById('search_form');
         if (form.search.value.length) {
             var save_name = prompt ("Save Name");
-            form.a.value = 'save_search';
-            form.save_name.value = save_name;
+            if (save_name) {
+                form.a.value = 'save_search';
+                form.save_name.value = save_name;
+                form.submit();
+            }
         }
-        form.submit();
+    }
+    function sidebar_open() {
+        document.getElementById("sidebar").style.display = "block";
+        document.getElementById("overlay").style.display = "block";
+    }
+    function sidebar_close() {
+        document.getElementById("sidebar").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
     }
     [% INCLUDE footer_javascript_site %]

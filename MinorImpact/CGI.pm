@@ -79,6 +79,20 @@ sub add_reference {
     }
 }
 
+sub collections {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $local_params = cloneHash($params);
+    my $user = $MINORIMPACT->getUser() || $MINORIMPACT->redirect();
+    my $TT = $MINORIMPACT->getTT();
+
+    my @collections = $user->getCollections();
+    $TT->process('collections', {
+                                    collections => [ @collections ],
+                        }) || die $TT->error();
+}
+
 sub css {
     my $self = shift || return;
     my $params = shift || {};
@@ -436,11 +450,13 @@ sub tags {
 
     my $local_params = cloneHash($params);
     $local_params->{user_id} = $user->id();
+    delete($local_params->{tag});
     my @objects = MinorImpact::Object::Search::search($local_params);
     my @tags;
     my $tags;
 
     foreach my $object (@objects) {
+        MinorImpact::log(8, $object->name() . " " . join(",", $object->getTags()));
         push(@tags, $object->getTags());
     }
     map { $tags->{$_}++; } @tags;
