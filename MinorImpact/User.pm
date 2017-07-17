@@ -7,7 +7,7 @@ sub new {
     my $package = shift;
     my $params = shift;
 
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -16,16 +16,16 @@ sub new {
     checkDatabaseTables($self->{DB});
 
     my $user_id = $params;
-    #MinorImpact::log(8, "\$user_id='$params'");
+    MinorImpact::log(8, "\$user_id='$params'");
 
     if ($user_id =~/^\d+$/) {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id)) || return;
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id)) || die $self->{DB}->errstr;
     } else {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || return;
+        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
     }
     bless($self, $package);
 
-    #MinorImpact::log(8, "created user: '" .$self->name() . "'");
+    MinorImpact::log(8, "created user: '" .$self->name() . "'");
     return $self;
 }
 
@@ -38,7 +38,7 @@ sub checkDatabaseTables {
     if ($@) {
         $DB->do("CREATE TABLE `user` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
-                `name` varchar(25) NOT NULL,
+                `name` varchar(50) NOT NULL,
                 `password` varchar(255) NOT NULL,
                 `test` varchar(255) DEFAULT NULL,
                 `admin` tinyint(1) DEFAULT NULL,
@@ -64,7 +64,7 @@ sub getCollections {
     return MinorImpact::Object::Search::search($local_params);
 }
 
-sub validate_user {
+sub validateUser {
     my $self = shift || return;
 
     my $password = shift || return;
@@ -86,6 +86,17 @@ sub addUser {
     }
     die "Couldn't add user " . $params->{username};
     return;
+}
+
+sub delete {
+    my $self = shift || return;
+    
+    my @objects = MinorImpact::Object::Search::search({ user_id => $self->id() });
+    foreach my $object (@objects) {
+        MinorImpact::log(8, "deleting " . $object->name());
+        $object->delete();
+    }
+    $self->{DB}->do("DELETE FROM user WHERE id=?", undef, ($self->id())) || die $DB->errstr;
 }
 
 sub id {

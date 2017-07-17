@@ -1,8 +1,10 @@
-<!-- TEMPLATE:default.list_object -->
+
+[% INCLUDE list_object_site %]
+
 [% INCLUDE pagination %]
-<table class="w3-table w3-striped">
-[% FOREACH o IN objects %]
-    <p>[% o.toString({ format => 'list' }) %]</p>
+
+[% FOREACH object IN objects %]
+    [% INCLUDE object_list %]
 [% END %]
-</table>
+
 [% INCLUDE pagination %]

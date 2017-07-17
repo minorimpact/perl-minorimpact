@@ -1,22 +1,11 @@
 [% INCLUDE header %]
 
-<script>
-        \$(function () {
-            \$("#tabs").tabs({
-                active: [% tab_number or 0 %],
-                beforeLoad: function( event, ui ) {
-                    ui.panel.html("<div>Loading...</div>");
-                }
-            });
-        });
-</script>
-
 <!-- TEMPLATE:default.index -->
 [% IF object %]
     [% IF object.back() %]
         <a href='[% object.back() %]'>back</a><br />
     [% END %]
-    <dev class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
+    <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
     [% IF object.user_id() == user.id() %]
         <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
         <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
@@ -28,7 +17,9 @@
     [% object.toString({format=>'column'}) %]
 [% END %]
 
-[% IF types.size %]
+[% IF objects.size %]
+    [% INCLUDE list_object %]
+[% ELSIF types.size %]
     <div id=tabs>
     <ul>
     [% FOREACH type_id IN types %]
@@ -36,8 +27,6 @@
     [% END %]
     </ul>
     </div>
-[% ELSE %]
-    Nothing...
 [% END %]
 
 [% INCLUDE footer %]

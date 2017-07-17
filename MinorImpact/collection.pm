@@ -43,6 +43,7 @@ sub searchParams {
         $params->{text} .= " $text";
     }
     trim($params->{text});
+
     #MinorImpact::log(8, "\$params->{text}='" . $params->{text} . "'");
     
     #MinorImpact::log(7, "ending");

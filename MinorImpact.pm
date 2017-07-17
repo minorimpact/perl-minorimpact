@@ -133,41 +133,22 @@ sub getUser {
     my $CGI = MinorImpact::getCGI();
     my $CACHE = MinorImpact::getCache({ method => 'memcached' });
 
-    # If the user has logged in before, and we can verify it's the same session,
-    #   we can get the user_id from cache or cookie and don't require credentials
-    #   again.
-    my $user_id = $CGI->cookie("user_id") || $CACHE->get('user_id');
-    if ($user_id) {
-        #MinorImpact::log(8, "user_id=$user_id");
-        my $user = new MinorImpact::User($user_id);
-        my $ip_list = $CACHE->get("client_ip:$user_id");
-        #MinorImpact::log(8, "client_ip=$client_ip");
-        if ($user && $ip_list) {
-            foreach my $client_ip ( split(",", $ip_list) ) {
-                #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
-                if ($client_ip && ($ENV{REMOTE_ADDR} eq $client_ip  || $ENV{SSH_CLIENT} eq $client_ip)) {
-                    #MinorImpact::log(7, "ending - cached ip matched current ip");
-                    $self->{USER} = $user;
-                    return $user;
-                }
-            }
-        }
-    }
 
     # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
     if ($username && $password) {
-        #MinorImpact::log(3, "validating " . $username);
+        MinorImpact::log(3, "validating " . $username);
         my $user = new MinorImpact::User($username);
-        if ($user && $user->validate_user($password)) {
+        if ($user && $user->validateUser($password)) {
+            MinorImpact::log(8, "password verified for $username");
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
             my $client_ip = $CACHE->get("client_ip:$user_id");
             my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
             $client_ip = "$client_ip,$new_ip";
-            $client_ip =~s/^\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 64);
+            $client_ip =~s/^\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
             $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
@@ -175,11 +156,34 @@ sub getUser {
             } else {
                 # TODO: This only supports a single command line connection at a time.  Might be a
                 #   problem in the future.
-                $CACHE->set("user_id", $user_id, $timeout);
+                $CACHE->set($client_ip, $user_id, $timeout);
             }
+            MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
             #MinorImpact::log(7, "ending");
             $self->{USER} = $user;
             return $user;
+        }
+    }
+
+    # If the user has logged in before, and we can verify it's the same session,
+    #   we can get the user_id from cache or cookie and don't require credentials
+    #   again.
+    my $user_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT});
+    MinorImpact::log(8, "user_id=$user_id");
+    if ($user_id) {
+        MinorImpact::log(8, "cached user_id=$user_id");
+        my $user = new MinorImpact::User($user_id);
+        my $ip_list = $CACHE->get("client_ip:$user_id");
+        MinorImpact::log(8, "client_ip=$client_ip");
+        if ($user && $ip_list) {
+            foreach my $client_ip ( split(",", $ip_list) ) {
+                MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+                if ($client_ip && ($ENV{REMOTE_ADDR} eq $client_ip  || $ENV{SSH_CLIENT} eq $client_ip)) {
+                    MinorImpact::log(7, "ending - cached ip matched current ip");
+                    $self->{USER} = $user;
+                    return $user;
+                }
+            }
         }
     }
 

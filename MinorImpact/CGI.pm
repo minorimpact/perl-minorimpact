@@ -156,17 +156,18 @@ sub index {
 
     #MinorImpact::log(7, "starting");
 
-    my $TT = $self->getTT();
     my $CGI = $self->getCGI();
-    my $script_name = $self->scriptName();
+    my $TT = $self->getTT();
+    my $user = $self->getUser();
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
     my $tab_id = $CGI->param('tab_id') || 0;
     my $search = $CGI->param('search') || '';
+    my $page = $CGI->param('page') || 1;
+    my $limit = $CGI->param('limit') || 30;
 
-    my $user = $self->getUser();
     my @collections;
     if ($user) {
         @collections = $user->getCollections();
@@ -179,6 +180,7 @@ sub index {
     }
 
     my @types;
+    my @objects;
     if ($object) {
         if ($format eq 'json') {
             # Handle the json stuff and get out of here early.
@@ -192,8 +194,25 @@ sub index {
         print "Set-Cookie: $object_cookie\n";
 
         @types = $object->getChildTypes();
-    } elsif ($search) {
-        $local_params->{text} = $search;
+        if (scalar(@types) == 1) {
+            MinorImpact::log(8, "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
+            @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
+            MinorImpact::log(8, "found: " . scalar(@objects));
+        }
+    } elsif ($collection_id || $search) {
+        my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
+        my $local_params = cloneHash($params);
+        if ($collection) {
+            $local_params = { %local_params, %{$collection->searchParams()} };
+            $search = $collection->searchText();
+        } else {
+            $local_params->{search} = $search;
+        }
+        $local_params->{user_id} = $user->id(),
+        $local_params->{debug} .= 'index.cgi::list();';
+        $local_params->{page} = $page;
+        $local_params->{limit} = $limit + 1;
+
         $local_params->{type_tree} = 1;
         $local_params->{sort} = 1;
         # Anything coming in through here is coming from a user, they 
@@ -202,7 +221,7 @@ sub index {
         # TODO: INEFFICIENT AS FUCK.
         #   We need to figure out  a search that just tells us what types we're
         #   dealing with so we know how many tabs to create.
-        #   I feel like this is maybe were efficient caching would come in... maybe
+        #   I feel like this is maybe where efficient caching would come in... maybe
         #   we can... the problem is this is arbitrary searching, so we can't really
         #   cache any numbers that make sense.  The total changes, the search string
         #   changes... Maybe we can... have a separate search that just searches by
@@ -215,12 +234,20 @@ sub index {
         if ($result) {
             push(@types, keys %{$result});
         }
+        if (scalar(@types) == 1) {
+            $local_params->{object_type_id} = $types[0];
+            delete($local_params->{type_tree});
+            @objects = MinorImpact::Object::Search::search($local_params);
+        }
     } else {
         push(@types, MinorImpact::Object::getType());
         #my $all_types = MinorImpact::Object::types();
         #foreach my $type (@$types) {
         #    push(@types, $type->{id});
         #}
+        if (scalar(@types) == 1) {
+            @objects = MinorImpact::Object::Search::search({ object_type_id => $types[0] });
+        }
     }
 
     my $tab_number = 0;
@@ -231,18 +258,24 @@ sub index {
         $tab_number++;
     }
 
-    #$TT->process('search', {
-    #                        objects  => $objects,
-    #                        search   => $search,
-    #                        typeName => sub { MinorImpact::Object::typeName(@_, {plural=>1}) },
-    #                    }) || die $TT->error();
+    my $url_last;
+    my $url_next;
+    if (scalar(@objects)) {
+        $url_last = $page>1?"$script_name?cid=$collection_id&search=$serach&page=" . ($page - 1):'';
+        $url_next = (scalar(@objects)>$limit)?"$script_name?cid=$collection_id&search=$search&page=" . ($page + 1):'';
+        pop(@objects) if ($url_next);
+    }
+
     $TT->process('index', {
                             cid         => $collection_id,
                             collections => [ @collections ],
                             object      => $object,
+                            objects     => [ @objects ],
                             search      => $search,
                             tab_number  => $tab_number,
                             types       => [ @types ],
+                            url_last    => $url_last,
+                            url_next    => $url_next,
                             }) || die $TT->error();
 
     # For testing.
@@ -378,7 +411,7 @@ sub tablist {
     my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
     my $search = $CGI->param('search') || '';
     my $page = $CGI->param('page') || 1;
-    my $limit = $CGI->param('limit') || 25;
+    my $limit = $CGI->param('limit') || 30;
 
     my $object;
     if ($object_id) {
@@ -403,35 +436,27 @@ sub tablist {
     }
     $local_params->{debug} .= "collection::searchParams();";
     $local_params->{page} = $page;
-    $local_params->{limit} = $limit;
+    $local_params->{limit} = $limit + 1;
 
     # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
     my $max;
     if ($object) {
-        # If you specify id_only it ignores pagination, so we don't have to unset it
-        #   in the search parameters.
-        $max = scalar($object->getChildren({ %$local_params, id_only => 1 }));
         @objects = $object->getChildren($local_params);
     } else {
-        $max = scalar(MinorImpact::Object::Search::search({ %$local_params, id_only => 1 }));
         @objects = MinorImpact::Object::Search::search($local_params);
     }
 
-    #my @tags;
-    #my %tags;
-    #foreach my $object (@objects) {
-    #    map { $tags{$_}++; } $object->getTags();
-    #}
-    #@tags = reverse sort { $tags{$a} <=> $tags{$b}; } keys %tags;
-    #splice(@tags, 5);
 
-    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&page=" . ($page - 1):'';
-    my $url_next = ($page<=int($max/$limit))?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&page=" . ($page + 1):'';
+    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&&page=" . ($page - 1):'';
+    my $url_next;
+    if (scalar(@objects) > $limit) {
+        $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&page=" . ($page + 1);
+        pop(@objects);
+    }
     $TT->process('tablist', {  
                             collections => [ @collections ],
                             objects     => [ @objects ],
                             search      => $search,
-                            #tags        => [ @tags ],
                             type_id     => $type_id,
                             url_last    => $url_last,
                             url_next    => $url_next,
@@ -456,7 +481,6 @@ sub tags {
     my $tags;
 
     foreach my $object (@objects) {
-        MinorImpact::log(8, $object->name() . " " . join(",", $object->getTags()));
         push(@tags, $object->getTags());
     }
     map { $tags->{$_}++; } @tags;
@@ -473,64 +497,6 @@ sub user {
     my $script_name = MinorImpact::scriptName();
 
     $TT->process('user') || die $TT->error();
-}
-
-sub view_old {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    #MinorImpact::log(7, "starting");
-
-    my $TT = $self->getTT();
-    my $CGI = $self->getCGI();
-    my $script_name = $self->scriptName();
-
-    my $object_id = $CGI->param('object_id') || $CGI->param('id') || $self->redirect();
-    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
-    my $format = $CGI->param('format') || 'html';
-    my $tab_id = $CGI->param('tab_id') || 0;
-
-    my $user = $self->getUser();
-    my $object = new MinorImpact::Object($object_id) || $self->redirect();
-
-    if ($format eq 'json') {
-        my $data = $object->toData();
-        print "Content-type: text/plain\n\n";
-        print to_json($data);
-        exit;
-    }
-    my $tab_number = 0;
-
-    # TODO: figure out some way for these to be alphabetized
-    $tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
-    foreach my $child_type_id ($object->getChildTypes()) {
-        last if ($child_type_id == $tab_id);
-        $tab_number++;
-    }
-
-    my $javascript = <<JAVASCRIPT;
-        \$(function () {
-            \$("#tabs").tabs({
-                active: $tab_number,
-                beforeLoad: function( event, ui ) {
-                    ui.panel.html("<div>Loading...</div>");
-                }
-            });
-        });
-JAVASCRIPT
-
-    viewHistory($object->typeName() . "_id", $object->id());
-    my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>$object->id());
-    print "Set-Cookie: $object_cookie\n";
-
-    $TT->process('index', {
-                            cid        => $collection_id,
-                            javascript => $javascript,
-                            object     => $object,
-                            tab_number => $tab_number,
-                            }) || die $TT->error();
-
-    #$object->updateAllDates();
 }
 
 sub viewHistory {

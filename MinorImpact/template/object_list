@@ -1,1 +1,4 @@
-<tr><td><a href='[% script_name %]?id=[% object.id() %]'>[% object.name() %]</a></td></tr>
+<hr>
+<div class="w3-row">
+    <a href='[% script_name %]?id=[% object.id() %]'>[% object.name() %]</a>
+</div>

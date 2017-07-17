@@ -22,6 +22,7 @@ use Exporter 'import';
             "fromMysqlDate", 
             "indexOf",
             "parseTags",
+            "randomText",
             "toMysqlDate", 
             "trim",
             "trunc",
@@ -159,6 +160,23 @@ sub parseTags {
         }
     }
     return sort map { lc($_); } keys %tags;
+}
+
+sub randomText {
+    my $word_count = shift || int(rand(15)) + 1;
+    $word_count =~s/\D//g;
+
+    my $text;
+    for (my $i = 0; $i < $word_count; $i++) {
+        my $letter_count = int(rand(7)) + 3;
+        for (my $j = 0; $j < $letter_count; $j++) {
+            $text .= chr(int(rand(26))+97);
+        }
+        $text .= " ";
+    }
+    $text = ucfirst($text);
+    trim(\$text);
+    return $text;
 }
 
 sub toMysqlDate {

@@ -35,7 +35,7 @@ Content-type: text/html
             [% IF no_search != 1 %]
                 <form id=search_form method=POST>
                     <input type=hidden id=save_name name=save_name>
-                    <input class="w3-input w3-small  w3-bar-item w3-border" type=text id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="Search..."> 
+                    <input class="w3-input w3-small w3-bar-item w3-border" type=text id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="Search..." style="margin-top:6px"> 
                     <button class="w3-btn w3-bar-item w3-hide" ><i class="fa fa-search fa-2x"></i></button>
                     [% IF search %]<button class="w3-btn w3-bar-item w3-hide-small" id=save_button name=save_button onclick='submitForm();' title="Save Search"><i class="fa fa-save fa-2x"></i></button>[% END %]
                 </form>
@@ -55,13 +55,13 @@ Content-type: text/html
     <div class="w3-container">
         <button class="w3-button w3-hide-large" onclick="sidebar_close();"><i class="fa fa-close fa-2x"></i></button>
         [% IF user %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=user">[% user.get('name') %]</a>
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=tags">Tags</a>
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=collections">Collections</a>
-            [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();">Save Search</a>[% END %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=logout">Logout</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=user"><i class="fa fa-user fa-2x"></i>&nbsp;[% user.get('name') %]</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=tags"><i class="fa fa-tags fa-2x"></i>&nbsp;Tags</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=collections"><i class="fa fa-bookmark fa-2x"></i>&nbsp;Collections</a>
+            [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();"><i class="fa fa-save fa-2x"></i>&nbsp;Save Search</a>[% END %]
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=logout"><i class="fa fa-sign-out fa-2x"></i>&nbsp;Logout</a>
         [% ELSE %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=login">Login</a>
+            <a class="w3-bar-item w3-button" href="[% script_name %]?a=login"><i class="fa fa-sign-in fa-2x"></i>&nbsp;Login</a>
             <a class="w3-bar-item w3-button" href="[% script_name %]?a=register">Register</a>
         [% END %]
     </div>

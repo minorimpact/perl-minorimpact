@@ -943,7 +943,7 @@ sub validateUser {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(8, "starting(" . $self->id() . ")");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
 
     return true if ($self->isSystem());
 
@@ -954,8 +954,10 @@ sub validateUser {
 
     my $test_user = $params->{user} || MinorImpact::getUser();
     return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
-    #MinorImpact::log(8, "\$test_user->id()='" .$test_user->id() . "'");
+    #MinorImpact::log(8, "\$test_user->id()='" . $test_user->id() . "'");
+    #MinorImpact::log(8, "\$self->userID()='" . $self->userID() . "'");
 
+    #MinorImpact::log(7, "ending");
     return ($test_user->id() && $self->userID() && ($test_user->id() eq $self->userID()));
 }
 

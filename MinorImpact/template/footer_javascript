@@ -32,6 +32,12 @@
                 \$("#object_type_id").append(select);
             }
         });
+        \$("#tabs").tabs({
+            active: [% tab_number or 0 %],
+            beforeLoad: function( event, ui ) {
+                ui.panel.html("<div>Loading...</div>");
+            }
+        });
     });
 
     function reloadObjects() {

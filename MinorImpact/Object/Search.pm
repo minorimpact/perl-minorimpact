@@ -5,6 +5,7 @@ use Data::Dumper;
 
 use MinorImpact;
 use MinorImpact::Util;
+use Text::ParseWords;
 
 sub parseSearchString {
     my $string = shift || return;
@@ -15,10 +16,10 @@ sub parseSearchString {
         $string = $params->{search} || $params->{text};
     }
 
+    $string = lc($string);
+    $string2 = $string;
     $params->{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
-    #MinorImpact::log(8, "before extractTags \$string='$string'");
     my @tags = extractTags(\$string);
-    #MinorImpact::log(8, "after extractTags \$string='$string'");
     foreach my $tag (@tags) {
         $params->{tag} .= "$tag,";
     }
@@ -31,8 +32,37 @@ sub parseSearchString {
     #   extracted: tags, field=value pairs, etc.
     delete($params->{search});
     $params->{text} = $string;
-    return $params;
 
+
+    # Working on a more complicated search mechanism.
+    my @ors;
+    my @ands;
+    my @parsed = parse_line('\s+', 0,  $string2);
+    for (my $i = 0; $i<scalar(@parsed); $i++) {
+        my $token = $parsed[$i];
+        next if ($token eq "and");
+        if ( $i < (scalar(@parsed) - 2) && $parsed[$i+1] eq 'or') {
+            push(@ors, $parsed[$i], $parsed[$i + 2]);
+            undef($parsed[$i]);
+            undef($parsed[$i+1]);
+            undef($parsed[$i+2]);
+            next;
+        }
+        if (defined($token)) {
+            push(@ands, $token);
+        }
+    }
+    #MinorImpact::log(8, "\@ands='" . join(",", @ands) . "'");
+    #MinorImpact::log(8, "\@ors='" . join(",", @ors) . "'");
+
+    #my @tags = extractTags(\$string);
+    #foreach my $tag (@tags) {
+    #    $params->{tag} .= "$tag,";
+    #}
+    #$params->{tag} =~s/,$//;
+    #trim(\$string);
+
+    return $params;
 }
 
 sub search {
