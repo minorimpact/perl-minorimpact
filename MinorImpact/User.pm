@@ -7,7 +7,7 @@ sub new {
     my $package = shift;
     my $params = shift;
 
-    MinorImpact::log(7, "starting");
+   #MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -16,7 +16,7 @@ sub new {
     checkDatabaseTables($self->{DB});
 
     my $user_id = $params;
-    MinorImpact::log(8, "\$user_id='$params'");
+    #MinorImpact::log(8 "\$user_id='$params'");
 
     if ($user_id =~/^\d+$/) {
         $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id)) || die $self->{DB}->errstr;
@@ -25,7 +25,7 @@ sub new {
     }
     bless($self, $package);
 
-    MinorImpact::log(8, "created user: '" .$self->name() . "'");
+    #MinorImpact::log(8 "created user: '" .$self->name() . "'");
     return $self;
 }
 
@@ -75,13 +75,13 @@ sub validateUser {
 sub addUser {
     my $params = shift || return;
     
-    MinorImpact::log(7, "starting");
+   #MinorImpact::log(7, "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
     if ($DB && $params->{username} && $params->{password}) {
         $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
-        MinorImpact::log(8, "\$user_id=$user_id");
+        #MinorImpact::log(8 "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
     }
     die "Couldn't add user " . $params->{username};
@@ -90,13 +90,16 @@ sub addUser {
 
 sub delete {
     my $self = shift || return;
+    my $params = shift || {};
     
-    my @objects = MinorImpact::Object::Search::search({ user_id => $self->id() });
+    my $user_id = $self->id();
+    my $DB = $self->{DB};
+    my @objects = MinorImpact::Object::Search::search({ user_id => $user_id });
     foreach my $object (@objects) {
         MinorImpact::log(8, "deleting " . $object->name());
-        $object->delete();
+        $object->delete($params);
     }
-    $self->{DB}->do("DELETE FROM user WHERE id=?", undef, ($self->id())) || die $DB->errstr;
+    $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
 }
 
 sub id {

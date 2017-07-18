@@ -94,7 +94,7 @@ sub search {
             #   the current user has access to.  We may want to 
             #   override this in the future with an admin flag
             #   and an admin user.
-            push(@objects, $object) if ($object->validateUser());
+            push(@objects, $object) if ($object->validateUser($params));
         };
     }
     if ($params->{sort}) {

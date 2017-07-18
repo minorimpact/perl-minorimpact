@@ -514,26 +514,29 @@ sub tags {
 
 sub delete {
     my $self = shift || return;
+    my $params = shift || {};
 
-    $self->log(7, "starting");
+    my $object_id = $self->id();
+    my $DB = $self->{DB};
+    MinorImpact::log(7, "starting(" . $object_id . ")");
 
-    my $data = $self->{DB}->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
+    my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
-        $self->{DB}->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $self->id()));
+        $DB->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $object_id));
     }
 
-    my $data = $self->{DB}->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($self->id()));
+    my $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id));
     foreach my $row (@$data) {
-        $self->{DB}->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id}));
+        $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id}));
     }
 
-    $self->{DB}->do("DELETE FROM object_data WHERE object_id=?", undef, ($self->id()));
-    $self->{DB}->do("DELETE FROM object_text WHERE object_id=?", undef, ($self->id()));
-    $self->{DB}->do("DELETE FROM object_reference WHERE object_id=?", undef, ($self->id()));
-    $self->{DB}->do("DELETE FROM object_tag WHERE object_id=?", undef, ($self->id()));
-    $self->{DB}->do("DELETE FROM object WHERE id=?", undef, ($self->id()));
+    $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id));
+    $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id));
+    $DB->do("DELETE FROM object_reference WHERE object_id=?", undef, ($object_id));
+    $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id));
+    $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id));
 
-    $self->log(7, "ending");
+    MinorImpact::log(7, "ending");
 }
 
 sub log {
@@ -895,7 +898,7 @@ sub match {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
 
     # Check tags first.
     if ($params->{tag}) {
@@ -952,7 +955,7 @@ sub validateUser {
         return $object->validateUser($params);
     }
 
-    my $test_user = $params->{user} || MinorImpact::getUser();
+    my $test_user = $params->{user} || MinorImpact::getUser($params);
     return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
     #MinorImpact::log(8, "\$test_user->id()='" . $test_user->id() . "'");
     #MinorImpact::log(8, "\$self->userID()='" . $self->userID() . "'");

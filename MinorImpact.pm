@@ -126,10 +126,6 @@ sub getUser {
         $self = new MinorImpact();
     }
 
-    # We only need to check the cache and validate once per session.  Now that we're doing
-    #   permission checking per object, this will save us a shitload.
-    return $self->{USER} if ($self->{USER});
-
     my $CGI = MinorImpact::getCGI();
     my $CACHE = MinorImpact::getCache({ method => 'memcached' });
 
@@ -141,7 +137,7 @@ sub getUser {
         MinorImpact::log(3, "validating " . $username);
         my $user = new MinorImpact::User($username);
         if ($user && $user->validateUser($password)) {
-            MinorImpact::log(8, "password verified for $username");
+            #MinorImpact::log(8, "password verified for $username");
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
@@ -158,28 +154,33 @@ sub getUser {
                 #   problem in the future.
                 $CACHE->set($client_ip, $user_id, $timeout);
             }
-            MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
+            #MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
             #MinorImpact::log(7, "ending");
             $self->{USER} = $user;
             return $user;
         }
     }
 
+    # We only need to check the cache and validate once per session.  Now that we're doing
+    #   permission checking per object, this will save us a shitload.
+    return $self->{USER} if ($self->{USER});
+
+
     # If the user has logged in before, and we can verify it's the same session,
     #   we can get the user_id from cache or cookie and don't require credentials
     #   again.
     my $user_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT});
-    MinorImpact::log(8, "user_id=$user_id");
+    #MinorImpact::log(8, "user_id=$user_id");
     if ($user_id) {
-        MinorImpact::log(8, "cached user_id=$user_id");
+        #MinorImpact::log(8, "cached user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
         my $ip_list = $CACHE->get("client_ip:$user_id");
-        MinorImpact::log(8, "client_ip=$client_ip");
+        #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $ip_list) {
             foreach my $client_ip ( split(",", $ip_list) ) {
-                MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
+                #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
                 if ($client_ip && ($ENV{REMOTE_ADDR} eq $client_ip  || $ENV{SSH_CLIENT} eq $client_ip)) {
-                    MinorImpact::log(7, "ending - cached ip matched current ip");
+                    #MinorImpact::log(7, "ending - cached ip matched current ip");
                     $self->{USER} = $user;
                     return $user;
                 }
@@ -193,7 +194,7 @@ sub getUser {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
     #}
-    MinorImpact::log(8, "no user found");
+    #MinorImpact::log(8, "no user found");
     #MinorImpact::log(7, "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
@@ -539,7 +540,7 @@ sub cgi {
     MinorImpact::log(8, "\$action='$action'");
 
     if ($params->{actions}{$action}) {
-        MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
+        #MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ( $action eq 'add') {
