@@ -1,1 +1,1 @@
-<a class="w3-button w3-tiny w3-blue w3-round" href="[% script_name %]?search=tag:[% tag %]" style="margin-bottom:4px">#[% text or tag %]</a>
+<a class="w3-button w3-tiny w3-grey" href="[% script_name %]?search=tag:[% tag %]" style="padding-top:2px;padding-bottom:2px;margin-bottom:4px">#[% text or tag %]</a>
