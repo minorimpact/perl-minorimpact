@@ -209,7 +209,7 @@ sub index {
             $local_params->{search} = $search;
         }
         $local_params->{user_id} = $user->id(),
-        $local_params->{debug} .= 'index.cgi::list();';
+        $local_params->{debug} .= 'index.cgi::index();';
         $local_params->{page} = $page;
         $local_params->{limit} = $limit + 1;
 
@@ -299,7 +299,7 @@ sub login {
     my $user = $MINORIMPACT->getUser();
 
     if ($user) {
-        $MINORIMPACT->redirect($redirect);
+        $MINORIMPACT->redirect();
     }
     
     $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
@@ -310,7 +310,7 @@ sub logout {
     my $MINORIMPACT = shift || return;
 
     my $CGI = $MINORIMPACT->getCGI();
-    my $user = $MINORIMPACT->getUser();
+    #my $user = $MINORIMPACT->getUser();
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');

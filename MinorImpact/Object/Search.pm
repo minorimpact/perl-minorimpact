@@ -87,15 +87,18 @@ sub search {
 
     my @objects;
     foreach my $id (@ids) {
-        #MinorImpact::log(8, "\$id=" . $id);
         eval {
             my $object = new MinorImpact::Object($id);
             # This is where we limit what comes back to just what
             #   the current user has access to.  We may want to 
             #   override this in the future with an admin flag
             #   and an admin user.
-            push(@objects, $object) if ($object->validateUser($params));
+            my $valid = $object->validateUser($params);
+            if ($valid) {
+                push(@objects, $object);
+            }
         };
+        MinorImpact::log(3, $@) if ($@);
     }
     if ($params->{sort}) {
         @objects = sort {$a->cmp($b); } @objects;

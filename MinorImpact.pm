@@ -144,7 +144,7 @@ sub getUser {
             my $client_ip = $CACHE->get("client_ip:$user_id");
             my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
             $client_ip = "$client_ip,$new_ip";
-            $client_ip =~s/^\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
+            $client_ip =~s/^,?\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
             $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
@@ -175,6 +175,7 @@ sub getUser {
         #MinorImpact::log(8, "cached user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
         my $ip_list = $CACHE->get("client_ip:$user_id");
+        MinorImpact::log(8, "\$ip_list='$ip_list',count='" . length($ip_list) . "'");
         #MinorImpact::log(8, "client_ip=$client_ip");
         if ($user && $ip_list) {
             foreach my $client_ip ( split(",", $ip_list) ) {
@@ -381,15 +382,16 @@ sub checkDatabaseTables {
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_data` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `object_id` int(11) NOT NULL,
-  `object_field_id` int(11) NOT NULL,
-  `value` varchar(50) NOT NULL,
-  `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `create_date` datetime NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_object_field` (`object_id`,`object_field_id`),
-  KEY `idx_object_data` (`object_id`))");
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_id` int(11) NOT NULL,
+            `object_field_id` int(11) NOT NULL,
+            `value` varchar(50) NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_object_field` (`object_id`,`object_field_id`),
+            KEY `idx_object_data` (`object_id`)
+        )");
     }
 
     eval {
@@ -405,14 +407,16 @@ sub checkDatabaseTables {
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_text` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `object_id` int(11) NOT NULL,
-  `object_field_id` int(11) NOT NULL,
-  `value` text,
-  `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `create_date` datetime NOT NULL,
-  PRIMARY KEY (`id`)
-)");
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_id` int(11) NOT NULL,
+            `object_field_id` int(11) NOT NULL,
+            `value` text,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_object_text` (`object_id`),
+            KEY `idx_object_field` (`object_id`,`object_field_id`)
+        )");
     }
     eval {
         $DB->do("DESC `object_reference`");

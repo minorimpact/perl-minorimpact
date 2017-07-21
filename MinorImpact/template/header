@@ -35,6 +35,7 @@ Content-type: text/html
             [% IF no_search != 1 %]
                 <form id=search_form method=POST>
                     <input type=hidden id=save_name name=save_name>
+                    <input type=hidden id=a name=a>
                     <input class="w3-input w3-small w3-bar-item w3-border" type=text id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="Search..." style="margin-top:6px"> 
                     <button class="w3-btn w3-bar-item w3-hide" ><i class="fa fa-search fa-2x"></i></button>
                     [% IF search %]<button class="w3-btn w3-bar-item w3-hide-small" id=save_button name=save_button onclick='submitForm();' title="Save Search"><i class="fa fa-save fa-2x"></i></button>[% END %]
