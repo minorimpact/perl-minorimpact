@@ -6,6 +6,7 @@ use CGI;
 use Cwd;
 use Data::Dumper;
 use DBI;
+use Digest::MD5 qw(md5 md5_hex);
 use File::Spec;
 use JSON;
 use Template;
@@ -129,12 +130,15 @@ sub getUser {
     my $CGI = MinorImpact::getCGI();
     my $CACHE = MinorImpact::getCache({ method => 'memcached' });
 
-
     # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
     if ($username && $password) {
         MinorImpact::log(3, "validating " . $username);
+        my $user_hash = md5_hex("$username:$password");
+        if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
+            return $self->{USER};
+        }
         my $user = new MinorImpact::User($username);
         if ($user && $user->validateUser($password)) {
             #MinorImpact::log(8, "password verified for $username");
@@ -157,6 +161,7 @@ sub getUser {
             #MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
             #MinorImpact::log(7, "ending");
             $self->{USER} = $user;
+            $self->{USERHASH} = $user_hash;
             return $user;
         }
     }
