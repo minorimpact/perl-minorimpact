@@ -138,8 +138,14 @@ sub back {
     my $self = shift || return;
     my $params = shift || {};
     
+    my $CGI = MinorImpact::getCGI();
+    my $search = $CGI->param('search');
+
     my $script_name = MinorImpact::scriptName();
-    return "$script_name?" . $params->{url};
+    my $url = "$script_name?" . $params->{url};
+    $url .= "&search=$search" if ($search);
+
+    return $url;
 }
 
 sub id { my $self = shift || return; return $self->{data}->{id}; }
@@ -805,6 +811,7 @@ sub form {
                                     object_type_id => $object_type_id,
                                     name           => ($CGI->param('name') || ($self && $self->name())),
                                     no_name        => $local_params->{no_name},
+                                    search         => $CGI->param('search'),
                                     tags           => ($CGI->param('tags') || ($self && join(' ', $self->getTags()))),
                                 }, \$form) || die $TT->error();
     #MinorImpact::log(7, "ending");
@@ -828,9 +835,9 @@ sub cmp {
     }
     if ($b) {
         return ($self->get($sortby) cmp $b->cmp());
-    } else {
-        return $self->get($sortby);
     }
+
+    return $self->get($sortby);
 }
 
 # Returns the object_field id from the type/field name.

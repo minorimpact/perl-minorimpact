@@ -7,6 +7,7 @@
         <input type=hidden name=id      value='[% object ? object.id() : '' %]'>
         <input type=hidden name=a       value='[% object ? 'edit' : 'add' %]'>
         <input type=hidden name=type_id value='[% object_type_id %]'>
+        <input type=hidden name=search  value='[% search %]'>
         [% IF not no_name %]
             <label>Name*</label>
             <input type=text name=name value='[% name %]' class="w3-input w3-border">

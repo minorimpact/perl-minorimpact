@@ -30,8 +30,8 @@ Content-type: text/html
 <div class="w3-top w3-blue">
     <div class="w3-bar" style="">
         [% IF user %]
-        <button class="w3-bar-item w3-button w3-hide-large" onclick="sidebar_open();"><i class='fa fa-navicon fa-2x'></i></button>
-        <a class="w3-bar-item w3-button" href=[% script_name %]><i class='fa fa-home fa-2x'></i></a>
+            <button class="w3-bar-item w3-button w3-hide-large" onclick="sidebar_open();"><i class='fa fa-navicon fa-2x'></i></button>
+            <a class="w3-bar-item w3-btn" href='[% script_name %]'><i class='fa fa-home fa-2x'></i></a>
             [% IF no_search != 1 %]
                 <form id=search_form method=POST>
                     <input type=hidden id=save_name name=save_name>
@@ -42,12 +42,12 @@ Content-type: text/html
                 </form>
             [% END %]
             [% INCLUDE collectionsDD %]
+            [% INCLUDE sort %]
         [% ELSE %]
-            <a class="w3-bar-itea w3-button" href=[% script_name %]?a=login>Log In</a>
-            <a class="w3-bar-item w3-button" href=[% script_name %]?a=register>Register</a>
+            <a class="w3-bar-itea w3-button" href='[% INCLUDE url_index action='login' %]'>Log In</a>
+            <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='register' %]'>Register</a>
         [% END %]
     </div>
-
     <div class="w3-row">
         [% INCLUDE header_menu_site %]
     </div>
@@ -56,14 +56,62 @@ Content-type: text/html
     <div class="w3-container">
         <button class="w3-button w3-hide-large" onclick="sidebar_close();"><i class="fa fa-close fa-2x"></i></button>
         [% IF user %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=user"><i class="fa fa-user fa-2x"></i>&nbsp;[% user.get('name') %]</a>
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=tags"><i class="fa fa-tags fa-2x"></i>&nbsp;Tags</a>
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=collections"><i class="fa fa-bookmark fa-2x"></i>&nbsp;Collections</a>
-            [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();"><i class="fa fa-save fa-2x"></i>&nbsp;Save Search</a>[% END %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=logout"><i class="fa fa-sign-out fa-2x"></i>&nbsp;Logout</a>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' sort='' %]'><i class="fa fa-user fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' sort='' %]'>[% user.get('name') %]</a>
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' sort='' %]'><i class="fa fa-tags fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' sort='' %]'>Tags</a>
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' sort='' %]'><i class="fa fa-bookmark fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' sort='' %]'>Collections</a>
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();"><i class="fa fa-save fa-2x"></i></a>[% END %]
+                </div>
+                <div class="w3-col s9">
+                    [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();">Save Search</a>[% END %]
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' type_id='' sort='' %]'><i class="fa fa-sign-out fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' type_id='' sort='' %]'>Logout</a>
+                </div>
+            </div>
         [% ELSE %]
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=login"><i class="fa fa-sign-in fa-2x"></i>&nbsp;Login</a>
-            <a class="w3-bar-item w3-button" href="[% script_name %]?a=register">Register</a>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href="[% script_name %]?a=login"><i class="fa fa-sign-in fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href="[% script_name %]?a=login">Login</a>
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href="[% script_name %]?a=register">Register</a>
+                </div>
+            </div>
         [% END %]
     </div>
 </div>

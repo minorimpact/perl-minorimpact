@@ -49,7 +49,7 @@ sub new {
     #MinorImpact::log(8, "starting");
 
     unless ($self) {
-        MinorImpact::log(3, "creating new MinorImpact object");
+        MinorImpact::log(3, "creating new MinorImpact object") unless ($options->{no_log});
 
         my $config;
         if ($options->{config}) {
@@ -82,6 +82,7 @@ sub new {
         $self->{conf} = $config;
         $self->{conf}{default}{home_script} ||= "index.cgi";
         $self->{conf}{application} = $options;
+        $self->{conf}{no_log} = 1 if ($options->{no_log});
 
         $self->{starttime} = [gettimeofday];
 
@@ -264,6 +265,8 @@ sub param {
 sub log {
     my $level = shift || return;
     my $message = shift || return;
+
+    return if ($MinorImpact::SELF && $MinorImpact::SELF->{conf}->{no_log});
 
     my $date = toMysqlDate();
     my $file = "/tmp/debug.log";

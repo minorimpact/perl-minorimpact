@@ -7,8 +7,8 @@
     [% END %]
     <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
     [% IF object.user_id() == user.id() %]
-        <a href=[% script_name %]?a=edit&id=[% object.id() %]>edit</a>
-        <a href=[% script_name %]?a=delete&id=[% object.id() %]>delete</a>
+        <a href='[% INCLUDE url_index action=edit %]'>edit</a>
+        <a href='[% INCLUDE url_index action=delete %]'>delete</a>
     [% END %]
 [% END %]
 [% INCLUDE index_menu_site %]
@@ -23,7 +23,7 @@
     <div id=tabs>
     <ul>
     [% FOREACH type_id IN types %]
-        <li><a href='[% script_name %]?id=[% object ? object.id() : '' %]&type_id=[% type_id %]&a=tablist&cid=[% cid %]&search=[% search %]'>[% typeName({object_type_id=>type_id, plural=>1}) %]</a></li>
+        <li><a href='[% INCLUDE url_index action='tablist' %]'>[% typeName({object_type_id=>type_id, plural=>1}) %]</a></li>
     [% END %]
     </ul>
     </div>

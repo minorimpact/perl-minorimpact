@@ -100,8 +100,11 @@ sub search {
         };
         MinorImpact::log(3, $@) if ($@);
     }
-    if ($params->{sort}) {
+    if (defined($params->{sort}) && $params->{sort} != 0) {
         @objects = sort {$a->cmp($b); } @objects;
+        if ($params->{sort} < 0) {
+            @objects = reverse @objects;
+        }
     }
     my $page = $params->{page} || 0;
     my $limit = $params->{limit} || ($page?10:0);

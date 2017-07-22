@@ -111,7 +111,7 @@ sub del {
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
-    my $back = $object->back({ url => "search=$search" });
+    my $back = $object->back();
 
     $object->delete();
     $self->redirect($back);
@@ -124,6 +124,8 @@ sub edit {
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
     my $user = $self->getUser({ force => 1 });
+
+    my $search = $CGI->param('search');
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
@@ -160,13 +162,14 @@ sub index {
     my $TT = $self->getTT();
     my $user = $self->getUser();
 
-    my $object_id = $CGI->param('object_id') || $CGI->param('id');
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
-    my $tab_id = $CGI->param('tab_id') || 0;
-    my $search = $CGI->param('search') || '';
-    my $page = $CGI->param('page') || 1;
     my $limit = $CGI->param('limit') || 30;
+    my $object_id = $CGI->param('object_id') || $CGI->param('id');
+    my $page = $CGI->param('page') || 1;
+    my $search = $CGI->param('search') || '';
+    my $sort = $CGI->param('sort') || 1;
+    my $tab_id = $CGI->param('tab_id') || 0;
 
     my @collections;
     if ($user) {
@@ -214,7 +217,7 @@ sub index {
         $local_params->{limit} = $limit + 1;
 
         $local_params->{type_tree} = 1;
-        $local_params->{sort} = 1;
+        $local_params->{sort} = $sort;
         # Anything coming in through here is coming from a user, they 
         #   don't need to search system objects.
         $local_params->{system} = 0;
@@ -272,6 +275,7 @@ sub index {
                             object      => $object,
                             objects     => [ @objects ],
                             search      => $search,
+                            sort        => $sort,
                             tab_number  => $tab_number,
                             types       => [ @types ],
                             url_last    => $url_last,
