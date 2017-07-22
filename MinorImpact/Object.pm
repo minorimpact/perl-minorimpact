@@ -196,12 +196,12 @@ sub selectList {
     }
     $select .= ">\n";
     $select .= "<option></option>\n" unless ($local_params->{required});
-    $local_params->{sort} = 1;
+    $local_params->{query}{sort} = 1;
     if ($local_params->{object_type_id} && $local_params->{user_id}) {
         # TODO: I've added system objects, so I don't want to limit the results to just
         #   what's owned by the current user, so I need to query the database about this
         #   type and change my tune if these belong to everyone.
-        delete($local_params->{user_id}) if (MinorImpact::Object::isSystem($local_params->{object_type_id}));
+        delete($local_params->{query}{user_id}) if (MinorImpact::Object::isSystem($local_params->{query}{object_type_id}));
     }
     my @objects = MinorImpact::Object::Search::search($local_params);
     foreach my $object (@objects) {
@@ -582,12 +582,12 @@ sub getChildren {
 
     #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $local_params = cloneHash($params);
-    $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
-    $local_params->{debug} .= "Object::getChildren();";
+    $local_params->{query}{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
+    $local_params->{query}{debug} .= "Object::getChildren();";
     #my $user_id = $self->userID();
 
-    $local_params->{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
-    $local_params->{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
+    $local_params->{query}{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
+    $local_params->{query}{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
 
     return MinorImpact::Object::Search::search($local_params);
 }

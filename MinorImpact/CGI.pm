@@ -202,25 +202,30 @@ sub index {
             @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
             MinorImpact::log(8, "found: " . scalar(@objects));
         }
-    } elsif ($collection_id || $search) {
+    } elsif ($collection_id || $search || defined($params->{query}) ) {
         my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
         my $local_params = cloneHash($params);
         if ($collection) {
-            $local_params = { %local_params, %{$collection->searchParams()} };
+            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
         } else {
-            $local_params->{search} = $search;
+            $local_params->{query}{search} = $search;
         }
-        $local_params->{user_id} = $user->id(),
-        $local_params->{debug} .= 'index.cgi::index();';
-        $local_params->{page} = $page;
-        $local_params->{limit} = $limit + 1;
+        # I still don't know if I need this or not.  In some cases, index is open to all, so limiting
+        #   search to the current user doesn't make sense... but at the same time, this is specifically
+        #   either a search or a collection, both of which *seem* like they should be limited to the currently
+        #   logged in user... right?
+        #$local_params->{query}{user_id} = $user->id();
+        $local_params->{query}{debug} .= 'MinorImpact::CGI::index();';
+        $local_params->{query}{page} = $page;
+        $local_params->{query}{limit} = $limit + 1;
 
-        $local_params->{type_tree} = 1;
-        $local_params->{sort} = $sort;
+        $local_params->{query}{type_tree} = 1;
+        $local_params->{query}{sort} = $sort;
         # Anything coming in through here is coming from a user, they 
         #   don't need to search system objects.
-        $local_params->{system} = 0;
+        $local_params->{query}{system} = 0;
+
         # TODO: INEFFICIENT AS FUCK.
         #   We need to figure out  a search that just tells us what types we're
         #   dealing with so we know how many tabs to create.
@@ -238,8 +243,8 @@ sub index {
             push(@types, keys %{$result});
         }
         if (scalar(@types) == 1) {
-            $local_params->{object_type_id} = $types[0];
-            delete($local_params->{type_tree});
+            $local_params->{query}{object_type_id} = $types[0];
+            delete($local_params->{query}{type_tree});
             @objects = MinorImpact::Object::Search::search($local_params);
         }
     } else {
@@ -249,7 +254,7 @@ sub index {
         #    push(@types, $type->{id});
         #}
         if (scalar(@types) == 1) {
-            @objects = MinorImpact::Object::Search::search({ object_type_id => $types[0] });
+            @objects = MinorImpact::Object::Search::search({ query => {  object_type_id => $types[0] } });
         }
     }
 
@@ -390,7 +395,6 @@ sub save_search {
     my $user = MinorImpact::getUser({ force => 1 });
 
     my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
-    #??? MinorImpact::Object::Search::search($MINORIMPACT, $params);
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     MinorImpact::log(8, "\$search='$search'");
 
@@ -428,19 +432,20 @@ sub tablist {
     my $type_name = MinorImpact::Object::typeName($type_id);
 
     # Show a list of objects of a certain type that refer to the current object.
-    my $local_params = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::tablist();"};
-    $local_params->{user_id} = $user->id() if ($user);
+    my $local_params;
+    $local_params->{query} = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::tablist();"};
+    $local_params->{query}{user_id} = $user->id() if ($user);
 
     my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
     my @collections = $user->getCollections() if ($user);
     if ($collection) {
-        $local_params = { %$local_params, %{$collection->searchParams()} };
+        $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
     } elsif ($search) {
-        $local_params->{search} = $search;
+        $local_params->{query}{search} = $search;
     }
-    $local_params->{debug} .= "collection::searchParams();";
-    $local_params->{page} = $page;
-    $local_params->{limit} = $limit + 1;
+    $local_params->{query}{debug} .= "collection::searchParams();";
+    $local_params->{query}{page} = $page;
+    $local_params->{query}{limit} = $limit + 1;
 
     # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
     my $max;
@@ -478,8 +483,8 @@ sub tags {
     my $script_name = MinorImpact::scriptName();
 
     my $local_params = cloneHash($params);
-    $local_params->{user_id} = $user->id();
-    delete($local_params->{tag});
+    $local_params->{query}{user_id} = $user->id();
+    delete($local_params->{query}{tag});
     my @objects = MinorImpact::Object::Search::search($local_params);
     my @tags;
     my $tags;

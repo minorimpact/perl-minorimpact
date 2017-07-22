@@ -55,8 +55,8 @@ sub getCollections {
     my $params = shift || {};
 
     my $local_params = cloneHash($params);
-    $local_params = { 
-                        %$local_params,
+    $local_params->{query} = { 
+                        %{$local_params->{query}},
                         debug          => 'MinorImpact::User::getCollections();',
                         object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
                         user_id        => $self->id(),
@@ -94,7 +94,7 @@ sub delete {
     
     my $user_id = $self->id();
     my $DB = $self->{DB};
-    my @objects = MinorImpact::Object::Search::search({ user_id => $user_id });
+    my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
     foreach my $object (@objects) {
         MinorImpact::log(8, "deleting " . $object->name());
         $object->delete($params);
