@@ -148,15 +148,17 @@ sub getUser {
 
             my $client_ip = $CACHE->get("client_ip:$user_id");
             my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
-            $client_ip = "$client_ip,$new_ip";
-            $client_ip =~s/^,?\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
-            $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
+            unless ($client_ip =~/$new_ip/) {
+                $client_ip = "$client_ip,$new_ip";
+                $client_ip =~s/^,?\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
+                $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
+            }
             if ($ENV{REMOTE_ADDR}) {
                 my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
                 print "Set-Cookie: $cookie\n";
             } else {
-                # TODO: This only supports a single command line connection at a time.  Might be a
-                #   problem in the future.
+                # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT 
+                #   environment variable.
                 $CACHE->set($client_ip, $user_id, $timeout);
             }
             #MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
