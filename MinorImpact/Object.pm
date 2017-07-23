@@ -651,7 +651,7 @@ sub toString {
                 $value = $field->toString();
             }
             my $row;
-            $TT->process('field_column', {name=>$field->displayName(), value=>$value}, \$row) || die $TT->error();
+            $TT->process('row_column', {name=>$field->displayName(), value=>$value}, \$row) || die $TT->error();
             $string .= $row;
         }
         $string .= "<!-- CUSTOM -->\n";
