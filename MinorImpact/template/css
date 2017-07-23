@@ -1,6 +1,11 @@
 Content-type: text/css
 
 /* TEMPLATE:default.css */
+
+/* The collection dropdown in the header was getting covered by the sidebar and the index. */
 .w3-dropdown-content { z-index:5; }
+
+/* So that text/markdown fields don't sit so low. */
+div p { margin-top:0px; }
 
 [% INCLUDE css_site %]

@@ -2,6 +2,7 @@
 
 <!-- TEMPLATE:default.index -->
 [% IF object %]
+    <div class="w3-card-4 w3-margin w3-padding">
     <div class='w3-bar'>
         [% IF object.back() %]
             <a href='[% object.back() %]' title='Back'><i class='fa fa-arrow-left fa-2x'></i></a>
@@ -14,6 +15,8 @@
     </div>
     <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
     [% object.toString({format=>'column'}) %]
+    <div class="w3-tiny w3-right" style="margin-bottom:4px"><em>Last modified [% object.get('mod_date') %]</div>
+    </div>
 [% END %]
 
 [% IF objects.size %]
