@@ -805,7 +805,7 @@ sub form {
     my $name = $CGI->param('name') || ($self && $self->name());
     my $search = $CGI->param('search');
     my $tags = $CGI->param('tags') || ($self && join(' ', $self->getTags()));
-    $TT->process('object_form', {
+    $TT->process('form_object', {
                                     form_fields    => $form_fields,
                                     javascript     => $script,
                                     object         => $self,
