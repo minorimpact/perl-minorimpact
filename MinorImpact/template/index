@@ -2,18 +2,17 @@
 
 <!-- TEMPLATE:default.index -->
 [% IF object %]
-    [% IF object.back() %]
-        <a href='[% object.back() %]'>back</a><br />
-    [% END %]
+    <div class='w3-bar'>
+        [% IF object.back() %]
+            <a href='[% object.back() %]' title='Back'><i class='fa fa-arrow-left fa-2x'></i></a>
+        [% END %]
+        [% IF object.user_id() == user.id() %]
+            <a href='[% INCLUDE url_index action='edit' %]' title='Edit task'><i class='fa fa-edit fa-2x'></i></a>
+            <a href='[% INCLUDE url_index action='delete' %]' title='Delete task'><i class='fa fa-trash fa-2x'></i></a>
+            [% INCLUDE index_menu_site %]
+        [% END %]
+    </div>
     <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
-    [% IF object.user_id() == user.id() %]
-        <a href='[% INCLUDE url_index action=edit %]'>edit</a>
-        <a href='[% INCLUDE url_index action=delete %]'>delete</a>
-    [% END %]
-[% END %]
-[% INCLUDE index_menu_site %]
-
-[% IF object %]
     [% object.toString({format=>'column'}) %]
 [% END %]
 

@@ -44,7 +44,7 @@ Content-type: text/html
             [% INCLUDE collectionsDD %]
             [% INCLUDE sort %]
         [% ELSE %]
-            <a class="w3-bar-itea w3-button" href='[% INCLUDE url_index action='login' %]'>Log In</a>
+            <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='login' %]'>Log In</a>
             <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='register' %]'>Register</a>
         [% END %]
     </div>

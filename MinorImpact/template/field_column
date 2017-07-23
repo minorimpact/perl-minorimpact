@@ -1,2 +1,8 @@
-<label>[% name %]</label>
-[% value %]
+<div class='w3-row'>
+    <div class='w3-col s2' style='text-align:right;'>
+        <span class='w3-margin-right'><b>[% name %]</b></span>
+    </div>
+    <div class='w3-col s10'>
+        [% value %]
+    </div>
+</div>

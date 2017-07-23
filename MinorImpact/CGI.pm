@@ -148,6 +148,17 @@ sub edit {
 
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
+        # Checkboxes don't come back from forms, but object::update() supports only setting a subset of
+        #   fields, so unless I want it to set all boolean fields to false no matter what is updated, 
+        #   I need to manually set them to false if they exist, because browsers don't send data
+        #   for  checkboxes unless they're true.  I've got the strangest sense that I've done this
+        #   before.
+        my $fields = $object->fields();
+        foreach my $name (keys %$fields) {
+            if ($fields->{$name}->type() eq 'boolean' && !defined($params->{$name})) {
+                $params->{$name} = 0;
+            }
+        }
         eval {
             $object->update($params);
         };
@@ -189,7 +200,9 @@ sub index {
 
     my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
     my $object;
-    if ($object_id) {
+    if ($params->{object}) {
+        $object = $params->{object};
+    } elsif ($object_id) {
         eval {
             $object = new MinorImpact::Object($object_id);
         };
@@ -215,6 +228,8 @@ sub index {
             @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
             MinorImpact::log(8, "found: " . scalar(@objects));
         }
+    } elsif ($params->{objects}) {
+        @objects = @{$params->{objects}};
     } elsif ($collection_id || $search || defined($params->{query}) ) {
         my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
         my $local_params = cloneHash($params);

@@ -293,10 +293,10 @@ sub update {
             $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
             $self->{DB}->do("delete from object_text where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
             foreach my $value (split(/\0/, $params->{$field_name})) {
+                #MinorImpact::log(8, "$field_name='$value'");
                 if ($field_type =~/text$/ || $field_type eq 'url') {
                     $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 } else {
-                    #MinorImpact::log(8, "$field_name='$value'");
                     #MinorImpact::log(8, "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW()) (" . $self->id() . ", " . $field->get('object_field_id') . ", $value)");
                     $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 }
@@ -618,7 +618,7 @@ sub toString {
     } 
     if ($params->{format} eq 'column') {
         #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
-        $string .= "<table class=view>\n";
+        $string .= "<div class='w3-container'>\n";
         foreach my $name (keys %{$self->{object_data}}) {
             my $field = $self->{object_data}{$name};
             #MinorImpact::log(7, "processing $name");
@@ -656,7 +656,7 @@ sub toString {
             $string .= $row;
         }
         $string .= "<!-- CUSTOM -->\n";
-        $string .= "</table>\n";
+        $string .= "</div>\n";
 
         my $references = $self->getReferences();
         if (scalar(@$references)) {
