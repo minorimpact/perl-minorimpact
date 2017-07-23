@@ -171,7 +171,6 @@ sub formRow {
 
     $local_params->{row_value} = $values[$i];
     my $row;
-    $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
 
     if ($self->isArray()) {
         while (++$i <= (scalar(@values)-1)) {
@@ -185,6 +184,8 @@ sub formRow {
         my $row_form;
         $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
         $row .= $row_form;
+    } else {
+        $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
     }
     #MinorImpact::log(7, "ending");
     return $row;
@@ -208,7 +209,7 @@ sub _input {
         delete($local_params->{name});
         $row .= "" .  MinorImpact::Object::selectList($local_params);
     } else {
-        $row .= "<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
+        $row .= "<label>" . $self->fieldName() . "</label>\n<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
         if ($params->{duplicate}) {
             $row .= " onchange='duplicateRow(this);'";
         }

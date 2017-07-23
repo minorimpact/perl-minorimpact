@@ -1,12 +1,14 @@
 [% INCLUDE header %]
 
 <!-- TEMPLATE:default.edit -->
-<a class='back' href='[% object.back() %]'>back</a>
+<a class='back' href='[% url_index %]'>back</a>
 [% IF not no_name %]
     <span class=object_name>[% object.name() %]</span>
 [% END %]
 
+<div class='w3-container'>
 [% form %]
+</div>
 
 [% INCLUDE footer %]
 

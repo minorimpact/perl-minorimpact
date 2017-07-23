@@ -59,7 +59,7 @@ sub _input {
     my $value = $params->{row_value};
 
     my $row;
-    $row .= "<input class='w3-check' type=checkbox name='$name'" . ($value?" checked":"") . ">\n";
+    $row .= "<input class='w3-check' type=checkbox name='$name'" . ($value?" checked":"") . "><label>" . $self->fieldName() . "</label>";
 
     return $row;
 }

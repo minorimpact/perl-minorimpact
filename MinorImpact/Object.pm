@@ -797,22 +797,23 @@ sub form {
         }
 
         my $local_params = cloneHash($params);
-        $local_params->{field_type} = $field_type;
-        $local_params->{required} = $field->get('required');
         $local_params->{name} = $name;
         $local_params->{value} = \@values;
         $form_fields .= $field->formRow($local_params);
     }
 
+    my $name = $CGI->param('name') || ($self && $self->name());
+    my $search = $CGI->param('search');
+    my $tags = $CGI->param('tags') || ($self && join(' ', $self->getTags()));
     $TT->process('object_form', {
                                     form_fields    => $form_fields,
                                     javascript     => $script,
                                     object         => $self,
                                     object_type_id => $object_type_id,
-                                    name           => ($CGI->param('name') || ($self && $self->name())),
+                                    name           => $name,
                                     no_name        => $local_params->{no_name},
-                                    search         => $CGI->param('search'),
-                                    tags           => ($CGI->param('tags') || ($self && join(' ', $self->getTags()))),
+                                    search         => $search,
+                                    tags           => $tags,
                                 }, \$form) || die $TT->error();
     #MinorImpact::log(7, "ending");
     return $form;
