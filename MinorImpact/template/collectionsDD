@@ -3,8 +3,11 @@
     <button class="w3-btn w3-hide-small" onclick="openCollectionsDD();">Collections <i class="fa fa-caret-down"></i></button>
     <button class="w3-btn w3-hide-large w3-hide-medium" onclick="openCollectionsDDRight();"><i class="fa fa-bookmark fa-2x"></i><i class="fa fa-caret-down"></i></button>
     <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
-        [% FOREACH collection IN collections %]
+        [% FOREACH collection IN collections.slice(0,11) %]
             [% INCLUDE collection %]
+        [% END %]
+        [% IF collections.size > 12 %]
+            <a href="[% INCLUDE url_index action='collections' %]" class="w3-bar-item w3-button">More...</a>
         [% END %]
     </div>
 </div>

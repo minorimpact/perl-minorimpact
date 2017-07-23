@@ -567,6 +567,8 @@ sub cgi {
         MinorImpact::CGI::css($self, $params);
     } elsif ( $action eq 'delete') {
         MinorImpact::CGI::del($self, $params);
+    } elsif ( $action eq 'delete_collection') {
+        MinorImpact::CGI::delete_collection($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::CGI::edit($self, $params);
     } elsif ( $action eq 'login') {

@@ -87,7 +87,7 @@ sub collections {
     my $user = $MINORIMPACT->getUser() || $MINORIMPACT->redirect();
     my $TT = $MINORIMPACT->getTT();
 
-    my @collections = $user->getCollections();
+    my @collections = sort { $a->cmp($b); } $user->getCollections();
     $TT->process('collections', {
                                     collections => [ @collections ],
                         }) || die $TT->error();
@@ -107,7 +107,6 @@ sub del {
 
     my $CGI = $self->getCGI();
     my $user = $self->getUser({ force => 1 });
-    my $search = $CGI->param('search');
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
@@ -115,6 +114,23 @@ sub del {
 
     $object->delete();
     $self->redirect($back);
+}
+
+sub delete_collection {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $CGI = $self->getCGI();
+    my $user = $self->getUser({ force => 1 });
+
+    my $collection_id = $CGI->param('cid') || $self->redirect();
+
+    my $collection = new MinorImpact::Object($collection_id);
+    if ($collection && $collection->user_id() eq $user->id()) {
+        $collection->delete();
+    }
+
+    $self->redirect("?a=collections");
 }
 
 sub edit {
@@ -171,10 +187,7 @@ sub index {
     my $sort = $CGI->param('sort') || 1;
     my $tab_id = $CGI->param('tab_id') || 0;
 
-    my @collections;
-    if ($user) {
-        @collections = $user->getCollections();
-    }
+    my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
     my $object;
     if ($object_id) {
         eval {
@@ -436,8 +449,8 @@ sub tablist {
     $local_params->{query} = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::CGI::tablist();"};
     $local_params->{query}{user_id} = $user->id() if ($user);
 
+    my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
     my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
-    my @collections = $user->getCollections() if ($user);
     if ($collection) {
         $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
     } elsif ($search) {
@@ -454,7 +467,6 @@ sub tablist {
     } else {
         @objects = MinorImpact::Object::Search::search($local_params);
     }
-
 
     my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&&page=" . ($page - 1):'';
     my $url_next;

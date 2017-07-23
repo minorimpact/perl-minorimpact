@@ -21,9 +21,9 @@ sub parseSearchString {
     $params->{query}{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
     my @tags = extractTags(\$string);
     foreach my $tag (@tags) {
-        $params->{query}{tag} .= "$tag,";
+        $params->{query}{tag} .= ",$tag";
     }
-    $params->{query}{tag} =~s/,$//;
+    $params->{query}{tag} =~s/^,//;
     trim(\$string);
 
     # This is confusing because the two strings do different things at different times, but
