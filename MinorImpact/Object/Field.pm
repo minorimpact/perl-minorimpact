@@ -202,11 +202,11 @@ sub _input {
     if ($self->type() =~/object\[(\d+)\]$/) {
         my $object_type_id = $1;
         my $local_params = cloneHash($params);
-        $local_params->{debug} .= "Object::Field::_input();";
-        $local_params->{object_type_id} = $object_type_id;
+        $local_params->{query}{debug} .= "Object::Field::_input();";
+        $local_params->{query}{object_type_id} = $object_type_id;
         $local_params->{fieldname} = $name;
         $local_params->{selected} = $value;
-        delete($local_params->{name});
+        $local_params->{required} = $self->get('required');
         $row .= "" .  MinorImpact::Object::selectList($local_params);
     } else {
         $row .= "<label>" . $self->fieldName() . "</label>\n<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";

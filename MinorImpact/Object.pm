@@ -173,21 +173,20 @@ sub selectList {
 
     #MinorImpact::log(7, "starting");
     my $local_params = cloneHash($params);
-    $local_params->{debug} .= "Object::selectList();";
+    $local_params->{query}{debug} .= "Object::selectList();";
     if (ref($self) eq 'HASH') {
         $local_params = cloneHash($self);
-        $local_params->{debug} .= "Object::selectList();";
+        $local_params->{query}{debug} .= "Object::selectList();";
         if ($local_params->{selected}) {
             $self = new MinorImpact::Object($local_params->{selected});
-            $local_params->{user_id} = $self->userID() if ($self && !$local_params->{user_id});
-            delete($local_params->{user_id}) if ($self->isSystem());
+            $local_params->{query}{user_id} = $self->userID() if ($self && !$local_params->{query}{user_id});
+            delete($local_params->{query}{user_id}) if ($self->isSystem());
         } else {
             undef $self;
         }
     } elsif (ref($self)) {
-        $local_params->{user_id} ||= $self->userID();
+        $local_params->{query}{user_id} ||= $self->userID();
         $local_params->{selected} = $self->id() unless ($local_params->{selected});
-        delete($local_params->{user_id}) if ($self->isSystem());
     }
 
     my $select = "<select class='w3-select' id='$local_params->{fieldname}' name='$local_params->{fieldname}'";
@@ -197,7 +196,7 @@ sub selectList {
     $select .= ">\n";
     $select .= "<option></option>\n" unless ($local_params->{required});
     $local_params->{query}{sort} = 1;
-    if ($local_params->{object_type_id} && $local_params->{user_id}) {
+    if ($local_params->{query}{object_type_id} && $local_params->{query}{user_id}) {
         # TODO: I've added system objects, so I don't want to limit the results to just
         #   what's owned by the current user, so I need to query the database about this
         #   type and change my tune if these belong to everyone.

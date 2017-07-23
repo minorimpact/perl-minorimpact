@@ -18,7 +18,7 @@
 
 [% IF objects.size %]
     [% INCLUDE list_object %]
-[% ELSIF types.size %]
+[% ELSIF types && types.size > 1 %]
     <div id=tabs>
     <ul>
     [% FOREACH type_id IN types %]

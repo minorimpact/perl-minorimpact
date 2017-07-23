@@ -40,9 +40,9 @@ sub add {
         }
     }
 
-    my $type_name = MinorImpact::Object::typeName({object_type_id=>$type_id});
+    my $type_name = MinorImpact::Object::typeName({ object_type_id => $type_id });
     my $local_params = {object_type_id=>$type_id};
-    MinorImpact::log(8, "\$type_name='$type_name'");
+    #MinorImpact::log(8, "\$type_name='$type_name'");
     my $form;
     eval {
         $form = $type_name->form($local_params);
@@ -54,8 +54,8 @@ sub add {
     $TT->process('add', {
                         error=>$error,
                         form => $form,
-                        object=>$object,
                         type_name => $type_name,
+                        type_id => $type_id,
                     }) || die $TT->error();
 }
 
@@ -222,7 +222,6 @@ sub index {
 
         @types = $object->getChildTypes();
         if (scalar(@types) == 1) {
-            @types = ();
             MinorImpact::log(8, "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
             @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
             MinorImpact::log(8, "found: " . scalar(@objects));
@@ -281,7 +280,6 @@ sub index {
         #    push(@types, $type->{id});
         #}
         if (scalar(@types) == 1) {
-            @types = ();
             @objects = MinorImpact::Object::Search::search({ query => {  object_type_id => $types[0] } });
         }
     }
