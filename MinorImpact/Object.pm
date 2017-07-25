@@ -879,6 +879,13 @@ sub getTagCounts {
     return $VAR1;
 }
 
+sub hasTag {
+    my $self = shift || return;
+    my $tag = shift || return;
+
+    return scalar(grep(/^$tag$/, $self->getTags()));
+}
+
 sub isSystem {
     my $self = shift || {};
 
