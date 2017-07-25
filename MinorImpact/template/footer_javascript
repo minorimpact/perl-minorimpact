@@ -99,26 +99,18 @@
             x.className = x.className.replace(" w3-show", "");
         }
     }
+    function showSearchForm() {
+        var search = document.getElementById("search_button");
+        var form = document.getElementById("search_form");
+        var sort = document.getElementById("sort_button");
+        var collections = document.getElementById("collections_button");
+        form.className = form.className.replace(" w3-hide-small", "");
+        search.className += " w3-hide-small";
+        sort.className += " w3-hide-small";
+        collections.className += " w3-hide-small";
+    }
     function openCollectionsDDRight() {
         var x = document.getElementById("collectionsDD");
-        if (x.className.indexOf("w3-show") == -1) {
-            x.style.right = 0;
-            x.className += " w3-show";
-        } else { 
-            x.className = x.className.replace(" w3-show", "");
-        }
-    }
-    function openTagsDD() {
-        var x = document.getElementById("tagsDD");
-        if (x.className.indexOf("w3-show") == -1) {
-            x.style.right = null;
-            x.className += " w3-show";
-        } else { 
-            x.className = x.className.replace(" w3-show", "");
-        }
-    }
-    function openTagsDDRight() {
-        var x = document.getElementById("tagsDD");
         if (x.className.indexOf("w3-show") == -1) {
             x.style.right = 0;
             x.className += " w3-show";
