@@ -83,11 +83,11 @@ sub collections {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    my $local_params = cloneHash($params);
-    my $user = $MINORIMPACT->getUser() || $MINORIMPACT->redirect();
+    my $user = $MINORIMPACT->getUser({ force => 1 });
     my $TT = $MINORIMPACT->getTT();
 
-    my @collections = sort { $a->cmp($b); } $user->getCollections();
+    #my @collections = sort { $a->cmp($b); } $user->getCollections();
+    my @collections = $user->getCollections();
     $TT->process('collections', {
                                     collections => [ @collections ],
                         }) || die $TT->error();
@@ -187,7 +187,7 @@ sub home {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
-    my $user = $self->getUser();
+    my $user = $self->getUser({ force => 1 });
 
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
@@ -198,7 +198,8 @@ sub home {
     my $sort = $CGI->param('sort') || 1;
     my $tab_id = $CGI->param('tab_id') || 0;
 
-    my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
+    my @collections = sort { $a->cmp($b); } $user->getCollections();
+    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
     my $object;
     if ($params->{object}) {
         $object = $params->{object};
@@ -208,6 +209,7 @@ sub home {
         };
     }
 
+    my $local_params = cloneHash($params);
     my @types;
     my @objects;
     if ($object) {
@@ -228,20 +230,16 @@ sub home {
         }
     } elsif ($params->{objects}) {
         @objects = @{$params->{objects}};
-    } elsif ($collection_id || $search || defined($params->{query}) ) {
-        my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
-        my $local_params = cloneHash($params);
-        if ($collection) {
+        $search ||= $collection->searchText() if ($collection);
+    } elsif ($collection || $search || defined($params->{query}) ) {
+        if ($search) {
+            $local_params->{query}{search} = $search;
+        } elsif ($collection) {
             $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
-        } else {
-            $local_params->{query}{search} = $search;
         }
-        # I still don't know if I need this or not.  In some cases, index is open to all, so limiting
-        #   search to the current user doesn't make sense... but at the same time, this is specifically
-        #   either a search or a collection, both of which *seem* like they should be limited to the currently
-        #   logged in user... right?
-        #$local_params->{query}{user_id} = $user->id();
+
+        $local_params->{query}{user_id} = $user->id();
         $local_params->{query}{debug} .= 'MinorImpact::CGI::index();';
         $local_params->{query}{page} = $page;
         $local_params->{query}{limit} = $limit + 1;
@@ -280,7 +278,9 @@ sub home {
         #    push(@types, $type->{id});
         #}
         if (scalar(@types) == 1) {
-            @objects = MinorImpact::Object::Search::search({ query => {  object_type_id => $types[0] } });
+            $local_params->{query}{object_type_id} = $types[0];
+            delete($local_params->{query}{type_tree});
+            @objects = MinorImpact::Object::Search::search($local_params);
         }
     }
 

@@ -139,11 +139,15 @@ sub back {
     my $params = shift || {};
     
     my $CGI = MinorImpact::getCGI();
+    my $cid = $CGI->param('cid');
     my $search = $CGI->param('search');
+    my $sort = $CGI->param('sort');
 
     my $script_name = MinorImpact::scriptName();
     my $url = "$script_name?" . $params->{url};
+    $url .= "&cid=$cid" if ($cid);
     $url .= "&search=$search" if ($search);
+    $url .= "&sort=$sort" if ($sort);
 
     return $url;
 }

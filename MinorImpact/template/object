@@ -2,5 +2,5 @@
 [% IF object.isSystem() %]
     [% object.name() %]
 [% ELSE %]
-    <a href=[% script_name %]?id=[% object.id() %]>[% object.name() %]</a>
+    <a href="[% INCLUDE url_index action='home' %]">[% object.name() %]</a>
 [% END %]

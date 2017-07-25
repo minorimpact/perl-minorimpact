@@ -93,8 +93,14 @@ sub search {
             #   the current user has access to.  We may want to 
             #   override this in the future with an admin flag
             #   and an admin user.
-            my $valid = $object->validateUser($params);
-            if ($valid) {
+            next unless ($object->validateUser($params));
+            if (defined($params->{query}{child})) {
+                my @children = $object->getChildren({ query => { %{$params->{query}{child}}, id_only => 1 } });
+                push(@objects, $object) if (scalar(@children));
+            } elsif (defined($params->{query}{no_child})) {
+                my @children = $object->getChildren({ query => { %{$params->{query}{no_child}}, id_only => 1 } });
+                push(@objects, $object) unless (scalar(@children));
+            } else {
                 push(@objects, $object);
             }
         };
@@ -135,8 +141,8 @@ sub _search {
 
     my $query = $params->{query}; # || $params;
     $query->{object_type_id} = $query->{object_type} if ($query->{object_type} && !$query->{object_type_id});
-    my $select = "SELECT DISTINCT(object.id) ";
-    my $from   = "FROM object JOIN object_type ON (object.object_type_id=object_type.id) LEFT JOIN object_tag ON (object.id=object_tag.object_id) LEFT JOIN object_data ON (object.id=object_data.object_id) LEFT JOIN object_text ON (object.id=object_text.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id) ";
+    my $select = "SELECT DISTINCT(object.id)";
+    my $from   = "FROM object JOIN object_data AS object_data ON (object.id=object_data.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id)";
     my $where  = "WHERE object.id > 0";
     my @fields;
 
@@ -150,13 +156,14 @@ sub _search {
     }
 
     foreach my $param (keys %$query) {
-        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields)$/);
+        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields|child)$/);
         next unless (defined($query->{$param}));
         #MinorImpact::log(8, "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $query->{name});
         } elsif ($param eq "object_type_id") {
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
             if ($query->{object_type_id} =~/^[0-9]+$/) {
                 $where .= " AND object_type.id=?";
             } else {
@@ -167,11 +174,13 @@ sub _search {
             $where .= " AND object.user_id=?";
             push(@fields, $query->{user_id});
         } elsif ($param eq "system") {
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
             $where .= " AND object_type.system = ? ";
             push(@fields, $query->{system});
         } elsif ($param eq "tag") {
             my $tag_where;
             foreach my $tag (split(",", $query->{tag})) {
+                $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag/);
                 if (!$tag_where) {
                     $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
                 } else {
@@ -186,6 +195,7 @@ sub _search {
         } elsif ($param eq "text" || $param eq "search") {
             my $text = $query->{text} || $query->{search};
             if ($text) {
+                $from .= " LEFT JOIN object_text ON (object.id=object_text.object_id)" unless ($from =~/JOIN object_text/);
                 $where .= " AND (object.name LIKE ? OR object_data.value LIKE ? OR object_text.value LIKE ?)";
                 push(@fields, "\%$text\%");
                 push(@fields, "\%$text\%");
@@ -197,7 +207,7 @@ sub _search {
             #MinorImpact::log(8, "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             if ($object_field_id) {
-                $from .= "JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id) ";
+                $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
                 $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
                 push(@fields, $object_field_id);
                 push(@fields, $query->{$param});

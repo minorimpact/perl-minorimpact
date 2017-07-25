@@ -167,15 +167,11 @@ sub formRow {
     @values = $self->value({id_only=>1}) unless (scalar(@values));
     
     my $field_name = $self->displayName();
-    my $i = 0;
 
-    $local_params->{row_value} = $values[$i];
     my $row;
-    $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
-
     if ($self->isArray()) {
-        while (++$i <= (scalar(@values)-1)) {
-            $local_params->{row_value} = $values[$i];
+        foreach my $value (@values) {
+            $local_params->{row_value} = $value;
             my $row_form;
             $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
             $row .= $row_form;
@@ -185,6 +181,9 @@ sub formRow {
         my $row_form;
         $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
         $row .= $row_form;
+    } else {
+        $local_params->{row_value} = $values[0];
+        $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
     }
     #MinorImpact::log(7, "ending");
     return $row;
@@ -209,6 +208,11 @@ sub _input {
         $row .= "" .  MinorImpact::Object::selectList($local_params);
     } else {
         $row .= "<label>" . $self->fieldName() . "</label>\n<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
+        if ($name eq 'name') {
+            $row .= " maxlength=50" if ($name eq 'name');
+        } else {
+            $row .= " maxlength=255" if ($name eq 'name');
+        }
         if ($params->{duplicate}) {
             $row .= " onchange='duplicateRow(this);'";
         }

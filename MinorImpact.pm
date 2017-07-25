@@ -218,6 +218,10 @@ sub redirect {
     my $CGI = MinorImpact::getCGI();
     my $user = MinorImpact::getUser();
 
+    my $search = $CGI->param('search');
+    my $cid = $CGI->param('cid');
+    my $sort = $CGI->param('sort');
+
     #MinorImpact::log(8, "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
         $params = $self;
@@ -233,7 +237,7 @@ sub redirect {
         $params->{redirect} = $redirect;
     }
 
-    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi');
+    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
     #MinorImpact::log(8, "\$location='$location'");
 
     my $domain = "https://$ENV{HTTP_HOST}";
@@ -241,10 +245,11 @@ sub redirect {
     if ($location =~/^\?/) {
         $location = "$domain/cgi-bin/$script_name$location";
     } elsif ($location =~/^\//) {
-        $location = "$domain/$location";
+        $location = "$domain$location";
     } elsif ($location !~/^\//) {
         $location = "$domain/cgi-bin/$location";
     }
+    $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
 
     #print $self->{CGI}->header(-location=>$location);
     MinorImpact::log(3, "redirecting to $location");
@@ -488,7 +493,7 @@ sub getTT {
     my $self = shift || {};
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -499,6 +504,12 @@ sub getTT {
         return $self->{TT};
     }
 
+    my $CGI = getCGI();
+    my $user = MinorImpact::getUser();
+    my $cid = $CGI->param('cid');
+    my $search = $CGI->param('search');
+    my $sort = $CGI->param('sort');
+
     my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
 
     # The default package templates are in the 'template' directory 
@@ -508,17 +519,18 @@ sub getTT {
 
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
     my $global_template_directory = File::Spec->catfile($path, "$package/template");
-    my $user;
-    eval {
-        $user = $self->getUser();
-    };
-
+    #eval {
+    #    $user = $self->getUser();
+    #};
 
     my $variables = {
-                        home => $self->{conf}{default}{home_script},
+                        cid         => $cid,
+                        home        => $self->{conf}{default}{home_script},
                         script_name => MinorImpact::scriptName(),
-                        typeName => sub { MinorImpact::Object::typeName(shift); },
-                        user => $user,
+                        search      => $search,
+                        sort        => $sort,
+                        typeName    => sub { MinorImpact::Object::typeName(shift); },
+                        user    => $user,
                     };
     if ($params->{variables}) {
         foreach my $key (keys %{$params->{variables}}) {
@@ -534,7 +546,7 @@ sub getTT {
 
     $self->{TT} = $TT;
     
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $TT;
 }
 
@@ -552,8 +564,6 @@ sub cgi {
 
     my $CGI = MinorImpact::getCGI();
     my $action = $CGI->param('a') || $CGI->param('action') || 'index';
-    #my $script = $params->{script} || 'index';
-    my $object_id = $CGI->param('id') || $CGI->param('object_id');
 
     #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));
 

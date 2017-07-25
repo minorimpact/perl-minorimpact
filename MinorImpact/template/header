@@ -32,7 +32,7 @@ Content-type: text/html
         [% IF user %]
             <button class="w3-bar-item w3-button w3-hide-large" onclick="sidebar_open();"><i class='fa fa-navicon fa-2x'></i></button>
             <div class="w3-bar-item w3-hide-small w3-hide-medium"><i class='fa fa-navicon fa-2x' style="color:black"></i></div>
-            <a class="w3-bar-item w3-btn" href='[% INCLUDE url_index action="home" %]'><i class='fa fa-home fa-2x'></i></a>
+            <a class="w3-bar-item w3-btn" href='[% INCLUDE url_index action="home" reset=1 %]'><i class='fa fa-home fa-2x'></i></a>
             [% UNLESS no_search %]
                 <button onclick='showSearchForm();' class="w3-hide-medium w3-hide-large w3-bar-item w3-button" id="search_button" ><i class="fa fa-search fa-2x"></i></button>
                 <form id=search_form method=POST class=" w3-hide-small">
@@ -60,26 +60,26 @@ Content-type: text/html
         [% IF user %]
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' sort='' %]'><i class="fa fa-user fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' reset=1 %]'><i class="fa fa-user fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' sort='' %]'>[% user.get('name') %]</a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' reset=1 %]'>[% user.get('name') %]</a>
                 </div>
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' sort='' %]'><i class="fa fa-tags fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' cid='' sort='' %]'><i class="fa fa-tags fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' sort='' %]'>Tags</a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' cid='' sort='' %]'>Tags</a>
                 </div>
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' sort='' %]'><i class="fa fa-bookmark fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' reset=1 %]'><i class="fa fa-bookmark fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' sort='' %]'>Collections</a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' reset=1 %]'>Collections</a>
                 </div>
             </div>
             <div class="w3-row">
@@ -92,10 +92,10 @@ Content-type: text/html
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' type_id='' sort='' %]'><i class="fa fa-sign-out fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' reset=1 %]'><i class="fa fa-sign-out fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' type_id='' sort='' %]'>Logout</a>
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' reset=1 %]'>Logout</a>
                 </div>
             </div>
         [% ELSE %]
