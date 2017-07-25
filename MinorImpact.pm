@@ -488,7 +488,7 @@ sub getTT {
     my $self = shift || {};
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
 
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -508,12 +508,17 @@ sub getTT {
 
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
     my $global_template_directory = File::Spec->catfile($path, "$package/template");
+    my $user;
+    eval {
+        $user = $self->getUser();
+    };
+
 
     my $variables = {
                         home => $self->{conf}{default}{home_script},
                         script_name => MinorImpact::scriptName(),
                         typeName => sub { MinorImpact::Object::typeName(shift); },
-                        user => $self->getUser(),
+                        user => $user,
                     };
     if ($params->{variables}) {
         foreach my $key (keys %{$params->{variables}}) {
@@ -529,7 +534,7 @@ sub getTT {
 
     $self->{TT} = $TT;
     
-    #MinorImpact::log(7, "ending");
+    MinorImpact::log(7, "ending");
     return $TT;
 }
 

@@ -5,6 +5,7 @@
 <div class='w3-container'>
 <form class='w3-container' id=form_login method=POST>
     <input type=hidden name=redirect value='[% redirect %]'>
+    <input type=hidden name=a value='login'>
     <label>Username</label>
     <input class='w3-input w3-border' type=text name=username value='[% username %]' required>
     <label>Password</label>

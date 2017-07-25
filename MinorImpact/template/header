@@ -119,3 +119,4 @@ Content-type: text/html
 </div>
 <div class="w3-overlay w3-hide-large" onclick="sidebar_close()" style="cursor:pointer" title="close side menu" id="overlay"></div>
 <div class="w3-main w3-container w3-padding-0" style="margin-left:200px;margin-top:47px">
+[% INCLUDE error %]

@@ -3,13 +3,15 @@
 <!-- TEMPLATE:default.register -->
 <form class=form_register method=POST>
     <input type='hidden' name='a' value='register'>
-    <table>
-    <tr><td class=fieldname>Username</td><td><input type=text name=username value="[% username %]"></td></tr>
-    <tr><td class=fieldname>Email</td><td><input type=text name=email value="[% email %]"></td></tr>
-    <tr><td class=fieldname>Password</td><td><input type=password name=password></td></tr>
-    <tr><td class=fieldname>Confirm Password</td><td><input type=password name=password2></td></tr>
-    <tr><td></td><td><input type=submit name=submit value=Register></td></tr>
-    </table>
+    <label>Username</label>
+    <input class="w3-input w3-border" type=text name=username value="[% username %]" placeholder="Username...">
+    <label>Email</label>
+    <input class="w3-input w3-border" type=text name=email value="[% email %]" placeholder="Email address...">
+    <label>Password</label>
+    <input class="w3-input w3-border" type=password name=password placeholder="Password...">
+    <label>Confirm Password</label>
+    <input class="w3-input w3-border" type=password name=password2 placeholder="Confirm password...">
+    <input class="w3-input w3-border" type=submit name=submit value=Register>
 </form>
 
 [% INCLUDE footer %]

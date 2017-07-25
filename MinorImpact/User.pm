@@ -75,16 +75,18 @@ sub validateUser {
 sub addUser {
     my $params = shift || return;
     
-   #MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
     if ($DB && $params->{username} && $params->{password}) {
         $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
-        #MinorImpact::log(8 "\$user_id=$user_id");
+        #MinorImpact::log(8, "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
     }
     die "Couldn't add user " . $params->{username};
+
+    #MinorImpact::log(7, "ending");
     return;
 }
 

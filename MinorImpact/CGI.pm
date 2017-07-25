@@ -339,7 +339,7 @@ sub index {
         };
     }
 
-    $TT->process('home', {
+    $TT->process('index', {
                             }) || die $TT->error();
 
 }
@@ -353,16 +353,21 @@ sub login {
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
     
-    my $username = $CGI->param('username');
-    my $redirect = $CGI->param('redirect');
-    
     my $user = $MINORIMPACT->getUser();
 
     if ($user) {
-        $MINORIMPACT->redirect();
+        $MINORIMPACT->redirect("?a=home");
     }
-    
-    $TT->process('login', {redirect=>$redirect, username=>$username}) || die $TT->error();
+
+    my $username = $CGI->param('username');
+    my $redirect = $CGI->param('redirect');
+    my @errors;
+
+    if ($username) {
+        push(@errors, "Invalid username or password");
+    }
+
+    $TT->process('login', { errors => [ @errors ], redirect => $redirect, username => $username }) || die $TT->error();
     #MinorImpact::log(7, "ending");
 }
 
@@ -396,7 +401,7 @@ sub register {
     my $MI = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $CGI = $MI->getCGI();
     my $tt = $MI->getTT();
@@ -407,52 +412,54 @@ sub register {
     my $password2 = $CGI->param('password2');
     my $submit = $CGI->param('submit');
 
-    my $error;
+    MinorImpact::log(8, "\$submit='$submit'");
+    my @errors;
     if ($submit) {
-        MinorImpact::log(8, "submit");
+        #MinorImpact::log(8, "submit");
         if (!$username) {
-            $error = "'$username' is not a valid username";
+           push(@errors, "'$username' is not a valid username");
         }
         if (!$password) {
-            $error .= "Password cannot be blank";
+           push(@errors, "Password cannot be blank");
         }
         if ($password ne $password2) {
-            $error .= "Passwords don't match";
+            push(@errors, "Passwords don't match");
         }
-        if (!$error) {
+        if (!scalar(@errors)) {
+            my $user;
             eval {
-                MinorImpact::log(8, "addUser");
-                MinorImpact::User::addUser({username=>$username, password=>$password, email=>$email});
-                my $user = $MI->getUser({username=>$username, password=>$password});
-                if ($user) {
-                    $MI->redirect();
-                } else {
-                    $error = "Can't create new user.";
-                }
+                #MinorImpact::log(8, "FUCK");
+                MinorImpact::User::addUser({ email=>$email, password=>$password, username=>$username });
+                $user  = $MI->getUser({ password=>$password, username=>$username });
             };
-            $error = $@ if ($@);
+            push(@errors, $@) if ($@);
+            if ($user) {
+                $MI->redirect("?a=home");
+            } else {
+                push(@errors, "Can't create new user");
+            }
         }
     }
-    $tt->process('register', {username=>$username, email=>$email, error=>$error}) || die $tt->error();
-    MinorImpact::log(7, "ending");
+    $tt->process('register', { email => $email, errors => [ @errors ], username => $username }) || die $tt->error();
+    #MinorImpact::log(7, "ending");
 }
 
 sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $CGI = MinorImpact::getCGI();
     my $user = MinorImpact::getUser({ force => 1 });
 
     my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
-    MinorImpact::log(8, "\$search='$search'");
+    #MinorImpact::log(8, "\$search='$search'");
 
     my $collection_data = {name => $name, search => $search, user_id => $user->id()};
     my $collection = new MinorImpact::collection($collection_data);
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     $MINORIMPACT->redirect("?cid=" . $collection->id());
 }
 
