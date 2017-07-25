@@ -295,8 +295,8 @@ sub home {
     my $url_last;
     my $url_next;
     if (scalar(@objects)) {
-        $url_last = $page>1?"$script_name?cid=$collection_id&search=$serach&page=" . ($page - 1):'';
-        $url_next = (scalar(@objects)>$limit)?"$script_name?cid=$collection_id&search=$search&page=" . ($page + 1):'';
+        $url_last = $page>1?"$script_name?a=home&cid=$collection_id&search=$serac&sort=$sorth&page=" . ($page - 1):'';
+        $url_next = (scalar(@objects)>$limit)?"$script_name?a=home&cid=$collection_id&sort=$sort&search=$search&page=" . ($page + 1):'';
         pop(@objects) if ($url_next);
     }
 
