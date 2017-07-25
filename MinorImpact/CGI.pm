@@ -179,7 +179,7 @@ sub edit {
                     }) || die $TT->error();
 }
 
-sub index {
+sub home {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -300,7 +300,7 @@ sub index {
         pop(@objects) if ($url_next);
     }
 
-    $TT->process('index', {
+    $TT->process('home', {
                             cid         => $collection_id,
                             collections => [ @collections ],
                             object      => $object,
@@ -314,9 +314,34 @@ sub index {
                             }) || die $TT->error();
 
     # For testing.
-    if ($object && $object->typeID() == 4) {
-        $object->updateAllDates();
+    #if ($object && $object->typeID() == 4) {
+    #    $object->updateAllDates();
+    #}
+}
+
+sub index {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log(7, "starting");
+
+    my $user = $self->getUser();
+    $self->redirect("?a=home") if ($user);
+
+    my $CGI = $self->getCGI();
+    my $TT = $self->getTT();
+
+    my $object_id = $CGI->param('object_id') || $CGI->param('id');
+
+    if ($object_id) {
+        eval {
+            $object = new MinorImpact::Object($object_id);
+        };
     }
+
+    $TT->process('home', {
+                            }) || die $TT->error();
+
 }
 
 sub login {
@@ -353,7 +378,7 @@ sub logout {
     print "Set-Cookie: $user_cookie\n";
     print "Set-Cookie: $object_cookie\n";
     print "Set-Cookie: $view_cookie\n";
-    $MINORIMPACT->redirect();
+    $MINORIMPACT->redirect("?");
 }
 
 sub object_types {

@@ -216,6 +216,7 @@ sub redirect {
     #MinorImpact::log(7, "starting");
 
     my $CGI = MinorImpact::getCGI();
+    my $user = MinorImpact::getUser();
 
     #MinorImpact::log(8, "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
@@ -232,7 +233,7 @@ sub redirect {
         $params->{redirect} = $redirect;
     }
 
-    my $location = $params->{redirect} || $CGI->param('redirect') ||  'index.cgi';
+    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi');
     #MinorImpact::log(8, "\$location='$location'");
 
     my $domain = "https://$ENV{HTTP_HOST}";
@@ -571,6 +572,8 @@ sub cgi {
         MinorImpact::CGI::delete_collection($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::CGI::edit($self, $params);
+    } elsif ( $action eq 'home') {
+        MinorImpact::CGI::home($self, $params);
     } elsif ( $action eq 'login') {
         MinorImpact::CGI::login($self, $params);
     } elsif ( $action eq 'logout') {
