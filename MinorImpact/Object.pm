@@ -144,6 +144,8 @@ sub back {
     my $sort = $CGI->param('sort');
 
     my $script_name = MinorImpact::scriptName();
+    $params ||= "?a=home";
+
     my $url = "$script_name?" . $params->{url};
     $url .= "&cid=$cid" if ($cid);
     $url .= "&search=$search" if ($search);
@@ -585,7 +587,7 @@ sub getChildren {
 
     #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $local_params = cloneHash($params);
-    $local_params->{query}{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
+    $local_params->{query}{object_type_id} = $local_params->{query}{type_id} if ($local_params->{query}{type_id} && !$local_params->{query}{object_type_id});
     $local_params->{query}{debug} .= "Object::getChildren();";
     #my $user_id = $self->userID();
 
@@ -750,7 +752,7 @@ sub form {
     my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
-    $local_params->{debug} .= "Object::form();";
+    $local_params->{query}{debug} .= "Object::form();";
     my $type;
     if ($self) {
         $local_params->{object_type_id} = $self->typeID();
@@ -802,6 +804,7 @@ sub form {
         my $local_params = cloneHash($params);
         $local_params->{name} = $name;
         $local_params->{value} = \@values;
+        $local_params->{query}{user_id} = $user->id();
         $form_fields .= $field->formRow($local_params);
     }
 
@@ -815,7 +818,6 @@ sub form {
                                     object_type_id => $object_type_id,
                                     name           => $name,
                                     no_name        => $local_params->{no_name},
-                                    search         => $search,
                                     tags           => $tags,
                                 }, \$form) || die $TT->error();
     #MinorImpact::log(7, "ending");

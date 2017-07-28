@@ -22,6 +22,7 @@ sub add {
     $type_id ||= MinorImpact::Object::getType();
 
     my $object;
+    my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         if ($action eq 'add') {
@@ -31,8 +32,7 @@ sub add {
             eval {
                 $object = new MinorImpact::Object($params);
             };
-            MinorImpact::log(3, "error: $@");
-            $error = $@ if ($@);
+            push(@errors, $@) if ($@);
         }
         if ($object && !$error) {
             my $back = $object->back() || "$script_name?id=" . $object->id();
@@ -52,10 +52,10 @@ sub add {
     }
 
     $TT->process('add', {
-                        error=>$error,
-                        form => $form,
+                        errors    => [ @errors ],
+                        form      => $form,
                         type_name => $type_name,
-                        type_id => $type_id,
+                        type_id   => $type_id,
                     }) || die $TT->error();
 }
 
@@ -279,6 +279,7 @@ sub home {
         #}
         if (scalar(@types) == 1) {
             $local_params->{query}{object_type_id} = $types[0];
+            $local_params->{query}{user_id} = $user->id();
             delete($local_params->{query}{type_tree});
             @objects = MinorImpact::Object::Search::search($local_params);
         }
@@ -534,7 +535,7 @@ sub tags {
     my $params = shift || {};
 
     my $local_params = cloneHash($params);
-    my $user = $MINORIMPACT->getUser();
+    my $user = $MINORIMPACT->getUser({ force => 1 });
     my $CGI = $MINORIMPACT->getCGI();
     my $TT = $MINORIMPACT->getTT();
     my $script_name = MinorImpact::scriptName();
@@ -543,9 +544,9 @@ sub tags {
     $local_params->{query}{user_id} = $user->id();
     delete($local_params->{query}{tag});
     my @objects = MinorImpact::Object::Search::search($local_params);
+
     my @tags;
     my $tags;
-
     foreach my $object (@objects) {
         push(@tags, $object->getTags());
     }

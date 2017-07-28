@@ -1,4 +1,4 @@
-<hr>
 <div class="w3-row">
-    <a href='[% script_name %]?id=[% object.id() %]'>[% object.name() %]</a>
+    <a href='[% INCLUDE url_index action="home" %]'>[% object.name() %]</a>
 </div>
+<hr>

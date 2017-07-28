@@ -98,6 +98,7 @@ sub search {
                 my @children = $object->getChildren({ query => { %{$params->{query}{child}}, id_only => 1 } });
                 push(@objects, $object) if (scalar(@children));
             } elsif (defined($params->{query}{no_child})) {
+                MinorImpact::log(8, "NO CHILD: $id");
                 my @children = $object->getChildren({ query => { %{$params->{query}{no_child}}, id_only => 1 } });
                 push(@objects, $object) unless (scalar(@children));
             } else {
