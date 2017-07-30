@@ -56,7 +56,7 @@ sub new {
             $config = $options->{config};
         } elsif ($options->{config_file}) {
             $config = readConfig($options->{config_file});
-        } elsif ($ENV{MINORIMPACT_CONFIG}) {
+        } elsif ($ENV{MINORIMPACT_CONFIG} && -f $ENV{MINORIMPACT_CONFIG}) {
             $config = readConfig($ENV{MINORIMPACT_CONFIG});
         } elsif (-f "../conf/minorimpact.conf") {
             $config = readConfig("../conf/minorimpact.conf");
