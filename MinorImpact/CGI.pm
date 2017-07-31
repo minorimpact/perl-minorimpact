@@ -379,11 +379,7 @@ sub logout {
     #my $user = $MINORIMPACT->getUser();
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
-    my $object_cookie =  $CGI->cookie(-name=>'object_id', -value=>'', -expires=>'-1d');
-    my $view_cookie =  $CGI->cookie(-name=>'view_history', -value=>'', -expires=>'-1d');
     print "Set-Cookie: $user_cookie\n";
-    print "Set-Cookie: $object_cookie\n";
-    print "Set-Cookie: $view_cookie\n";
     $MINORIMPACT->redirect("?");
 }
 
@@ -570,15 +566,8 @@ sub viewHistory {
     my $field = shift;
     my $value = shift;
 
-
-    my $CGI = MinorImpact::getCGI();
-    my $history;
-    my $view_history = $CGI->cookie('view_history');
-    #MinorImpact::log(8, "\$CGI->cookie('view_history') = '$view_history'"); 
-    foreach my $pair (split(';', $view_history)) {
-        my ($f, $v) = $pair =~/^([^=]+)=(.*)$/;
-        $history->{$f} = $v if ($f);
-    }
+    my $session = MinorImpact::getSession();
+    my $history = $session->{view_history};
 
     if (!$field && !defined($value)) {
         return $history;
@@ -587,10 +576,8 @@ sub viewHistory {
     }
     $history->{$field} = $value;
 
-    $view_history = join(";", map { "$_=" . $history->{$_}; } keys %$history);
-    #MinorImpact::log(8, "view_history='$view_history'");
-    my $cookie =  $CGI->cookie(-name=>'view_history', -value=>$view_history);
-    print "Set-Cookie: $cookie\n";
+    $session->{view_history} = $history;
+    MinorImpact::setSession($session)
 }
 
 1;

@@ -139,6 +139,9 @@ sub getUser {
     if ($username && $password) {
         MinorImpact::log(3, "validating " . $username);
         my $user_hash = md5_hex("$username:$password");
+        # If this is the first page, the cookie hasn't been set, so if there are a ton of items
+        #   we're gonna validate against the database over and over again... so just validate against
+        #   a stored hash and return the cached user.
         if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
             return $self->{USER};
         }
@@ -148,23 +151,7 @@ sub getUser {
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
-            my $client_ip = $CACHE->get("client_ip:$user_id");
-            my $new_ip = $ENV{REMOTE_ADDR} || $ENV{SSH_CLIENT};
-            unless ($client_ip =~/$new_ip/) {
-                $client_ip = "$client_ip,$new_ip";
-                $client_ip =~s/^,?\d+\.\d+\.\d+\.\d+,// if (length($client_ip) > 128);
-                $CACHE->set("client_ip:$user_id", $client_ip, $timeout);
-            }
-            if ($ENV{REMOTE_ADDR}) {
-                my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$user_id);
-                print "Set-Cookie: $cookie\n";
-            } else {
-                # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT 
-                #   environment variable.
-                $CACHE->set($client_ip, $user_id, $timeout);
-            }
-            #MinorImpact::log(8, "cache->user_id:'" . $CACHE->get('user_id') . "'\n");
-            #MinorImpact::log(7, "ending");
+            MinorImpact::setSession({ user_id => $user_id });
             $self->{USER} = $user;
             $self->{USERHASH} = $user_hash;
             return $user;
@@ -176,26 +163,14 @@ sub getUser {
     return $self->{USER} if ($self->{USER});
 
 
-    # If the user has logged in before, and we can verify it's the same session,
-    #   we can get the user_id from cache or cookie and don't require credentials
-    #   again.
-    my $user_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT});
-    #MinorImpact::log(8, "user_id=$user_id");
+    my $session = MinorImpact::getSession();
+    my $user_id = $session->{user_id};
     if ($user_id) {
         #MinorImpact::log(8, "cached user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
-        my $ip_list = $CACHE->get("client_ip:$user_id");
-        MinorImpact::log(8, "\$ip_list='$ip_list',count='" . length($ip_list) . "'");
-        #MinorImpact::log(8, "client_ip=$client_ip");
-        if ($user && $ip_list) {
-            foreach my $client_ip ( split(",", $ip_list) ) {
-                #MinorImpact::log(8, "\$ENV{REMOTE_ADDR}=$ENV{REMOTE_ADDR}");
-                if ($client_ip && ($ENV{REMOTE_ADDR} eq $client_ip  || $ENV{SSH_CLIENT} eq $client_ip)) {
-                    #MinorImpact::log(7, "ending - cached ip matched current ip");
-                    $self->{USER} = $user;
-                    return $user;
-                }
-            }
+        if ($user) {
+            $self->{USER} = $user;
+            return $user;
         }
     }
 
@@ -209,6 +184,40 @@ sub getUser {
     #MinorImpact::log(7, "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
+}
+
+sub getSession {
+    my $CACHE = MinorImpact::getCache();
+    my $CGI = MinorImpact::getCGI();
+    my $session_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT}) || return {};
+    my $session = $CACHE->get("session:$session_id");
+    return $session || {};
+}
+
+sub setSession {
+    my $session = shift || return;
+
+    my $self = new MinorImpact();
+    my $CACHE = MinorImpact::getCache();
+    my $CGI = MinorImpact::getCGI();
+
+    my $timeout = $self->{conf}{default}{user_timeout} || 86400;
+    my $session_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT});
+    if ($session_id) {
+        return $CACHE->set("session:$session_id", $session, $timeout);
+    }
+
+    # ... otherwise, generate a new session_id.
+    $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
+    if ($ENV{REMOTE_ADDR}) {
+        my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
+        print "Set-Cookie: $cookie\n";
+    } else {
+        # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT
+        #   environment variable.
+        $CACHE->set($client_ip, $session_id, $timeout);
+    }
+    return $CACHE->set("session:$session_id", $session, $timeout);
 }
 
 sub redirect {
