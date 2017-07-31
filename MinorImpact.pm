@@ -194,7 +194,7 @@ sub session {
     my $CGI = MinorImpact::getCGI();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
-    my $session_id = $CGI->cookie("user_id") || $ENV{SSH_CLIENT};
+    my $session_id = $CGI->cookie("user_id") || $ENV{SSH_CLIENT} || $ENV{USER};
     my $session;
     if ($session_id) {
         $session = $CACHE->get("session:$session_id");
