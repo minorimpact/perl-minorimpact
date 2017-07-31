@@ -463,8 +463,7 @@ sub getCache {
         $self = $MinorImpact::SELF;
     }
 
-    my $local_params = cloneHash($params);
-    my $method = $local_params->{method} || 'file';
+    my $method = $params->{method} || ($self->{conf}{default}{memcached_server}?'memcached':'file');
 
     #MinorImpact::log(8, "\$method='$method'");
 
@@ -476,8 +475,12 @@ sub getCache {
     if ($method eq 'file') {
         $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
     } elsif ($method eq 'memcached') {
-        delete($local_params->{method});
-        return getCache($local_params) unless ($self->{conf}{default}{memcached_server});
+        unless ($self->{conf}{default}{memcached_server}) {
+            my $local_params = cloneHash($params);
+            $local_params->{method} = 'file';
+            return getCache($local_params);
+        }
+
         #MinorImpact::log(8, "memcached_server='" . $self->{conf}{default}{memcached_server} . "'");
         #$cache = new CHI( driver => "Memcached::libmemcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ], #l1_cache => { driver => 'FastMmap', root_dir => '/path/to/root' }
         #$cache = new CHI( driver => "Cache::Memcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] );
