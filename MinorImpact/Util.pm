@@ -162,19 +162,67 @@ sub parseTags {
     return sort map { lc($_); } keys %tags;
 }
 
+sub _getConsonant {
+    my $letter = _getLetter();
+    while (_isNoun($letter)) {
+        $letter = _getLetter();
+    }
+    return $letter;
+}
+sub _getLetter {
+    my $letter = chr(int(rand(26))+97);
+    if (indexOf($letter, ('q','x','z')) && rand(100) > .5) {
+        $letter = _getLetter();
+    } elsif (indexOf($letter, ('y')) && rand(100) > 1) {
+        $letter = _getLetter();
+    }
+
+    return $letter;
+}
+sub _getNoun {
+    my $letter = _getLetter();
+    while (!_isNoun($letter)) {
+        $letter = _getLetter();
+    }
+    return $letter;
+}
+sub _isNoun {
+    my $letter = shift || return;;
+    my @nouns = ('a', 'e', 'i', 'o', 'u');
+    push (@nouns, 'y') if (int(rand(100)) > 5);
+    return indexOf($letter, @nouns);
+}
+
 sub randomText {
-    my $word_count = shift || int(rand(15)) + 1;
+    my $word_count = shift;
     $word_count =~s/\D//g;
+    $word_count ||= int(rand(13)) + 3;
 
     my $text;
     for (my $i = 0; $i < $word_count; $i++) {
-        my $letter_count = int(rand(7)) + 3;
-        for (my $j = 0; $j < $letter_count; $j++) {
-            $text .= chr(int(rand(26))+97);
+        my $word;
+        my $letter_count = int(rand(5)) + int(rand(5)) + 1;
+        my $last_letter;
+        for (my $j = 1; $j <= $letter_count; $j++) {
+            my $letter = _getLetter();
+            redo if ($letter_count == 1 && !_isNoun($letter) && rand(100) > .001);
+            redo if ($last_letter && $last_letter eq $letter && rand(100) > 2);
+            redo if (_isNoun($letter) && !$last_letter && rand(100) > 40);
+            redo if (!_isNoun($letter) && $last_letter && !_isNoun($last_letter) && rand(100) > 10);
+            redo if (_isNoun($letter) && $last_letter && _isNoun($last_letter) && rand(100) > 15);
+            
+            $letter = 'y' if ($j == $letter_count && $letter !~/y/ && rand(100) < 3);
+            $word .= $letter;
+            $last_letter = $letter;
         }
-        $text .= " ";
+        my $nouns = 0;
+        foreach my $letter (split(//, $word)) {
+            $nouns++ if (_isNoun($letter));
+        }
+        redo if ($nouns == 0 && rand(100) > .001);
+        redo if ($nouns == length($word) && length($word) > 1 && rand(100) > .001);
+        $text .= "$word ";
     }
-    $text = ucfirst($text);
     trim(\$text);
     return $text;
 }
