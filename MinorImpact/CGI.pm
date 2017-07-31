@@ -566,8 +566,7 @@ sub viewHistory {
     my $field = shift;
     my $value = shift;
 
-    my $session = MinorImpact::getSession();
-    my $history = $session->{view_history};
+    my $history = MinorImpact::session('view_history');
 
     if (!$field && !defined($value)) {
         return $history;
@@ -577,7 +576,7 @@ sub viewHistory {
     $history->{$field} = $value;
 
     $session->{view_history} = $history;
-    MinorImpact::setSession($session)
+    MinorImpact::session('view_history', $history);
 }
 
 1;

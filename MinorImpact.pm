@@ -151,7 +151,7 @@ sub getUser {
             my $user_id = $user->id();
             my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
-            MinorImpact::setSession({ user_id => $user_id });
+            MinorImpact::session('user_id', $user_id);
             $self->{USER} = $user;
             $self->{USERHASH} = $user_hash;
             return $user;
@@ -163,8 +163,7 @@ sub getUser {
     return $self->{USER} if ($self->{USER});
 
 
-    my $session = MinorImpact::getSession();
-    my $user_id = $session->{user_id};
+    my $user_id = MinorImpact::session('user_id');
     if ($user_id) {
         #MinorImpact::log(8, "cached user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
@@ -186,37 +185,41 @@ sub getUser {
     return;
 }
 
-sub getSession {
-    my $CACHE = MinorImpact::getCache();
-    my $CGI = MinorImpact::getCGI();
-    my $session_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT}) || return {};
-    my $session = $CACHE->get("session:$session_id");
-    return $session || {};
-}
-
-sub setSession {
-    my $session = shift || return;
+sub session {
+    my $name = shift || return;
+    my $value = shift;
 
     my $self = new MinorImpact();
     my $CACHE = MinorImpact::getCache();
     my $CGI = MinorImpact::getCGI();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
-    my $session_id = $CGI->cookie("user_id") || $CACHE->get($ENV{SSH_CLIENT});
+    my $session_id = $CGI->cookie("user_id") || $$ENV{SSH_CLIENT};
+    my $session;
     if ($session_id) {
-        return $CACHE->set("session:$session_id", $session, $timeout);
+        $session = $CACHE->get("session:$session_id");
+    } else {
+        # ... otherwise, generate a new session_id.
+        $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
+        if ($ENV{REMOTE_ADDR}) {
+            my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
+            print "Set-Cookie: $cookie\n";
+        } else {
+            # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT
+            #   environment variable.
+            $CACHE->set($client_ip, $session_id, $timeout);
+        }
+        $session = {};
     }
 
-    # ... otherwise, generate a new session_id.
-    $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
-    if ($ENV{REMOTE_ADDR}) {
-        my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
-        print "Set-Cookie: $cookie\n";
-    } else {
-        # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT
-        #   environment variable.
-        $CACHE->set($client_ip, $session_id, $timeout);
+    if ($name && !defined($value)) {
+        return $session->{$name};
     }
+
+    if ($name && defined($value)) {
+        $session->{$name} = $value;
+    }
+    
     return $CACHE->set("session:$session_id", $session, $timeout);
 }
 
