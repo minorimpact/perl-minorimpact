@@ -510,17 +510,17 @@ sub _reload {
 sub getTags {
     my $self = shift || return;
 
-    my @tags = ();
-    foreach my $data (@{$self->{tags}}) {
-        push @tags, $data->{name};
-    }
-    return @tags;
+    return $self->tags();
 }
 
 sub tags {
     my $self = shift || return;
 
-    return $self->getTags();
+    my @tags = ();
+    foreach my $data (@{$self->{tags}}) {
+        push @tags, $data->{name};
+    }
+    return @tags;
 }
 
 sub delete {

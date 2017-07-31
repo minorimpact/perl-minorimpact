@@ -544,7 +544,7 @@ sub tags {
     my @tags;
     my $tags;
     foreach my $object (@objects) {
-        push(@tags, $object->getTags());
+        push(@tags, $object->tags());
     }
     map { $tags->{$_}++; } @tags;
     $TT->process('tags', {
