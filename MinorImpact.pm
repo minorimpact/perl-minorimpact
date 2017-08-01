@@ -30,10 +30,6 @@ sub db {
 }
 
 sub getCGI { 
-    return cgi();
-}
-
-sub cgi {
     return $SELF->{CGI}; 
 }
 
@@ -206,7 +202,7 @@ sub session {
 
     my $self = new MinorImpact();
     my $CACHE = MinorImpact::cache();
-    my $CGI = MinorImpact::cgi();
+    my $CGI = MinorImpact::getCGI();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
     my $session_id;
@@ -604,8 +600,6 @@ sub templateToolkit {
     return $self->getTT();
 }
 
-# TEST: Something I'm thinking about; some of the functionality of cgi scripts can be handled
-#   by the MinorImpact object, reducing code reuse.
 sub cgi {
     my $self = shift || return;
     my $params = shift || {};

@@ -113,8 +113,8 @@ sub search {
             @objects = reverse @objects;
         }
     }
-    my $page = $params->{query}{page} || 0;
-    my $limit = $params->{query}{limit} || ($page?10:0);
+    my $page = $params->{query}{page} || 1;
+    my $limit = $params->{query}{limit}; # || ($page?10:0);
 
     if ($page && $limit) {
         @objects = splice(@objects, (($page - 1) * $limit), $limit);

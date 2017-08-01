@@ -218,7 +218,7 @@ sub home {
             my $data = $object->toData();
             print "Content-type: text/plain\n\n";
             print to_json($data);
-            exit;
+            return;
         }
         viewHistory($object->typeName() . "_id", $object->id());
 
@@ -466,15 +466,18 @@ sub tablist {
 
     my $CGI = $self->getCGI();
     my $TT = $self->getTT();
-    my $user = $self->getUser();
+    my $user = $self->getUser({ force => 1 });
     my $script_name = MinorImpact::scriptName();
 
-    my $object_id = $CGI->param('id') || $CGI->param('object_id');
-    my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
     my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
-    my $search = $CGI->param('search') || '';
+    my $format = $CGI->param('format') || 'html';
+    my $limit = $CGI->param('limit');
+    if ($limit eq '') { $limit = 30; }
+    elsif ($limit eq 0) { $limit = ''; }
+    my $object_id = $CGI->param('id') || $CGI->param('object_id');
     my $page = $CGI->param('page') || 1;
-    my $limit = $CGI->param('limit') || 30;
+    my $search = $CGI->param('search') || '';
+    my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
 
     my $object;
     if ($object_id) {
@@ -500,7 +503,7 @@ sub tablist {
     }
     $local_params->{query}{debug} .= "collection::searchParams();";
     $local_params->{query}{page} = $page;
-    $local_params->{query}{limit} = $limit + 1;
+    $local_params->{query}{limit} = $limit + 1 if ($limit);
 
     # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
     my $max;
@@ -509,12 +512,25 @@ sub tablist {
     } else {
         @objects = MinorImpact::Object::Search::search($local_params);
     }
+    if ($format eq 'json') {
+        pop(@objects) if ($limit && scalar(@objects) > $limit);
+        my @data;
+        foreach my $object (@objects) {
+            push(@data, $object->toData());
+        }
+        print "Content-type: text/plain\n\n";
+        print to_json(\@data);
+        return;
+    }
 
-    my $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&&page=" . ($page - 1):'';
+    my $url_lasty;
     my $url_next;
-    if (scalar(@objects) > $limit) {
-        $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&page=" . ($page + 1);
-        pop(@objects);
+    if ($limit) {
+        $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&&page=" . ($page - 1):'';
+        if (scalar(@objects) > $limit) {
+            $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&page=" . ($page + 1);
+            pop(@objects);
+        }
     }
     $TT->process('tablist', {  
                             collections => [ @collections ],

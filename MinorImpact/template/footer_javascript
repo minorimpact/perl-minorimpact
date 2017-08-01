@@ -64,7 +64,8 @@
             \$("#reference_add-dialog").data('object_text_id',object_text_id).data('parent_id', parent_id).data('data', text).dialog("open");
             \$("#reference_add-text").html(text);
             \$("#object_id").html('');
-            \$.getJSON("index.cgi?a=list&format=json&type_id=" + \$("#object_type_id").val(), function(data) {
+            var url = "index.cgi?a=tablist&format=json&limit=0&type_id=" + \$("#object_type_id").val();
+            \$.getJSON(url, function(data) {
                 for (var i=0; i<data.length; i++) {
                     var object = data[i];
                     var select = "<option value=" + object.id;
