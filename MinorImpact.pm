@@ -38,10 +38,10 @@ sub new {
     my $package = shift;
     my $options = shift || {};
 
-    #(my $p = __PACKAGE__ ) =~ s#::#/#g;
-    #my $filename = $p . '.pm';
-    #(my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
-    #use lib "$path/$p";
+    (my $p = __PACKAGE__ ) =~ s#::#/#g;
+    my $filename = $p . '.pm';
+    (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
+    use lib "$path/$p";
 
     #my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
@@ -509,7 +509,7 @@ sub cache {
 sub tt {
     my $self = shift || return; 
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);

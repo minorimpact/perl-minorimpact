@@ -1,4 +1,4 @@
-package MinorImpact::collection;
+package collection;
 
 use MinorImpact;
 use MinorImpact::Object;
