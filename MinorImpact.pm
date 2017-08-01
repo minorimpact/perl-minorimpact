@@ -15,15 +15,11 @@ use Time::Local;
 use URI::Escape;
 
 use MinorImpact::BinLib;
-use MinorImpact::CGI;
+use MinorImpact::WWW;
 use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
-
-sub getDB { 
-    return db();
-}
 
 sub db {
     return $SELF->{DB};
@@ -97,7 +93,7 @@ sub new {
 
     if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
         my ($script_name) = scriptName();
-        my $user = $self->getUser();
+        my $user = $self->user();
         if ($user) {
             if ($options->{user_id} && $user->id() != $options->{user_id}) {
                 MinorImpact::log(3, "logged in user doesn't match");
@@ -120,13 +116,9 @@ sub new {
     return $self;
 }
 
-sub getUser {
-    my $self = shift || {};
-    my $params = shift || {};
-
-    return user($self, $params);
+sub user {
+    return user(@_);
 }
-
 sub user {
     my $self = shift || {};
     my $params = shift || {};
@@ -243,7 +235,7 @@ sub redirect {
     #MinorImpact::log(7, "starting");
 
     my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::getUser();
+    my $user = MinorImpact::user();
 
     my $search = $CGI->param('search');
     my $cid = $CGI->param('cid');
@@ -322,10 +314,6 @@ sub log {
     #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
     #}
     close(LOG);
-
-    #my $DB = MinorImpact::getDB();
-    #my $hostname = `hostname`;
-    #$DB->do("INSERT INTO log (hostname, pid, script, level, sub, message) VALUES (?, ?, ?, ?, ?, ?)", undef, ($hostname, $$, $0, $level, $sub, $message));
 }
 
 sub cache {
@@ -533,7 +521,7 @@ sub tt {
         $TT = $self->{TT};
     } else {
         my $CGI = cgi();
-        my $user = MinorImpact::getUser();
+        my $user = MinorImpact::user();
         my $cid = $CGI->param('cid');
         my $search = $CGI->param('search');
         my $sort = $CGI->param('sort');
@@ -548,7 +536,7 @@ sub tt {
         (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
         my $global_template_directory = File::Spec->catfile($path, "$package/template");
         #eval {
-        #    $user = $self->getUser();
+        #    $user = $self->user();
         #};
 
         my $variables = {
@@ -589,39 +577,39 @@ sub www {
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ( $action eq 'add') {
-        MinorImpact::CGI::add($self, $params);
+        MinorImpact::WWW::add($self, $params);
     } elsif ( $action eq 'add_reference') {
-        MinorImpact::CGI::add_reference($self, $params);
+        MinorImpact::WWW::add_reference($self, $params);
     } elsif ( $action eq 'collections') {
-        MinorImpact::CGI::collections($self, $params);
+        MinorImpact::WWW::collections($self, $params);
     } elsif ( $action eq 'css') {
-        MinorImpact::CGI::css($self, $params);
+        MinorImpact::WWW::css($self, $params);
     } elsif ( $action eq 'delete') {
-        MinorImpact::CGI::del($self, $params);
+        MinorImpact::WWW::del($self, $params);
     } elsif ( $action eq 'delete_collection') {
-        MinorImpact::CGI::delete_collection($self, $params);
+        MinorImpact::WWW::delete_collection($self, $params);
     } elsif ( $action eq 'edit') {
-        MinorImpact::CGI::edit($self, $params);
+        MinorImpact::WWW::edit($self, $params);
     } elsif ( $action eq 'home') {
-        MinorImpact::CGI::home($self, $params);
+        MinorImpact::WWW::home($self, $params);
     } elsif ( $action eq 'login') {
-        MinorImpact::CGI::login($self, $params);
+        MinorImpact::WWW::login($self, $params);
     } elsif ( $action eq 'logout') {
-        MinorImpact::CGI::logout($self, $params);
+        MinorImpact::WWW::logout($self, $params);
     } elsif ( $action eq 'object_types') {
-        MinorImpact::CGI::object_types($self);
+        MinorImpact::WWW::object_types($self);
     } elsif ( $action eq 'register') {
-        MinorImpact::CGI::register($self, $params);
+        MinorImpact::WWW::register($self, $params);
     } elsif ( $action eq 'save_search') {
-        MinorImpact::CGI::save_search($self, $params);
+        MinorImpact::WWW::save_search($self, $params);
     } elsif ( $action eq 'tablist') {
-        MinorImpact::CGI::tablist($self, $params);
+        MinorImpact::WWW::tablist($self, $params);
     } elsif ( $action eq 'tags') {
-        MinorImpact::CGI::tags($self, $params);
+        MinorImpact::WWW::tags($self, $params);
     } elsif ( $action eq 'user') {
-        MinorImpact::CGI::user($self);
+        MinorImpact::WWW::user($self);
     } else {
-        MinorImpact::CGI::index($self, $params);
+        MinorImpact::WWW::index($self, $params);
     }
 }
 

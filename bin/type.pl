@@ -60,7 +60,7 @@ sub main {
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
     my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
     die $user->name() . " does not have admin priviledges" unless ($user->isAdmin());
-    my $DB = $MINORIMPACT->getDB();
+    my $DB = $MINORIMPACT->db();
     MinorImpact::checkDatabaseTables($DB);
 
 

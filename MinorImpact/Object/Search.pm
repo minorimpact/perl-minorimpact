@@ -138,7 +138,7 @@ sub _search {
     my $params = shift || {};
 
     #MinorImpact::log(7, "starting");
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
 
     my $query = $params->{query}; # || $params;
     $query->{object_type_id} = $query->{object_type} if ($query->{object_type} && !$query->{object_type_id});
@@ -223,7 +223,7 @@ sub _search {
     my $hash = md5_hex($sql);
     #MinorImpact::log(8, "hash='" . $hash . "'");
 
-    my $cache = MinorImpact::getCache({ method => 'memcached' });
+    my $cache = MinorImpact::cache({ method => 'memcached' });
     if ($cache) {
         #MinorImpact::log(8, "ref=" . ref($cache->get_keys()));
         #$objects = $cache->get("search_$hash");

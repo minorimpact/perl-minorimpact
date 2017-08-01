@@ -54,7 +54,7 @@ sub main {
         ReadMode('restore');
     }
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
-    my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
+    my $user = $MINORIMPACT->user({username=>$username, password=>$password}) || die "Unable to validate user";
 
     if ($options{id} && (!$options{action} || $options{action} eq 'list')) {
         # We can't 'list' a single object, so just change it to 'info' if ID is defined.

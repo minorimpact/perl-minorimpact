@@ -16,7 +16,7 @@ sub new {
     my $id = shift || return;
 
     #MinorImpact::log(7, "starting(" . $id . ")");
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
     my $object;
 
     return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id});
@@ -65,13 +65,13 @@ sub _new {
     if ($type_name && !$params->{type_id}) {
         $params->{type_id} = type_id($type_name);
     }
-    $self->{DB} = MinorImpact::getDB() || die;
+    $self->{DB} = MinorImpact::db() || die;
     $self->{CGI} = MinorImpact::cgi() || die;
 
     my $object_id;
     if (ref($params) eq 'HASH') {
         #MinorImpact::log(8, "ref(\$params)='" . ref($params) . "'");
-        my $user_id = $params->{'user_id'} || $MinorImpact::SELF->getUser()->id();
+        my $user_id = $params->{'user_id'} || $MinorImpact::SELF->user()->id();
         die "error:invalid name" unless ($params->{name});
         die "error:invalid user id" unless ($user_id);
         die "error:invalid type id" unless ($params->{type_id});
@@ -342,7 +342,7 @@ sub fields {
     die "No type_id defined\n" unless ($object_type_id);
 
     my $fields;
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
     my $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
     foreach my $row (@$data) {
         #MinorImpact::log(8, $row->{name});
@@ -366,7 +366,7 @@ sub typeID {
         #MinorImpact::log(8, "ref(\$self)='" . ref($self) . "'");
         $object_type_id = $self->{data}->{object_type_id};
     } else {
-        my $DB = MinorImpact::getDB();
+        my $DB = MinorImpact::db();
         #MinorImpact::log(8, "\$self='$self'");
         if ($self =~/^[0-9]+$/) {
             $object_type_id = $self;
@@ -385,7 +385,7 @@ sub getType {
     my $self = shift;
     my $type_id;
 
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
 
     # Figure out the id of the object type they're looking for.
     if (ref($self)) {
@@ -422,7 +422,7 @@ sub getType {
 # Return an array of all the object types.
 sub types {
     my $params = shift || {};
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
 
     my $select = "SELECT * FROM object_type";
     my $where = "WHERE id > 0 AND system = 0";
@@ -454,7 +454,7 @@ sub typeName {
         $type_name = $self->{type_data}->{name};
         $plural_name = $self->{type_data}->{plural};
     } else {
-        my $DB = MinorImpact::getDB();
+        my $DB = MinorImpact::db();
         my $where = "name=?";
         if ($type_id =~/^[0-9]+$/) {
             $where = "id=?";
@@ -723,7 +723,7 @@ sub getReferences {
     my $self = shift || return;
     my $object_text_id = shift;
 
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
     if ($object_text_id) {
         # Only return references to a particular 
         return $DB->selectall_arrayref("select object_id, data, object_text_id from object_reference where object_text_id=?", {Slice=>{}}, ($object_text_id));
@@ -746,7 +746,7 @@ sub form {
     }
 
     my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::getUser() || die "Invalid user.";
+    my $user = MinorImpact::user() || die "Invalid user.";
     my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
@@ -768,7 +768,7 @@ sub form {
 
     # Add fields for the last things they were looking at.
     unless ($self) {
-        my $view_history = MinorImpact::CGI::viewHistory();
+        my $view_history = MinorImpact::WWW::viewHistory();
         foreach my $field (keys %$view_history) {
             my $value = $view_history->{$field};
             #MinorImpact::log(8, "\$view_history->{$field} = '$value'");
@@ -852,7 +852,7 @@ sub fieldID {
 
     my $object_type_id = MinorImpact::Object::type_id($object_type);
     #MinorImpact::log(8, "object_type_id='$object_type_id',field_name='$field_name'");
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
     #MinorImpact::log(8, "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
     my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $field_name));
     if (scalar(@{$data}) > 0) {
@@ -864,7 +864,7 @@ sub fieldID {
 sub getTagCounts {
     my $self = shift || return;
 
-    my $DB = MinorImpact::getDB();
+    my $DB = MinorImpact::db();
     my $VAR1 = $DB->selectall_hashref("select name, count(*) as tag_count from object_tag where object_id=? group by name", 'name', undef, ($self->id())) || die $DB->errstr;
     #$VAR1 = {
     #      'friend' => {
@@ -902,7 +902,7 @@ sub isSystem {
     #   event know what type of object it's *going* to be? Wait, that can't be true, right? What the fuck is
     #   going on here?!
     if ($self =~/^\d+$/) {
-        my $DB = MinorImpact::getDB();
+        my $DB = MinorImpact::db();
         my $data = $DB->selectrow_hashref("SELECT name, system FROM object_type ot WHERE ot.id=?", undef, ($self)) || die $DB->errstr;
         return $data->{system};
     } elsif (ref($self)) {
@@ -973,7 +973,7 @@ sub validateUser {
         return $object->validateUser($params);
     }
 
-    my $test_user = $params->{user} || MinorImpact::getUser($params);
+    my $test_user = $params->{user} || MinorImpact::user($params);
     return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
     #MinorImpact::log(8, "\$test_user->id()='" . $test_user->id() . "'");
     #MinorImpact::log(8, "\$self->userID()='" . $self->userID() . "'");
