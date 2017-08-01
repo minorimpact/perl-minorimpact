@@ -525,22 +525,20 @@ sub cache {
     return $cache;
 }
 
-# Return the templateToolkit object;
-sub getTT {
-    return tt(@_);
-}
-
 sub tt {
     my $self = shift || return; 
 
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);
         $self = $MinorImpact::SELF;
     }
 
-    unless ($self->{TT}) {
+    my $TT;
+    if ($self->{TT}) {
+        $TT = $self->{TT};
+    } else {
         my $CGI = getCGI();
         my $user = MinorImpact::getUser();
         my $cid = $CGI->param('cid');
@@ -567,10 +565,10 @@ sub tt {
             search      => $search,
             sort        => $sort,
             typeName    => sub { MinorImpact::Object::typeName(shift); },
-            user    => $user,
+            user        => $user,
         };
 
-        my $TT = Template->new({
+        $TT = Template->new({
             INCLUDE_PATH => [ $template_directory, $global_template_directory ],
             INTERPOLATE => 1,
             VARIABLES => $variables,
@@ -578,16 +576,8 @@ sub tt {
 
         $self->{TT} = $TT;
         
-    } else {
-        $TT = $self->{TT};
     }
     $TT->process(@_) || die $TT->error();
-}
-
-sub templateToolkit {
-    my $self = shift || return;
-
-    return $self->getTT();
 }
 
 sub cgi {

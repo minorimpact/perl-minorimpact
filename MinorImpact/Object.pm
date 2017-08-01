@@ -613,7 +613,6 @@ sub toString {
     my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
 
     my $MINORIMPACT = new MinorImpact();
-    my $TT = $MINORIMPACT->getTT();
 
     my $string = '';
     if ($params->{column}) { $params->{format} = "column";
@@ -657,7 +656,7 @@ sub toString {
                 $value = $field->toString();
             }
             my $row;
-            $TT->process('row_column', {name=>$field->displayName(), value=>$value}, \$row) || die $TT->error();
+            MinorImpact::tt('row_column', {name=>$field->displayName(), value=>$value}, \$row);
             $string .= $row;
         }
         $string .= "<!-- CUSTOM -->\n";
@@ -677,7 +676,7 @@ sub toString {
 
         foreach my $tag ($self->getTags()) {
             my $t;
-            $TT->process('tag', {tag=>$tag}, \$t) || die $TT->error();
+            MinorImpact::tt('tag', {tag=>$tag}, \$t);
             $string .= $t;
         }
     } elsif ($params->{format} eq 'row') {
@@ -690,10 +689,10 @@ sub toString {
     } elsif ($params->{format} eq 'text') {
         $string = $self->name();
     } elsif ($params->{format} eq 'list') {
-        $TT->process('object_list', { object => $self }, \$string) || die $TT->error();
+        MinorImpact::tt('object_list', { object => $self }, \$string);
     } else {
         my $template = $params->{template} || 'object';
-        $TT->process('object', { object => $self }, \$string) || die $TT->error();
+        MinorImpact::tt('object', { object => $self }, \$string);
     }
     #$self->log(7, "ending");
     return $string;
@@ -747,7 +746,6 @@ sub form {
     }
 
     my $CGI = MinorImpact::getCGI();
-    my $TT = MinorImpact::getTT();
     my $user = MinorImpact::getUser() || die "Invalid user.";
     my $user_id = $user->id();
 
@@ -811,7 +809,7 @@ sub form {
     my $name = $CGI->param('name') || ($self && $self->name());
     my $search = $CGI->param('search');
     my $tags = $CGI->param('tags') || ($self && join(' ', $self->getTags()));
-    $TT->process('form_object', {
+    MinorImpact::tt('form_object', {
                                     form_fields    => $form_fields,
                                     javascript     => $script,
                                     object         => $self,
@@ -819,7 +817,7 @@ sub form {
                                     name           => $name,
                                     no_name        => $local_params->{no_name},
                                     tags           => $tags,
-                                }, \$form) || die $TT->error();
+                                }, \$form);
     #MinorImpact::log(7, "ending");
     return $form;
 }

@@ -13,7 +13,6 @@ sub add {
     #MinorImpact::log(7, "starting");
 
     my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
     my $user = $self->getUser({ force => 1 });
 
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
@@ -51,12 +50,12 @@ sub add {
         $form = MinorImpact::Object::form($local_params);
     }
 
-    $TT->process('add', {
+    MinorImpact::tt('add', {
                         errors    => [ @errors ],
                         form      => $form,
                         type_name => $type_name,
                         type_id   => $type_id,
-                    }) || die $TT->error();
+                    });
 }
 
 sub add_reference {
@@ -84,13 +83,10 @@ sub collections {
     my $params = shift || {};
 
     my $user = $MINORIMPACT->getUser({ force => 1 });
-    my $TT = $MINORIMPACT->getTT();
 
     #my @collections = sort { $a->cmp($b); } $user->getCollections();
     my @collections = $user->getCollections();
-    $TT->process('collections', {
-                                    collections => [ @collections ],
-                        }) || die $TT->error();
+    MinorImpact::tt('collections', { collections => [ @collections ], });
 }
 
 sub css {
@@ -137,7 +133,6 @@ sub edit {
     my $params = shift || {};
 
     my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
     my $user = $self->getUser({ force => 1 });
 
     my $search = $CGI->param('search');
@@ -170,12 +165,12 @@ sub edit {
     }
 
     my $form = $object->form($params);
-    $TT->process('edit', { 
+    $self->tt('edit', { 
                         error   => $error,
                         form    => $form,
                         no_name => $params->{no_name},
                         object   =>$object,
-                    }) || die $TT->error();
+    });
 }
 
 sub home {
@@ -185,7 +180,6 @@ sub home {
     #MinorImpact::log(7, "starting");
 
     my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
     my $user = $self->getUser({ force => 1 });
 
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
@@ -300,7 +294,7 @@ sub home {
         pop(@objects) if ($url_next);
     }
 
-    $TT->process('home', {
+    MinorImpact::tt('home', {
                             cid         => $collection_id,
                             collections => [ @collections ],
                             object      => $object,
@@ -311,8 +305,7 @@ sub home {
                             types       => [ @types ],
                             url_last    => $url_last,
                             url_next    => $url_next,
-                            }) || die $TT->error();
-
+                            });
     # For testing.
     #if ($object && $object->typeID() == 4) {
     #    $object->updateAllDates();
@@ -329,7 +322,6 @@ sub index {
     $self->redirect("?a=home") if ($user);
 
     my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
 
@@ -339,9 +331,7 @@ sub index {
         };
     }
 
-    $TT->process('index', {
-                            }) || die $TT->error();
-
+    MinorImpact::tt('index');
 }
 
 sub login {
@@ -351,7 +341,6 @@ sub login {
     #MinorImpact::log(7, "starting");
 
     my $CGI = $MINORIMPACT->getCGI();
-    my $TT = $MINORIMPACT->getTT();
     
     my $user = $MINORIMPACT->getUser();
 
@@ -367,7 +356,7 @@ sub login {
         push(@errors, "Invalid username or password");
     }
 
-    $TT->process('login', { errors => [ @errors ], redirect => $redirect, username => $username }) || die $TT->error();
+    MinorImpact::tt('login', { errors => [ @errors ], redirect => $redirect, username => $username });
     #MinorImpact::log(7, "ending");
 }
 
@@ -400,7 +389,6 @@ sub register {
     #MinorImpact::log(7, "starting");
 
     my $CGI = $MI->getCGI();
-    my $tt = $MI->getTT();
 
     my $username = $CGI->param('username');
     my $email = $CGI->param('email');
@@ -464,7 +452,6 @@ sub tablist {
     my $params = shift || {};
 
     my $CGI = $self->getCGI();
-    my $TT = $self->getTT();
     my $user = $self->getUser({ force => 1 });
     my $script_name = MinorImpact::scriptName();
 
@@ -531,14 +518,14 @@ sub tablist {
             pop(@objects);
         }
     }
-    $TT->process('tablist', {  
+    MinorImpact::tt('tablist', {  
                             collections => [ @collections ],
                             objects     => [ @objects ],
                             search      => $search,
                             type_id     => $type_id,
                             url_last    => $url_last,
                             url_next    => $url_next,
-                            }) || die $TT->error();
+    });
 }
 
 sub tags {
@@ -548,7 +535,6 @@ sub tags {
     my $local_params = cloneHash($params);
     my $user = $MINORIMPACT->getUser({ force => 1 });
     my $CGI = $MINORIMPACT->getCGI();
-    my $TT = $MINORIMPACT->getTT();
     my $script_name = MinorImpact::scriptName();
 
     my $local_params = cloneHash($params);
@@ -562,19 +548,16 @@ sub tags {
         push(@tags, $object->tags());
     }
     map { $tags->{$_}++; } @tags;
-    $TT->process('tags', {
-                            tags       => $tags,
-                        }) || die $TT->error();
+    MinorImpact::tt('tags', { tags => $tags, });
 }
 
 sub user {
     my $MI = shift || return;
 
     my $user = $MI->getUser({ force => 1 });
-    my $TT = $MI->getTT();
     my $script_name = MinorImpact::scriptName();
 
-    $TT->process('user') || die $TT->error();
+    MinorImpact::tt('user');
 }
 
 sub viewHistory {

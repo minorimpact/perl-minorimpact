@@ -157,7 +157,6 @@ sub formRow {
     my $params = shift || {};
 
     #MinorImpact::log(7, "start");
-    my $TT = MinorImpact::getTT();
 
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
@@ -173,17 +172,17 @@ sub formRow {
         foreach my $value (@values) {
             $local_params->{row_value} = $value;
             my $row_form;
-            $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
+            MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
             $row .= $row_form;
         }
         $local_params->{duplicate} = 1;
         delete($local_params->{row_value});
         my $row_form;
-        $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form) || die $TT->error();
+        MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
         $row .= $row_form;
     } else {
         $local_params->{row_value} = $values[0];
-        $TT->process('row_form', { field => $self, input => $self->_input($local_params) }, \$row) || die $TT->error();
+        MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row);
     }
     #MinorImpact::log(7, "ending");
     return $row;
