@@ -41,7 +41,7 @@ sub new {
     (my $p = __PACKAGE__ ) =~ s#::#/#g;
     my $filename = $p . '.pm';
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
-    use lib "$path/$p";
+    use lib "$path/$p/Object";
 
     #my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
