@@ -22,10 +22,18 @@ use MinorImpact::User;
 use MinorImpact::Util;
 
 sub getDB { 
-    return $SELF->{DB}; 
+    return db();
+}
+
+sub db {
+    return $SELF->{DB};
 }
 
 sub getCGI { 
+    return cgi();
+}
+
+sub cgi {
     return $SELF->{CGI}; 
 }
 
@@ -120,6 +128,13 @@ sub getUser {
     my $self = shift || {};
     my $params = shift || {};
 
+    return user($self, $params);
+}
+
+sub user {
+    my $self = shift || {};
+    my $params = shift || {};
+
     #MinorImpact::log(7, "starting");
 
     if (ref($self) eq 'HASH') {
@@ -190,11 +205,17 @@ sub session {
     my $value = shift;
 
     my $self = new MinorImpact();
-    my $CACHE = MinorImpact::getCache();
-    my $CGI = MinorImpact::getCGI();
+    my $CACHE = MinorImpact::cache();
+    my $CGI = MinorImpact::cgi();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
-    my $session_id = $CGI->cookie("user_id") || $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
+    my $session_id;
+    if ($ENV{REMOTE_ADDR}) {
+        $session_id = $CGI->cookie("user_id");
+    } else {
+        $session_id = $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
+    }
+    #MinorImpact::log(8, "\$session_id='$session_id'\n");
     my $session;
     if ($session_id) {
         $session = $CACHE->get("session:$session_id");
@@ -204,10 +225,6 @@ sub session {
         if ($ENV{REMOTE_ADDR}) {
             my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
             print "Set-Cookie: $cookie\n";
-        } else {
-            # A slightly different cache for the command line version of the user_id cookie based on the SSH_CLIENT
-            #   environment variable.
-            $CACHE->set($client_ip, $session_id, $timeout);
         }
         $session = {};
     }
@@ -469,6 +486,13 @@ sub getCache {
     my $self = shift || {};
     my $params = shift || {};
 
+    return cache($self, $params);
+}
+
+sub cache {
+    my $self = shift || {};
+    my $params = shift || {};
+
     #MinorImpact::log(7, "starting");
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -490,7 +514,7 @@ sub getCache {
         unless ($self->{conf}{default}{memcached_server}) {
             my $local_params = cloneHash($params);
             $local_params->{method} = 'file';
-            return getCache($local_params);
+            return cache($local_params);
         }
 
         #MinorImpact::log(8, "memcached_server='" . $self->{conf}{default}{memcached_server} . "'");
@@ -507,6 +531,13 @@ sub getCache {
 
 # Return the templateToolkit object;
 sub getTT {
+    my $self = shift || {};
+    my $params = shift || {};
+
+    return tt($self, $params);
+}
+
+sub tt {
     my $self = shift || {};
     my $params = shift || {};
 
