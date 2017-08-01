@@ -134,7 +134,6 @@ sub user {
     }
 
     my $CGI = MinorImpact::cgi();
-    my $CACHE = MinorImpact::cache({ method => 'memcached' });
 
     # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
@@ -193,7 +192,6 @@ sub session {
     my $value = shift;
 
     my $self = new MinorImpact();
-    my $CACHE = MinorImpact::cache();
     my $CGI = MinorImpact::cgi();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
@@ -206,7 +204,7 @@ sub session {
     #MinorImpact::log(8, "\$session_id='$session_id'\n");
     my $session;
     if ($session_id) {
-        $session = $CACHE->get("session:$session_id");
+        $session = cache("session:$session_id");
     } else {
         # ... otherwise, generate a new session_id.
         $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
@@ -225,7 +223,7 @@ sub session {
         $session->{$name} = $value;
     }
     
-    return $CACHE->set("session:$session_id", $session, $timeout);
+    return cache("session:$session_id", $session, $timeout);
 }
 
 sub redirect {
@@ -314,39 +312,6 @@ sub log {
     #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
     #}
     close(LOG);
-}
-
-sub cache {
-    my $params = shift || {};
-
-    my $key = $params->{key} || return;
-    my $timeout = $params->{timeout} || 300;
-    my $method = $params->{method} || 'file';
-    my $value = $params->{value};
-
-    if ($method eq 'file') {
-        my $cache_file = "/tmp/minorimpact.cache";
-        my $config = readConfig($cache_file);
-        if (defined($value)) { # && $value ne '') {
-            # write cache
-            $config->{$key}{value} = $value;
-            $config->{$key}{timeout} = time() + $timeout;
-            writeConfig($cache_file, $config);
-        }  else {
-            # read cache
-            if ($config->{$key}{timeout} > time()) {
-                $value = $config->{$key}{value};
-            }
-        }
-    } elsif ($method eq 'memcached') {
-        my $cache = MinorImpact::getMemcached();
-        if (defined($value)) {
-            $cache->set($key, $value, $timeout);
-        } else {
-            $value = $cache->get($key);
-        }
-    }
-    return $value;
 }
 
 sub checkDatabaseTables {
@@ -467,40 +432,42 @@ sub checkDatabaseTables {
 }
 
 sub cache {
-    my $self = shift || {};
-    my $params = shift || {};
+    my $self = shift || return;
 
     #MinorImpact::log(7, "starting");
-    if (ref($self) eq "HASH") {
-        $params = $self;
+    if (!ref($self)) {
+        unshift(@_, $self);
         $self = $MinorImpact::SELF;
     }
 
-    my $method = $params->{method} || ($self->{conf}{default}{memcached_server}?'memcached':'file');
-
-    #MinorImpact::log(8, "\$method='$method'");
-
-    if ($self->{CACHE}{$method}) {
-        return $self->{CACHE}{$method};
-    }
-
     my $cache;
-    if ($method eq 'file') {
-        $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
-    } elsif ($method eq 'memcached') {
-        unless ($self->{conf}{default}{memcached_server}) {
-            my $local_params = cloneHash($params);
-            $local_params->{method} = 'file';
-            return cache($local_params);
+    if ($self->{CACHE}) {
+        $cache = $self->{CACHE};
+    } else {
+        if ($self->{conf}{default}{memcached_server}) {
+            $cache = new Cache::Memcached({ servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] });
+        } else {
+            $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
         }
-
-        #MinorImpact::log(8, "memcached_server='" . $self->{conf}{default}{memcached_server} . "'");
-        #$cache = new CHI( driver => "Memcached::libmemcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ], #l1_cache => { driver => 'FastMmap', root_dir => '/path/to/root' }
-        #$cache = new CHI( driver => "Cache::Memcached", servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] );
-        $cache = new Cache::Memcached({ servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] });
+        die "Can't create cache\n" unless ($cache);
+        $self->{CACHE} = $cache;
     }
 
-    $self->{CACHE}{$method} = $cache if ($cache);
+    my $name = shift || return;
+    my $value = shift;
+    my $timeout = shift;
+
+    if ($self->{conf}{default}{application_id}) {
+        $name = $self->{conf}{default}{application_id} . "_$name";
+    }
+    if (!defined($value)) {
+        my $value = $cache->get($name);
+        MinorImpact::log(8, "$name='" . $value . "'");
+        return $value;
+    }
+
+    MinorImpact::log(8, "setting $name='" . $value . "' ($timeout)");
+    $cache->set($name, $value, $timeout);
 
     #MinorImpact::log(7, "ending");
     return $cache;

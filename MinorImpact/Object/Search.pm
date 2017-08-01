@@ -223,15 +223,14 @@ sub _search {
     my $hash = md5_hex($sql);
     #MinorImpact::log(8, "hash='" . $hash . "'");
 
-    my $cache = MinorImpact::cache({ method => 'memcached' });
     if ($cache) {
         #MinorImpact::log(8, "ref=" . ref($cache->get_keys()));
-        #$objects = $cache->get("search_$hash");
+        #$objects = MinorImpact::cache("search_$hash");
     }
 
     unless ($objects) {
         $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
-        $cache->set("search_$hash", $objects) if ($cache);
+        MinorImpact::cache("search_$hash", $objects);
     }
 
     #MinorImpact::log(7, "ending");
