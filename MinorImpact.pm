@@ -29,7 +29,7 @@ sub db {
     return $SELF->{DB};
 }
 
-sub getCGI { 
+sub cgi { 
     return $SELF->{CGI}; 
 }
 
@@ -141,7 +141,7 @@ sub user {
         $self = new MinorImpact();
     }
 
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $CACHE = MinorImpact::getCache({ method => 'memcached' });
 
     # If the username and password are provided, then validate the user.
@@ -202,7 +202,7 @@ sub session {
 
     my $self = new MinorImpact();
     my $CACHE = MinorImpact::cache();
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
 
     my $timeout = $self->{conf}{default}{user_timeout} || 86400;
     my $session_id;
@@ -242,7 +242,7 @@ sub redirect {
 
     #MinorImpact::log(7, "starting");
 
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::getUser();
 
     my $search = $CGI->param('search');
@@ -539,7 +539,7 @@ sub tt {
     if ($self->{TT}) {
         $TT = $self->{TT};
     } else {
-        my $CGI = getCGI();
+        my $CGI = cgi();
         my $user = MinorImpact::getUser();
         my $cid = $CGI->param('cid');
         my $search = $CGI->param('search');
@@ -580,11 +580,11 @@ sub tt {
     $TT->process(@_) || die $TT->error();
 }
 
-sub cgi {
+sub www {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $action = $CGI->param('a') || $CGI->param('action') || 'index';
 
     #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));

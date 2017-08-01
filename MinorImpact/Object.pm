@@ -66,7 +66,7 @@ sub _new {
         $params->{type_id} = type_id($type_name);
     }
     $self->{DB} = MinorImpact::getDB() || die;
-    $self->{CGI} = MinorImpact::getCGI() || die;
+    $self->{CGI} = MinorImpact::cgi() || die;
 
     my $object_id;
     if (ref($params) eq 'HASH') {
@@ -138,7 +138,7 @@ sub back {
     my $self = shift || return;
     my $params = shift || {};
     
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $cid = $CGI->param('cid');
     my $search = $CGI->param('search');
     my $sort = $CGI->param('sort');
@@ -745,7 +745,7 @@ sub form {
         undef($self);
     }
 
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::getUser() || die "Invalid user.";
     my $user_id = $user->id();
 

@@ -12,7 +12,7 @@ sub add {
 
     #MinorImpact::log(7, "starting");
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
 
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
@@ -63,7 +63,7 @@ sub add_reference {
     my $params = shift || {};
 
     my $user = $MINORIMPACT->getUser({ force => 1 });
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $DB = MinorImpact::getDB();
 
     my $object_id = $CGI->param('object_id');
@@ -100,7 +100,7 @@ sub del {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
@@ -115,7 +115,7 @@ sub delete_collection {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
 
     my $collection_id = $CGI->param('cid') || $self->redirect();
@@ -132,7 +132,7 @@ sub edit {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
 
     my $search = $CGI->param('search');
@@ -179,7 +179,7 @@ sub home {
 
     #MinorImpact::log(7, "starting");
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
 
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
@@ -321,7 +321,7 @@ sub index {
     my $user = $self->getUser();
     $self->redirect("?a=home") if ($user);
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
 
@@ -340,7 +340,7 @@ sub login {
 
     #MinorImpact::log(7, "starting");
 
-    my $CGI = $MINORIMPACT->getCGI();
+    my $CGI = $MINORIMPACT->cgi();
     
     my $user = $MINORIMPACT->getUser();
 
@@ -363,7 +363,7 @@ sub login {
 sub logout {
     my $MINORIMPACT = shift || return;
 
-    my $CGI = $MINORIMPACT->getCGI();
+    my $CGI = $MINORIMPACT->cgi();
     #my $user = $MINORIMPACT->getUser();
 
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
@@ -388,7 +388,7 @@ sub register {
 
     #MinorImpact::log(7, "starting");
 
-    my $CGI = $MI->getCGI();
+    my $CGI = $MI->cgi();
 
     my $username = $CGI->param('username');
     my $email = $CGI->param('email');
@@ -433,7 +433,7 @@ sub save_search {
     my $params = shift || {};
 
     #MinorImpact::log(7, "starting");
-    my $CGI = MinorImpact::getCGI();
+    my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::getUser({ force => 1 });
 
     my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
@@ -451,7 +451,7 @@ sub tablist {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $CGI = $self->getCGI();
+    my $CGI = $self->cgi();
     my $user = $self->getUser({ force => 1 });
     my $script_name = MinorImpact::scriptName();
 
@@ -534,7 +534,7 @@ sub tags {
 
     my $local_params = cloneHash($params);
     my $user = $MINORIMPACT->getUser({ force => 1 });
-    my $CGI = $MINORIMPACT->getCGI();
+    my $CGI = $MINORIMPACT->cgi();
     my $script_name = MinorImpact::scriptName();
 
     my $local_params = cloneHash($params);
