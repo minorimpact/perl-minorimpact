@@ -457,16 +457,14 @@ sub cache {
     my $value = shift;
     my $timeout = shift;
 
-    if ($self->{conf}{default}{application_id}) {
-        $name = $self->{conf}{default}{application_id} . "_$name";
-    }
+    $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
     if (!defined($value)) {
         my $value = $cache->get($name);
-        MinorImpact::log(8, "$name='" . $value . "'");
+        #MinorImpact::log(8, "$name='" . $value . "'");
         return $value;
     }
 
-    MinorImpact::log(8, "setting $name='" . $value . "' ($timeout)");
+    #MinorImpact::log(8, "setting $name='" . $value . "' ($timeout)");
     $cache->set($name, $value, $timeout);
 
     #MinorImpact::log(7, "ending");
