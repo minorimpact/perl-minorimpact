@@ -97,8 +97,7 @@ sub css {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $TT = $self->getTT();
-    $TT->process('css');
+    MinorImpact::tt('css');
 }
 
 sub del {

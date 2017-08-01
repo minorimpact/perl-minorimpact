@@ -527,71 +527,61 @@ sub cache {
 
 # Return the templateToolkit object;
 sub getTT {
-    my $self = shift || {};
-    my $params = shift || {};
-
-    return tt($self, $params);
+    return tt(@_);
 }
 
 sub tt {
-    my $self = shift || {};
-    my $params = shift || {};
+    my $self = shift || return; 
 
     #MinorImpact::log(7, "starting");
 
-    if (ref($self) eq "HASH") {
-        $params = $self;
+    if (!ref($self)) {
+        unshift(@_, $self);
         $self = $MinorImpact::SELF;
     }
 
-    if ($self->{TT}) {
-        return $self->{TT};
+    unless ($self->{TT}) {
+        my $CGI = getCGI();
+        my $user = MinorImpact::getUser();
+        my $cid = $CGI->param('cid');
+        my $search = $CGI->param('search');
+        my $sort = $CGI->param('sort');
+
+        my $template_directory = $self->{conf}{default}{template_directory};
+
+        # The default package templates are in the 'template' directory 
+        # in the libary.  Find it, and use it as the secondary template location.
+        (my $package = __PACKAGE__ ) =~ s#::#/#g;
+        my $filename = $package . '.pm';
+
+        (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
+        my $global_template_directory = File::Spec->catfile($path, "$package/template");
+        #eval {
+        #    $user = $self->getUser();
+        #};
+
+        my $variables = {
+            cid         => $cid,
+            home        => $self->{conf}{default}{home_script},
+            script_name => MinorImpact::scriptName(),
+            search      => $search,
+            sort        => $sort,
+            typeName    => sub { MinorImpact::Object::typeName(shift); },
+            user    => $user,
+        };
+
+        my $TT = Template->new({
+            INCLUDE_PATH => [ $template_directory, $global_template_directory ],
+            INTERPOLATE => 1,
+            VARIABLES => $variables,
+        }) || die $TT->error();
+
+        $self->{TT} = $TT;
+        
+    } else {
+        $TT = $self->{TT};
     }
-
-    my $CGI = getCGI();
-    my $user = MinorImpact::getUser();
-    my $cid = $CGI->param('cid');
-    my $search = $CGI->param('search');
-    my $sort = $CGI->param('sort');
-
-    my $template_directory = $params->{template_directory} || $self->{conf}{default}{template_directory};
-
-    # The default package templates are in the 'template' directory 
-    # in the libary.  Find it, and use it as the secondary template location.
-    (my $package = __PACKAGE__ ) =~ s#::#/#g;
-    my $filename = $package . '.pm';
-
-    (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
-    my $global_template_directory = File::Spec->catfile($path, "$package/template");
-    #eval {
-    #    $user = $self->getUser();
-    #};
-
-    my $variables = {
-                        cid         => $cid,
-                        home        => $self->{conf}{default}{home_script},
-                        script_name => MinorImpact::scriptName(),
-                        search      => $search,
-                        sort        => $sort,
-                        typeName    => sub { MinorImpact::Object::typeName(shift); },
-                        user    => $user,
-                    };
-    if ($params->{variables}) {
-        foreach my $key (keys %{$params->{variables}}) {
-            $variables->{$key} = $params->{variables}{$key};
-        }
-    }
-
-    my $TT = Template->new({
-        INCLUDE_PATH => [ $template_directory, $global_template_directory ],
-        INTERPOLATE => 1,
-        VARIABLES => $variables,
-    }) || die $TT->error();
-
-    $self->{TT} = $TT;
-    
-    #MinorImpact::log(7, "ending");
-    return $TT;
+    $TT->process(@_) || die $TT->error();
 }
 
 sub templateToolkit {
