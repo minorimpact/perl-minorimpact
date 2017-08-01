@@ -142,7 +142,7 @@ sub user {
     }
 
     my $CGI = MinorImpact::cgi();
-    my $CACHE = MinorImpact::getCache({ method => 'memcached' });
+    my $CACHE = MinorImpact::cache({ method => 'memcached' });
 
     # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
@@ -476,13 +476,6 @@ sub checkDatabaseTables {
             )");
     }
     #MinorImpact::log(7, "ending");
-}
-
-sub getCache {
-    my $self = shift || {};
-    my $params = shift || {};
-
-    return cache($self, $params);
 }
 
 sub cache {
