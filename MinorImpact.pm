@@ -38,12 +38,14 @@ sub new {
     my $package = shift;
     my $options = shift || {};
 
+    # This exists solely so I can refer to included objects by their simple names (ie,
+    #   'collection', or 'note') rather than having to use their fully qualified package
+    #   names.  It's kind of a hack, but it makes the code and database cleaner.
     (my $p = __PACKAGE__ ) =~ s#::#/#g;
     my $filename = $p . '.pm';
     (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
     use lib "$path/$p/Object";
 
-    #my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
     my $self = $SELF;
     #MinorImpact::log(8, "starting");
@@ -491,7 +493,7 @@ sub tt {
         my $search = $CGI->param('search');
         my $sort = $CGI->param('sort');
 
-        my $template_directory = $self->{conf}{default}{template_directory};
+        my $template_directory = $ENV{MINORIMPACT_TEMPLATE} || $self->{conf}{default}{template_directory};
 
         # The default package templates are in the 'template' directory 
         # in the libary.  Find it, and use it as the secondary template location.

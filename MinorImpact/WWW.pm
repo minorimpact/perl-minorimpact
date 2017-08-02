@@ -3,7 +3,6 @@ package MinorImpact::WWW;
 use JSON;
 
 use MinorImpact;
-use MinorImpact::collection;
 use MinorImpact::Util;
 
 sub add {
