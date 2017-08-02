@@ -474,7 +474,7 @@ sub typeName {
     if ($params->{plural}) {
         return $plural_name;
     }
-    return $type_name
+    return $type_name;
 }
 
 sub _reload {
@@ -482,9 +482,11 @@ sub _reload {
     my $object_id = shift || $self->id();
 
     #MinorImpact::log(7, "starting(" . $object_id . ")");
-         
+
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     $self->{type_data} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->typeID()));
+
+    $self->dbConfig() if ($self->version() < $self->{type_data}{version});
 
     undef($self->{object_data});
     $self->{object_data} = $self->fields();
@@ -507,10 +509,7 @@ sub _reload {
     #MinorImpact::log(7, "ending(" . $object_id . ")");
 }
 
-sub getTags {
-    my $self = shift || return;
-
-    return $self->tags();
+sub dbConfig {
 }
 
 sub tags {
@@ -674,7 +673,7 @@ sub toString {
             $string .= "</table>\n";
         }
 
-        foreach my $tag ($self->getTags()) {
+        foreach my $tag ($self->tags()) {
             my $t;
             MinorImpact::tt('tag', {tag=>$tag}, \$t);
             $string .= $t;
@@ -715,7 +714,7 @@ sub toData {
             $data->{$name} = $values[0];
         }
     }
-    @{$data->{tags}} = ($self->getTags());
+    @{$data->{tags}} = ($self->tags());
     return $data;
 }
 
@@ -808,7 +807,7 @@ sub form {
 
     my $name = $CGI->param('name') || ($self && $self->name());
     my $search = $CGI->param('search');
-    my $tags = $CGI->param('tags') || ($self && join(' ', $self->getTags()));
+    my $tags = $CGI->param('tags') || ($self && join(' ', $self->tags()));
     MinorImpact::tt('form_object', {
                                     form_fields    => $form_fields,
                                     javascript     => $script,
@@ -887,7 +886,7 @@ sub hasTag {
     my $self = shift || return;
     my $tag = shift || return;
 
-    return scalar(grep(/^$tag$/, $self->getTags()));
+    return scalar(grep(/^$tag$/, $self->tags()));
 }
 
 sub isSystem {
@@ -920,7 +919,7 @@ sub match {
 
     # Check tags first.
     if ($params->{tag}) {
-        my @tags = $self->getTags();
+        my @tags = $self->tags();
         foreach my $tag (split(/,/, $params->{tag})) {
             if ($tag =~/^!(\w+)$/) {
                 # We found it - that's bad.
