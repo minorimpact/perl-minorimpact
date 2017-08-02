@@ -486,8 +486,6 @@ sub _reload {
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     $self->{type_data} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->typeID()));
 
-    $self->dbConfig() if ($self->version() < $self->{type_data}{version});
-
     undef($self->{object_data});
     $self->{object_data} = $self->fields();
 
