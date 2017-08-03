@@ -24,8 +24,8 @@
 [% ELSIF types && types.size > 1 %]
     <div id=tabs>
     <ul>
-    [% FOREACH type_id IN types %]
-        <li><a href='[% INCLUDE url_index action='tablist' %]'>[% typeName({object_type_id=>type_id, plural=>1}) %]</a></li>
+    [% FOREACH object_type_id IN types %]
+        <li><a href='[% INCLUDE url_index action='tablist' %]'>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</a></li>
     [% END %]
     </ul>
     </div>

@@ -58,7 +58,7 @@ sub getCollections {
     $local_params->{query} = { 
                         %{$local_params->{query}},
                         debug          => 'MinorImpact::User::getCollections();',
-                        object_type_id => MinorImpact::Object::typeID('collection'), 
+                        object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
                         user_id        => $self->id(),
                     };
     return MinorImpact::Object::Search::search($local_params);

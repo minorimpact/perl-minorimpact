@@ -62,6 +62,10 @@ sub _new {
     return $self;
 }
 
+sub defaultValue {
+    return '';
+}
+
 sub validate {
     my $self = shift || return;
     my $value = shift;

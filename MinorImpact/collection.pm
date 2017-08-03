@@ -1,10 +1,12 @@
-package collection;
+package MinorImpact::collection;
 
 use MinorImpact;
 use MinorImpact::Object;
 use MinorImpact::Util;
 
 our @ISA = qw(MinorImpact::Object);
+
+my $VERSION = 1;
 
 sub new {
     my $package = shift;
@@ -21,11 +23,18 @@ sub new {
         }
     }
 
+
     my $self = $package->SUPER::_new($params);
     bless($self, $package);
 
     #$self->log(7, "ending");
     return $self;
+}
+
+sub dbConfig {
+    MinorImpact::log(7, "starting");
+    MinorImpact::log(8, "ending");
+    return;
 }
 
 sub searchParams {

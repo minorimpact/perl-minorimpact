@@ -17,6 +17,10 @@ sub new {
     return $self;
 }
 
+sub defaultValue {
+    return '0000-00-00 00:00:00';
+}
+
 sub toString {
     my $self = shift || return;
     #MinorImpact::log(7, "starting");

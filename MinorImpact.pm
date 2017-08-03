@@ -15,11 +15,14 @@ use Time::Local;
 use URI::Escape;
 
 use MinorImpact::BinLib;
+use MinorImpact::collection;
 use MinorImpact::WWW;
 use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
+
+my $VERSION = 1;
 
 sub db {
     return $SELF->{DB};
@@ -37,15 +40,6 @@ sub scriptName {
 sub new {
     my $package = shift;
     my $options = shift || {};
-
-    # This exists solely so I can refer to included objects by their simple names (ie,
-    #   'collection', or 'note') rather than having to use their fully qualified package
-    #   names.  It's kind of a hack, but it makes the code and database cleaner.
-    (my $p = __PACKAGE__ ) =~ s#::#/#g;
-    my $filename = $p . '.pm';
-    (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
-    use lib "$path/$p/Object";
-
 
     my $self = $SELF;
     #MinorImpact::log(8, "starting");
@@ -119,9 +113,6 @@ sub new {
 }
 
 sub user {
-    return user(@_);
-}
-sub user {
     my $self = shift || {};
     my $params = shift || {};
 
@@ -178,7 +169,6 @@ sub user {
     }
 
     # Not sure what this is supposed to do.  Maybe it auto validates from the command line
-    #   if the logged in user is a valid user in the system?  Seems dangerous.
     #if ($ENV{'USER'}) {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
@@ -187,6 +177,10 @@ sub user {
     #MinorImpact::log(7, "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
+}
+
+sub userID {
+    return user()->id();
 }
 
 sub session {

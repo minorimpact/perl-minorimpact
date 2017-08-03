@@ -17,6 +17,10 @@ sub new {
     return $self;
 }
 
+sub defaultValue {
+    return 0;
+}
+
 sub addValue {
     my $self = shift || return;
     my $data = shift || return;

@@ -1,5 +1,7 @@
 package MinorImpact::Object;
 
+use strict;
+
 use Data::Dumper;
 use JSON;
 use Text::Markdown 'markdown';
@@ -19,16 +21,20 @@ sub new {
     my $DB = MinorImpact::db();
     my $object;
 
-    return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id});
+    # If we've created this object before, just return the cached version
+    #   NOTE: This is local process cache, not a persistent external cache.
+    return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id} && $id =~/^\d+$/);
 
     eval {
         my $data;
         if (ref($id) eq "HASH") {
-            $data = $DB->selectrow_hashref("SELECT name, system FROM object_type ot WHERE ot.id=?", undef, ($id->{type_id})) || die $MinorImpact::SELF->{DB}->errstr;
+            die "Can't create a new object without an object type id." unless ($id->{object_type_id});
+            $data = $DB->selectrow_hashref("SELECT name, system, version FROM object_type ot WHERE ot.id=? or ot.name=?", undef, ($id->{object_type_id}, $id->{object_type_id}));
         } else {
-            $data = $DB->selectrow_hashref("SELECT ot.name, ot.system FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+            $data = $DB->selectrow_hashref("SELECT ot.name, ot.system, ot.version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
         }
         my $type_name = $data->{name}; 
+        my $version = $data->{version};
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
         $object = $type_name->new($id) if ($type_name);
     };
@@ -59,69 +65,39 @@ sub _new {
     my $self = {};
     bless($self, $package);
 
+    $self->dbConfig() if ($self->version() > $self->{type_data}{version});
+
     #MinorImpact::log(7, "starting(" . $params . ")");
     #MinorImpact::log(8, "package='$package'");
-    my $type_name = lc($package);
-    if ($type_name && !$params->{type_id}) {
-        $params->{type_id} = type_id($type_name);
-    }
     $self->{DB} = MinorImpact::db() || die;
     $self->{CGI} = MinorImpact::cgi() || die;
 
     my $object_id;
     if (ref($params) eq 'HASH') {
         #MinorImpact::log(8, "ref(\$params)='" . ref($params) . "'");
-        my $user_id = $params->{'user_id'} || $MinorImpact::SELF->user()->id();
-        die "error:invalid name" unless ($params->{name});
-        die "error:invalid user id" unless ($user_id);
-        die "error:invalid type id" unless ($params->{type_id});
-        # TODO: isn't this just duplicating the fields() and update() functionatlity? Sure, we should independent
-        #   verification before we create the object (maybe? Hiw is this being done during update?) but then how is this different
-        #   than just creating the object and passing the values to update()?  Maybe because without the rest of the data added to the
-        #   database, update doesn't work?  Look into all of this.
-        my $data = $self->{DB}->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($params->{type_id}));
-        foreach my $row (@$data) {
-            my $field_name = $row->{name};
-            #MinorImpact::log(8, "field_name='$field_name'");
-            if ((!defined($params->{$field_name}) || !$params->{$field_name}) && $row->{required}) {
-                MinorImpact::log(3, "$field_name cannot be blank");
-                die "$field_name cannot be blank";
-            }   
-        }
-        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'name'}, $user_id, $params->{'description'}, $params->{type_id})) || die("Can't add new object:" . $self->{DB}->errstr);
+
+        $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
+        $params->{object_type_id} = type_id(lc($package)) unless ($params->{object_type_id});
+
+        my $user_id = $params->{'user_id'} || MinorImpact::userID();
+        die "invalid name" unless ($params->{name});
+        die "invalid user id" unless ($user_id);
+        die "invalid type id" unless ($params->{object_type_id});
+
+        my $fields = fields($params->{object_type_id});
+        validateFields($fields, $params);
+
+        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'name'}, $user_id, $params->{'description'}, $params->{object_type_id})) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
             MinorImpact::log(3, "Couldn't insert new object record");
             die "Couldn't insert new object record";
         }
-        foreach my $row (@$data) {
-            my $field_name = $row->{name};
-            my $field_type = $row->{type};
-            #MinorImpact::log(8, "field_name/field_type='$field_name/$field_type'");
-            if (defined $params->{$field_name}) {
-                #MinorImpact::log(8, "\$params->{$field_name} defined, = '" . $params->{$field_name} . "'");
-                if ($field_type eq 'boolean') {
-                    $self->{DB}->do("insert into object_data(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, 1)) || die $self->{DB}->errstr;
-                } else {
-                    foreach my $value (split(/\0/, $params->{$field_name})) {
-                        #MinorImpact::log(8, "$field_name='$value'");
-                        if ($field_type =~/text$/ || $field_type =~/url$/) {
-                            $self->{DB}->do("insert into object_text(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, $value)) || die $self->{DB}->errstr;
-                        } else {
-                            $self->{DB}->do("insert into object_data(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, $value)) || die $self->{DB}->errstr;
-                        }
-                    }
-                }
-            } elsif ($field_type eq 'boolean') {
-                $self->{DB}->do("insert into object_data(object_id, object_field_id, value) values (?, ?, ?)", undef, ($object_id, $row->{id}, 0)) || die $self->{DB}->errstr;
-            }
-        }
 
-        if ($params->{tags}) {
-            foreach my $tag (parseTags($params->{tags})) {
-                $self->{DB}->do("INSERT INTO object_tag(object_id, name) VALUES (?, ?)", undef, ($object_id, $tag)) if (trim(\$tag));
-            }
-        }
+        # These two fields are the absolute minimum requirement to be considered a valid object.
+        $self->{data}{id} = $object_id;
+        $self->{data}{object_type_id} = $params->{object_type_id};
+        $self->update($params);
     } elsif ($params =~/^\d+$/) {
         $object_id = $params;
     } else {
@@ -154,24 +130,12 @@ sub back {
     return $url;
 }
 
-sub id { my $self = shift || return; return $self->{data}->{id}; }
-sub name { 
-    my $self = shift || return; 
-    my $params = shit || {};
-
-    return $self->get('name', $params); 
-}
+sub id {return shift->{data}->{id}; }
+sub name { return shift->get('name', shift); }
 
 # LEGACY
-sub user_id { 
-    my $self = shift || return; 
-    return $self->userID(); 
-}
-
-sub userID { 
-    my $self = shift || return; 
-    return $self->get('user_id'); 
-}   
+sub user_id { return shift->userID(); }
+sub userID { return shift->get('user_id'); }   
 
 sub selectList {
     my $self = shift || return;
@@ -258,6 +222,8 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
+    #MinorImpact::log(7, "starting");
+
     #if (!$fields) {
     #   dumper($fields);
     #}
@@ -273,6 +239,12 @@ sub validateFields {
         next unless ($field);
         $field->validate($params->{$field_name});
     }
+    foreach my $field_name (keys %$fields) {
+        my $field = $fields->{$field_name};
+        die "$field_name is a required field" if ($field->get('required') && !defined($params->{$field_name}));
+        $params->{$field_name} = $field->defaultValue() if (!defined($params->{$field_name}));
+    }
+    #MinorImpact::log(7, "ending");
 }
 
 sub update {
@@ -285,9 +257,6 @@ sub update {
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     my $fields = $self->fields();
-    #print "Content-type: text/html\n\n";
-    #dumper($fields);
-    #dumper($params);;
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
@@ -300,16 +269,19 @@ sub update {
             foreach my $value (split(/\0/, $params->{$field_name})) {
                 #MinorImpact::log(8, "$field_name='$value'");
                 if ($field_type =~/text$/ || $field_type eq 'url') {
-                    $self->{DB}->do("insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
+                    my $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+                    #MinorImpact::log(8, "$sql \@fields=" . $self->id() . ", " . $field->get('object_field_id') . ", $value");
+                    $self->{DB}->do($sql, undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 } else {
-                    #MinorImpact::log(8, "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW()) (" . $self->id() . ", " . $field->get('object_field_id') . ", $value)");
-                    $self->{DB}->do("insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())", undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
+                    my $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+                    #MinorImpact::log(8, "$sql \@fields=" . $self->id() . ", " . $field->get('object_field_id') . ", $value");
+                    $self->{DB}->do($sql, undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
                 }
             }
         }
     }
 
-    foreach $param (keys %$params) {
+    foreach my $param (keys %$params) {
         if ($param =~/^tags$/) {
             $self->{DB}->do("DELETE FROM object_tag WHERE object_id=?", undef, ($self->id()));
             MinorImpact::log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
@@ -338,6 +310,7 @@ sub fields {
     } else {
         $object_type_id = $self;
     }
+    #MinorImpact::log(8, "\$self='" .$self."'");
 
     die "No type_id defined\n" unless ($object_type_id);
 
@@ -351,11 +324,7 @@ sub fields {
     return $fields;
 }
 
-sub type_id {
-    my $self = shift || return;
-
-    return MinorImpact::Object::typeID($self);
-}
+sub type_id { return MinorImpact::Object::typeID(@_); }
 
 sub typeID {
     my $self = shift || return;
@@ -492,7 +461,6 @@ sub _reload {
     my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
     foreach my $row (@$data) {
         if ($self->{object_data}->{$row->{name}}) {
-
             $self->{object_data}->{$row->{name}}->addValue($row);
         }
     }
@@ -505,19 +473,13 @@ sub _reload {
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
 
     #MinorImpact::log(7, "ending(" . $object_id . ")");
+    return;
 }
 
 sub dbConfig {
-}
-
-sub tags {
-    my $self = shift || return;
-
-    my @tags = ();
-    foreach my $data (@{$self->{tags}}) {
-        push @tags, $data->{name};
-    }
-    return @tags;
+    MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "endinf");
+    return;
 }
 
 sub delete {
@@ -526,7 +488,7 @@ sub delete {
 
     my $object_id = $self->id();
     my $DB = $self->{DB};
-    MinorImpact::log(7, "starting(" . $object_id . ")");
+    #MinorImpact::log(7, "starting(" . $object_id . ")");
 
     my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
@@ -544,7 +506,7 @@ sub delete {
     $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id));
     $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id));
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
 }
 
 sub log {
@@ -554,6 +516,19 @@ sub log {
 
     MinorImpact::log($level, $message);
     return;
+}
+
+sub tags {
+    my $self = shift || return;
+    if (scalar(@_)) {
+        $self->update({ tags => join(",", @_) });
+    }
+
+    my @tags = ();
+    foreach my $data (@{$self->{tags}}) {
+        push @tags, $data->{name};
+    }
+    return @tags;
 }
 
 sub getChildTypes {
@@ -963,7 +938,7 @@ sub validateUser {
 
     #MinorImpact::log(7, "starting(" . $self->id() . ")");
 
-    return true if ($self->isSystem());
+    return 1 if ($self->isSystem());
 
     if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
         my $object = new MinorImpact::Object($params->{proxy_object_id}) || die "Cannot create proxy object for validation.";
@@ -979,6 +954,14 @@ sub validateUser {
     #MinorImpact::log(8, $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
     #MinorImpact::log(7, "ending:$valid");
     return $valid;
+}
+
+sub version {
+    my $self = shift || return;
+
+    no strict 'refs';
+    my $class = ref($self) || $self;
+    return ${$class . "::VERSION"} || 0;
 }
 
 1;

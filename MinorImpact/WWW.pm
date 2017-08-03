@@ -15,9 +15,9 @@ sub add {
     my $user = $self->user({ force => 1 });
 
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
-    my $type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
-    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
-    $type_id ||= MinorImpact::Object::getType();
+    my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id && $object_type_id !~/^\d+$/);
+    $object_type_id ||= MinorImpact::Object::getType();
 
     my $object;
     my @errors;
@@ -26,7 +26,16 @@ sub add {
         if ($action eq 'add') {
             #MinorImpact::log(8, "submitted action eq 'add'");
             $params->{user_id} = $user->id();
-            $params->{type_id} = $type_id;
+            $params->{object_type_id} = $object_type_id;
+
+            # Add the booleans manually, since unchecked values don't get 
+            #   submitted.
+            my $fields = MinorImpact::Object::fields($object_type_id);
+            foreach my $name (keys %$fields) {
+                if ($fields->{$name}->type() eq 'boolean' && !defined($params->{$name})) {
+                    $params->{$name} = 0;
+                }
+            }
             eval {
                 $object = new MinorImpact::Object($params);
             };
@@ -38,8 +47,8 @@ sub add {
         }
     }
 
-    my $type_name = MinorImpact::Object::typeName({ object_type_id => $type_id });
-    my $local_params = {object_type_id=>$type_id};
+    my $type_name = MinorImpact::Object::typeName({ object_type_id => $object_type_id });
+    my $local_params = {object_type_id=>$object_type_id};
     #MinorImpact::log(8, "\$type_name='$type_name'");
     my $form;
     eval {
@@ -50,10 +59,10 @@ sub add {
     }
 
     MinorImpact::tt('add', {
-                        errors    => [ @errors ],
-                        form      => $form,
-                        type_name => $type_name,
-                        type_id   => $type_id,
+                        errors           => [ @errors ],
+                        form             => $form,
+                        object_type_name => $type_name,
+                        object_type_id   => $object_type_id,
                     });
 }
 
@@ -141,11 +150,8 @@ sub edit {
 
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
-        # Checkboxes don't come back from forms, but object::update() supports only setting a subset of
-        #   fields, so unless I want it to set all boolean fields to false no matter what is updated, 
-        #   I need to manually set them to false if they exist, because browsers don't send data
-        #   for  checkboxes unless they're true.  I've got the strangest sense that I've done this
-        #   before.
+        # Add the booleans manually, since unchecked values don't get 
+        #   submitted.
         my $fields = $object->fields();
         foreach my $name (keys %$fields) {
             if ($fields->{$name}->type() eq 'boolean' && !defined($params->{$name})) {
@@ -463,7 +469,7 @@ sub tablist {
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
     my $page = $CGI->param('page') || 1;
     my $search = $CGI->param('search') || '';
-    my $type_id = $CGI->param('type_id') || $CGI->param('type') || return;
+    my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id') || $CGI->param('type') || return;
 
     my $object;
     if ($object_id) {
@@ -471,13 +477,13 @@ sub tablist {
             $object = new MinorImpact::Object($object_id);
         };
     }
-    $type_id = MinorImpact::Object::typeID($type_id) if ($type_id && $type_id !~/^\d+$/);
-    $self->redirect() unless ($type_id);
-    my $type_name = MinorImpact::Object::typeName($type_id);
+    $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id && $object_type_id !~/^\d+$/);
+    $self->redirect() unless ($object_type_id);
+    my $type_name = MinorImpact::Object::typeName($object_type_id);
 
     # Show a list of objects of a certain type that refer to the current object.
     my $local_params;
-    $local_params->{query} = {object_type_id=>$type_id, sort=>1, debug=> "MinorImpact::www::tablist();"};
+    $local_params->{query} = {object_type_id=>$object_type_id, sort=>1, debug=> "MinorImpact::www::tablist();"};
     $local_params->{query}{user_id} = $user->id() if ($user);
 
     my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
@@ -512,19 +518,19 @@ sub tablist {
     my $url_lasty;
     my $url_next;
     if ($limit) {
-        $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&&page=" . ($page - 1):'';
+        $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$object_type_id&search=$search&&page=" . ($page - 1):'';
         if (scalar(@objects) > $limit) {
-            $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$type_id&search=$search&page=" . ($page + 1);
+            $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$object_type_id&search=$search&page=" . ($page + 1);
             pop(@objects);
         }
     }
     MinorImpact::tt('tablist', {  
-                            collections => [ @collections ],
-                            objects     => [ @objects ],
-                            search      => $search,
-                            type_id     => $type_id,
-                            url_last    => $url_last,
-                            url_next    => $url_next,
+                            collections    => [ @collections ],
+                            objects        => [ @objects ],
+                            search         => $search,
+                            object_type_id => $object_type_id,
+                            url_last       => $url_last,
+                            url_next       => $url_next,
     });
 }
 
