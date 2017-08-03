@@ -49,11 +49,11 @@ sub new {
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id' (v$package_version)");
         $object = $type_name->new($id) if ($type_name);
     };
-    MinorImpact::log(1, "id='$id',error:$@") if ($@);
-    if ($@ =~/^error:/) {
-        my $error = $@;
+    my $error = $@;
+    if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
+        MinorImpact::log(1, "id='$id',$error");
         die $error;
     }
     unless ($object) {
