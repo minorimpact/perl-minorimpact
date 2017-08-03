@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use strict;
+
 use Data::Dumper;
 use Term::ReadKey;
 use Getopt::Long "HelpMessage";
@@ -33,6 +35,7 @@ GetOptions( \%options,
             "field-sortby",
             "force|f",
             "help|?|h",
+            "module|m=s",
             "password|p=s",
             "plural=s",
             "system",
@@ -59,7 +62,7 @@ sub main {
         ReadMode('restore');
     }
     $MINORIMPACT = new MinorImpact({config_file=>$options{config}});
-    my $user = $MINORIMPACT->getUser({username=>$username, password=>$password}) || die "Unable to validate user";
+    my $user = $MINORIMPACT->user({username=>$username, password=>$password}) || die "Unable to validate user";
     die $user->name() . " does not have admin priviledges" unless ($user->isAdmin());
     my $DB = $MINORIMPACT->db();
     MinorImpact::checkDatabaseTables($DB);
@@ -116,6 +119,16 @@ sub main {
 
         $DB->do("INSERT INTO object_type (name, system, plural, create_date) VALUES (?, ?, ?, NOW())", undef, ($name, $system, $plural)) || die $DB->errstr;
 
+    } elsif ($options{action} eq 'bootstrap') {
+        my $module = $options{module};
+        my ($short_name) = $module =~/\/([^.\/]+)\.pm$/;
+        print "$short_name\n";
+        die "invalid module: $module" unless ($module && $short_name && -f $module);
+        eval {
+            require $module;
+            $short_name->dbConfig();
+        };
+        die $@ if ($@);
     } elsif ($options{action} eq 'delfield') {
         my $type_id = MinorImpact::Object::typeID($options{type}) || die "Can't get id for $options{type}";
         my $type_name = MinorImpact::Object::typeName($type_id);

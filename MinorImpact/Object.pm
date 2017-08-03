@@ -39,8 +39,13 @@ sub new {
 
         if ($version < $package_version) {
             MinorImpact::log(3, "Object/Database version mismatch: '$package_version' vs '$version'");
-            $type_name->dbConfig();
-        }
+            eval {
+                $type_name->dbConfig();
+            };
+            if ($@) {
+                MinorImpact::log(1, $@);
+            }
+        }   
         #MinorImpact::log(7, "trying to create new '$type_name' with id='$id' (v$package_version)");
         $object = $type_name->new($id) if ($type_name);
     };
