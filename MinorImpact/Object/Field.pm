@@ -238,7 +238,7 @@ sub addField {
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
-    my $object_type_id = MinorImpact::Object::type_id($params->{object_type_id}) || die "No object type id";
+    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id}) || die "No object type id";
     my $name = $params->{name} || die "Field name can't be blank.";
     my $type = $params->{type} || die "Field type can't be blank.";
 

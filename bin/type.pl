@@ -6,6 +6,7 @@ use Getopt::Long "HelpMessage";
 
 use MinorImpact;
 use MinorImpact::Object;
+use MinorImpact::Object::Type;
 
 my $MINORIMPACT;
 
@@ -79,7 +80,7 @@ sub main {
             print "\n";
         }
     } elsif ($options{action} eq 'addfield') {
-        my $type_id = MinorImpact::Object::type_id($options{type}) || die "Can't get id for $options{type}";
+        my $type_id = MinorImpact::Object::typeID($options{type}) || die "Can't get id for $options{type}";
 
         my $params;
         $params->{object_type_id} = $type_id;
@@ -90,7 +91,7 @@ sub main {
         #   convenience to allow people to reference it by the type name instead of the id.
         my $type = $options{"field-type"};
         $type =~s/^@//;
-        my $type_id = MinorImpact::Object::type_id($type);
+        my $type_id = MinorImpact::Object::typeID($type);
         if ($type_id) {
             $params->{type} = "object[$type_id]";
             $params->{type} = "@" . $params->{type} if ($options{"field-type"} =~/^@/);
@@ -105,7 +106,7 @@ sub main {
         MinorImpact::Object::Field::addField($params);
     } elsif ($options{action} eq 'addtype') {
         my $type = $options{type};
-        my $type_id = MinorImpact::Object::type_id($type);
+        my $type_id = MinorImpact::Object::typeID($type);
         die "$type already exists." if ($type_id);
 
 
@@ -113,10 +114,10 @@ sub main {
         my $plural = $options{plural} ||"${name}s";
         my $system = ($options{system}?1:0);
 
-        $DB->do("INSERT INTO object_type (name, plural, system, create_date) VALUES (?, ?, ?, NOW())", undef, ($name, $system, $plural)) || die $DB->errstr;
+        $DB->do("INSERT INTO object_type (name, system, plural, create_date) VALUES (?, ?, ?, NOW())", undef, ($name, $system, $plural)) || die $DB->errstr;
 
     } elsif ($options{action} eq 'delfield') {
-        my $type_id = MinorImpact::Object::type_id($options{type}) || die "Can't get id for $options{type}";
+        my $type_id = MinorImpact::Object::typeID($options{type}) || die "Can't get id for $options{type}";
         my $type_name = MinorImpact::Object::typeName($type_id);
 
         my $params;
@@ -134,7 +135,7 @@ sub main {
         print "Deleting $options{'field-name'} from $type_name\n";
         MinorImpact::Object::Field::delField($params);
     } elsif ($options{type} && $options{action} eq 'info') {
-        my $type_id = MinorImpact::Object::type_id($options{type}) || die "Can't get id for $options{type}";
+        my $type_id = MinorImpact::Object::typeID($options{type}) || die "Can't get id for $options{type}";
         my ($type_name, $plural_type_name) = MinorImpact::Object::typeName({object_type_id=>$type_id});
         my $fields = MinorImpact::Object::fields({object_type_id=>$type_id});
 

@@ -35,7 +35,13 @@ sub new {
         }
         my $type_name = $data->{name}; 
         my $version = $data->{version};
-        #MinorImpact::log(7, "trying to create new '$type_name' with id='$id'");
+        my $package_version = version($type_name);
+
+        if ($version < $package_version) {
+            MinorImpact::log(3, "Object/Database version mismatch: '$package_version' vs '$version'");
+            $type_name->dbConfig();
+        }
+        #MinorImpact::log(7, "trying to create new '$type_name' with id='$id' (v$package_version)");
         $object = $type_name->new($id) if ($type_name);
     };
     MinorImpact::log(1, "id='$id',error:$@") if ($@);
@@ -64,8 +70,6 @@ sub _new {
 
     my $self = {};
     bless($self, $package);
-
-    $self->dbConfig() if ($self->version() > $self->{type_data}{version});
 
     #MinorImpact::log(7, "starting(" . $params . ")");
     #MinorImpact::log(8, "package='$package'");
@@ -477,8 +481,9 @@ sub _reload {
 }
 
 sub dbConfig {
-    MinorImpact::log(7, "starting");
-    MinorImpact::log(7, "endinf");
+    # Placeholder.
+    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(6, "ending");
     return;
 }
 
@@ -961,7 +966,9 @@ sub version {
 
     no strict 'refs';
     my $class = ref($self) || $self;
-    return ${$class . "::VERSION"} || 0;
+    my $version = ${$class . "::VERSION"} || 0;
+    #MinorImpact::log(8, "${class}::VERSION='$version'");
+    return $version;
 }
 
 1;

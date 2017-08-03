@@ -348,6 +348,7 @@ sub checkDatabaseTables {
             UNIQUE KEY `object_type_idx` (`name`)
         )");
         $DB->do("create index idx_object_type_id on object_field(object_type_id)");
+        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)");
     }
 
     eval {

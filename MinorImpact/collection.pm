@@ -2,11 +2,12 @@ package MinorImpact::collection;
 
 use MinorImpact;
 use MinorImpact::Object;
+use MinorImpact::Object::Type;
 use MinorImpact::Util;
 
 our @ISA = qw(MinorImpact::Object);
 
-my $VERSION = 1;
+our $VERSION = 1;
 
 sub new {
     my $package = shift;
@@ -23,7 +24,6 @@ sub new {
         }
     }
 
-
     my $self = $package->SUPER::_new($params);
     bless($self, $package);
 
@@ -32,8 +32,30 @@ sub new {
 }
 
 sub dbConfig {
-    MinorImpact::log(7, "starting");
-    MinorImpact::log(8, "ending");
+    #MinorImpact::log(7, "starting");
+
+    # Verify type exists.
+    my $name = __PACKAGE__;
+    my $object_type_id = MinorImpact::Object::Type::add({
+        name => $name, 
+        system => 0,
+    });
+    die "Could not add object_type record\n" unless ($object_type_id);
+
+    MinorImpact::Object::Type::addField({
+        object_type_id => $object_type_id,
+        name => 'tag',
+        type => '@string',
+    });
+    MinorImpact::Object::Type::addField({
+        object_type_id => $object_type_id,
+        name => 'text',
+        type => '@string',
+    });
+
+    MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
+
+    #MinorImpact::log(7, "ending");
     return;
 }
 
