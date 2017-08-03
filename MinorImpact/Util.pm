@@ -67,6 +67,7 @@ sub extractTags {
         my $i = 0;
         foreach my $tag (split("\n", $text)) {
             # ignore the first line.
+            trim(\$tag);
             next unless ($i++ && $tag =~/^(\w+)$/);
             $tags{$tag}++;
             $text =~s/^$tag$//m;
