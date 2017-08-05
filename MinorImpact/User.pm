@@ -18,11 +18,16 @@ sub new {
     my $user_id = $params;
     #MinorImpact::log(8 "\$user_id='$params'");
 
-    if ($user_id =~/^\d+$/) {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id)) || die $self->{DB}->errstr;
-    } else {
-        $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+    my $data = MinorImpact::cache("user_data_$user_id");
+    unless ($data) {
+        if ($user_id =~/^\d+$/) {
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+        } else {
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+        }
+        MinorImpact::cache("user_data_$user_id", $data);
     }
+    $self->{data} = $data;
     bless($self, $package);
 
     #MinorImpact::log(8 "created user: '" .$self->name() . "'");
@@ -54,14 +59,21 @@ sub getCollections {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $local_params = cloneHash($params);
-    $local_params->{query} = { 
-                        %{$local_params->{query}},
-                        debug          => 'MinorImpact::User::getCollections();',
-                        object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
-                        user_id        => $self->id(),
-                    };
-    return MinorImpact::Object::Search::search($local_params);
+    my $collections = MinorImpact::cache("user_collections_" . $self->id());
+    unless ($collections) {
+        my $local_params = cloneHash($params);
+        $local_params->{query} = { 
+                            %{$local_params->{query}},
+                            debug          => 'MinorImpact::User::getCollections();',
+                            id_only        => 1,
+                            object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
+                            user_id        => $self->id(),
+                        };
+        my @collections = MinorImpact::Object::Search::search($local_params);
+        $collections = \@collections;
+        MinorImpact::cache("user_collections_" . $self->id(), $collections);
+    }
+    return map { new MinorImpact::Object($_); } @$collections; 
 }
 
 sub validateUser {
@@ -101,6 +113,7 @@ sub delete {
         MinorImpact::log(8, "deleting " . $object->name());
         $object->delete($params);
     }
+    MinorImpact::cache("user_data_$user_id", {});
     $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
 }
 
@@ -127,6 +140,7 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
+    MinorImpact::cache("user_data_" . $self->id(), {});
     $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{'name'}, crypt($params->{'password'}, $$), $self->id()));
 }
 

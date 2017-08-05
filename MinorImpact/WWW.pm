@@ -16,8 +16,7 @@ sub add {
 
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
     my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
-    $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id && $object_type_id !~/^\d+$/);
-    $object_type_id ||= MinorImpact::Object::getType();
+    $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
 
     my $object;
     my @errors;
@@ -228,9 +227,9 @@ sub home {
 
         @types = $object->getChildTypes();
         if (scalar(@types) == 1) {
-            MinorImpact::log(8, "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
+            #MinorImpact::log(8, "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
             @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
-            MinorImpact::log(8, "found: " . scalar(@objects));
+            #MinorImpact::log(8, "found: " . scalar(@objects));
         }
     } elsif ($params->{objects}) {
         @objects = @{$params->{objects}};
@@ -239,7 +238,7 @@ sub home {
         if ($search) {
             $local_params->{query}{search} = $search;
         } elsif ($collection) {
-            MinorImpact::log(8, "\$collection->id()='" . $collection->id() . "'");
+            #MinorImpact::log(8, "\$collection->id()='" . $collection->id() . "'");
             $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
         }
@@ -452,6 +451,7 @@ sub save_search {
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     #MinorImpact::log(8, "\$search='$search'");
 
+    MinorImpact::cache("user_collections_" . $user->id(), {});
     my $collection_data = {name => $name, search => $search, user_id => $user->id()};
     my $collection = new MinorImpact::collection($collection_data);
 
@@ -504,6 +504,8 @@ sub tablist {
     $local_params->{query}{limit} = $limit + 1 if ($limit);
 
     # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
+    #   Right now I know there's 'more' because I'm asking for one more than will fit on the page, but
+    #   I can't do a proper 'X of Y' until I can get the whole caboodle.
     my $max;
     if ($object) {
         @objects = $object->getChildren($local_params);

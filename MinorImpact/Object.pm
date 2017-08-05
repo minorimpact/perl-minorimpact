@@ -30,9 +30,18 @@ sub new {
         my $data;
         if (ref($id) eq "HASH") {
             die "Can't create a new object without an object type id." unless ($id->{object_type_id});
-            $data = $DB->selectrow_hashref("SELECT name, system, version FROM object_type ot WHERE ot.id=? or ot.name=?", undef, ($id->{object_type_id}, $id->{object_type_id}));
+            my $object_type_id = typeID($id->{object_type_id});
+            $data = MinorImpact::cache("object_type_$object_type_id");
+            unless ($data) {
+                $data = $DB->selectrow_hashref("SELECT name, version FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
+                MinorImpact::cache("object_type_$object_type_id", $data);
+            }
         } else {
-            $data = $DB->selectrow_hashref("SELECT ot.name, ot.system, ot.version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+            $data = MinorImpact::cache("object_id_type_$id");
+            unless ($data) {
+                $data = $DB->selectrow_hashref("SELECT ot.name, ot.version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+                $data = MinorImpact::cache("object_id_type_$id", $data);
+            }
         }
         my $type_name = $data->{name}; 
         my $version = $data->{version};
@@ -257,12 +266,16 @@ sub update {
     my $params = shift || return;
 
     #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    my $object_id = $self->id();
+
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($params->{'description'}, $self->id())) if (defined($params->{description}));
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
 
+    MinorImpact::cache("object_data_$object_id", {});
+
     my $fields = $self->fields();
-    MinorImpact::log(7, "validating parameters");
+    #MinorImpact::log(7, "validating parameters");
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
@@ -322,7 +335,11 @@ sub fields {
 
     my $fields;
     my $DB = MinorImpact::db();
-    my $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+    my $data = MinorImpact::cache("object_field_$object_type_id");
+    unless ($data) {
+        $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+        MinorImpact::cache("object_field_$object_type_id", $data);
+    }
     foreach my $row (@$data) {
         #MinorImpact::log(8, $row->{name});
         $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
@@ -344,53 +361,46 @@ sub typeID {
         my $DB = MinorImpact::db();
         #MinorImpact::log(8, "\$self='$self'");
         if ($self =~/^[0-9]+$/) {
+            # This seems stupid, but sometimes on the client I don't know whether or not
+            #   I have a name or an ID, so I just throw whatever I have into here.  If it
+            #   was a number, I just get that back.
             $object_type_id = $self;
         } else {
-            my $singular = $self;
-            $singular =~s/s$//;
-            $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
+            $object_type_id = MinorImpact::cache("object_type_id_$self");
+            unless ($object_type_id) {
+                my $singular = $self;
+                $singular =~s/s$//;
+                $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
+                MinorImpact::cache("object_type_id_$self", $object_type_id);
+            }
         }
     }
     #MinorImpact::log(7, "ending");
     return $object_type_id;
 }
 
+# Returns the 'default' type for the current application, for when we 
+#   desperately need something, but we don't know what.
 sub getType {
     #MinorImpact::log(7, "starting");
-    my $self = shift;
-    my $type_id;
 
     my $DB = MinorImpact::db();
 
-    # Figure out the id of the object type they're looking for.
-    if (ref($self)) {
-        $type_id = $self->typeID();
-    } else {
-        $type_id = $self;
-        if (!$type_id) {
-            if ($MinorImpact::SELF->{conf}{default}{default_object_type}) {
-                return MinorImpact::Object::typeID($MinorImpact::SELF->{conf}{default}{default_object_type});
-            }
-            # If type isn't specified, return the first 'toplevel' object, something that no other object
-            # references.
-            my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
-            if (scalar(@$nextlevel) > 0) {
-                my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
-                #MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
-                $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
-            } else {
-                $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
-            }
-        } elsif ($type_id !~/^\d+$/) {
-            # If someone passes the string name of the type, figure that out for them.
-            my $singular = $type_id;
-            $singular =~s/e?s$//;
-            $type_id = $DB->selectrow_array("SELECT id FROM object_type where name=? or name=? or plural=?", {Slice=>{}}, ($type_id, $singular, $type_id));
-        }
+    if ($MinorImpact::SELF->{conf}{default}{default_object_type}) {
+        return MinorImpact::Object::typeID($MinorImpact::SELF->{conf}{default}{default_object_type});
     }
-    #my $type = $DB->selectrow_hashref("SELECT * FROM object_type where id=?", {Slice=>{}}, ($type_id));
-    #my $type = new MinorImpact::Object::Type($type_id);
-    #MinorImpact::log(7, "ending");
+    # If there's no glbal object type, return the first 'toplevel' object, something that no other object
+    #   references.
+    my $type_id;
+    my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
+    if (scalar(@$nextlevel) > 0) {
+        my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
+        #MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
+        $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
+    } else {
+        $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
+    }
+
     return $type_id;
 }
 
@@ -458,25 +468,42 @@ sub _reload {
 
     #MinorImpact::log(7, "starting(" . $object_id . ")");
 
+    my $object_data = MinorImpact::cache("object_data_$object_id");
+    if ($object_data) {
+        $self->{data} = $object_data->{data};
+        $self->{type_data} = $object_data->{type_data};
+        $self->{object_data} = $object_data->{object_data};
+        $self->{tags} = $object_data->{tags};
+        return 
+    }
+
     $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
     $self->{type_data} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->typeID()));
 
     undef($self->{object_data});
-    $self->{object_data} = $self->fields();
 
+    $self->{object_data} = $self->fields();
     my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
     foreach my $row (@$data) {
         if ($self->{object_data}->{$row->{name}}) {
             $self->{object_data}->{$row->{name}}->addValue($row);
         }
     }
+
     my $text = $self->{DB}->selectall_arrayref("select object_field.name, object_text.id, object_text.value from object_text, object_field where object_field.id=object_text.object_field_id and object_text.object_id=?", {Slice=>{}}, ($self->id()));
     foreach my $row (@$text) {
         if ($self->{object_data}->{$row->{name}}) {
             $self->{object_data}->{$row->{name}}->addValue($row);
         }
     }
+
+
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
+    $object_data->{data} = $self->{data};
+    $object_data->{type_data} = $self->{type_data};
+    $object_data->{object_data} = $self->{object_data};
+    $object_data->{tags} = $self->{tags};
+    MinorImpact::cache("object_data_$object_id", $object_data, 3600);
 
     #MinorImpact::log(7, "ending(" . $object_id . ")");
     return;
@@ -903,7 +930,11 @@ sub isType {
             $object_type_id = MinorImpact::Object::typeID($object_type_id);
         }
         my $DB = MinorImpact::db();
-        my $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
+        my $data = MinorImpact::cache("object_type_$object_type_id");
+        unless ($data) {
+            $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
+            MinorImpact::cache("object_type_$object_type_id", $data);
+        }
         return $data->{$thingie};
     }
     return;

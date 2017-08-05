@@ -63,4 +63,8 @@ sub validate {
     return $value;
 }
 
+sub isText {
+    return 1;
+}
+
 1;

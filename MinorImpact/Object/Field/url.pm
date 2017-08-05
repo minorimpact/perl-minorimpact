@@ -17,6 +17,10 @@ sub new {
     return $self;
 }
 
+sub isText {
+    return 1;
+}
+
 sub toString {
     my $self = shift || return;
     #MinorImpact::log(7, "starting");

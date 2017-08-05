@@ -6,8 +6,6 @@ use MinorImpact;
 use MinorImpact::Object;
 use MinorImpact::Util;
 
-our @reserved = ('datetime', 'string', 'boolean', 'url', 'text', 'float', 'int');
-
 sub add {
     my $params = shift || return;
 
@@ -23,9 +21,17 @@ sub add {
 
     my $object_type_id = MinorImpact::Object::typeID($name);
     #MinorImpact::log(8, "\$object_type_id='$object_type_id'");
-    return $object_type_id if ($object_type_id);
+    
+    if ($object_type_id) {
+        MinorImpact::cache("object_type_$object_type_id", {});
+        my $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr();
+        $DB->do("UPDATE object_type SET plural=? WHERE id=?", undef, ($plural, $object_type_id)) || die $DB->errstr unless ($data->{plural} eq $plural);
+        $DB->do("UPDATE object_type SET readonly=? WHERE id=?", undef, ($readonly, $object_type_id)) || die $DB->errstr unless ($data->{readonly} eq $readonly);
+        $DB->do("UPDATE object_type SET system=? WHERE id=?", undef, ($system, $object_type_id)) || die $DB->errstr unless ($data->{system} eq $system);
+        return $object_type_id;
+    }
 
-    die "'$name' is reserved." if indexOf($name, @reserved);
+    die "'$name' is reserved." if (defined(indexOf($name, @MinorImpact::Object::Field::reserved)));
 
     $DB->do("INSERT INTO object_type (name, system, readonly, plural, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($name, $system, $readonly, $plural)) || die $DB->errstr;
 
@@ -33,39 +39,39 @@ sub add {
     return $DB->{mysql_insertid};
 }
 
-sub addField {
+sub del {
     my $params = shift || return;
 
-    my $local_params = cloneHash($params);
-    # We store fields that are references to other object as type object[<object id>].  This ia
-    #   convenience to allow people to reference it by the type name instead of the id.
-    my $name = $local_params->{name};
-    my $type = $local_params->{type};
-    die "Object name cannot be blank." unless ($name);
-    die "Object type cannot be blank." unless ($type);
-
-    my $array = ($type =~/^@/);
-    $type =~s/^@//;
-
-    if (!defined(indexOf($type, @reserved))) { 
-        my $object_type_id = MinorImpact::Object::typeID($type);
-        if ($object_type_id) {
-            $local_params->{type} = "object[$object_type_id]";
-            $local_params->{type} = "@" . $local_params->{type} if ($array);
-        } else {
-            die "'$type' is not a valid object type.";
-        }
+    my $DB = MinorImpact::db();
+    my $object_type_id = $params->{object_type_id};
+    unless ($object_type_id) {
+        $object_type_id = MinorImpact::Object::typeID($params->{name});
     }
+    die "No object type" unless ($object_type_id);
+    MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_id", {});
 
-    #MinorImpact::log(8, "adding field '" . $local_params->{object_type_id} . "-" . $local_params->{name} . "'");
-    eval {
-        MinorImpact::Object::Field::addField($local_params);
-    };
-    #MinorImpact::log(8, $@);
-    die $@ if ($@ && $@ !~/Duplicate entry/);
-
-    return;
+    my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+    foreach my $row (@$data) {
+        my $object_id = $row->{id};
+        MinorImpact::cache("object_data_$object_id", {});
+        $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+        $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+        $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    }
+    $DB->do("DELETE FROM object_field WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
 }
+
+sub addField {
+    return MinorImpact::Object::Field::add(@_);
+}
+
+sub delField {
+    return MinorImpact::Object::Field::del(@_);
+}
+
 
 sub setVersion {
     #MinorImpact::log(7, "starting");
@@ -77,6 +83,7 @@ sub setVersion {
     die "Invalid object type" unless ($object_type_id =~/^\d+$/);
     #MinorImpact::log(8, "\$object_type_id='$object_type_id', \$version='$version'");
 
+    MinorImpact::cache("object_type_$object_type_id", {});
     my $DB = MinorImpact::db();
     my $sql = "UPDATE object_type SET version=? WHERE id=?";
     #MinorImpact::log(8, "sql='$sql' \@fields='$version', '$object_type_id'");

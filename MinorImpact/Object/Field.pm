@@ -9,6 +9,8 @@ use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::url;
 
+our @reserved = ('datetime', 'string', 'boolean', 'url', 'text', 'float', 'int');
+
 # TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
 #   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
 #   should be written back to the database.  It's really weak as is.
@@ -235,19 +237,68 @@ sub isArray {
 
 # Add a new field to an object.
 sub addField {
+    add(@_);
+}
+
+sub add {
     my $params = shift || return;
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
-    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id}) || die "No object type id";
-    my $name = $params->{name} || die "Field name can't be blank.";
-    my $type = $params->{type} || die "Field type can't be blank.";
+    my $local_params = cloneHash($params);
+    my $object_type_id = MinorImpact::Object::typeID($local_params->{object_type_id}) || die "No object type id";
+    $local_params->{name} || die "Field name can't be blank.";
+    $local_params->{type} || die "Field type can't be blank.";
+    $local_params->{required} = $local_params->{required}?1:0;
+    $local_params->{hidden} = $local_params->{hidden}?1:0;
+    $local_params->{sortby} = $local_params->{sortby}?1:0;
+    $local_params->{readonly} = $local_params->{readonly}?1:0;
+    $local_params->{description} = $local_params->{description};
 
-    $DB->do("INSERT INTO object_field (object_type_id, name, description, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $name, $params->{description}, $type, ($params->{hidden}?1:0), ($params->{"readonly"}?1:0), ($params->{"required"}?1:0), ($params->{"sortby"}?1:0))) || die $DB->errstr;
+    my $type = $local_params->{type};
+    my $array = ($type =~/^@/);
+    $type =~s/^@//;
+
+    if (!defined(indexOf($type, @reserved))) {
+        my $object_type_id = MinorImpact::Object::typeID($type);
+        if ($object_type_id) {
+            $local_params->{type} = "object[$object_type_id]";
+            $local_params->{type} = "@" . $type if ($array);
+        } else {
+            die "'$type' is not a valid object type.";
+        }
+    }
+
+    MinorImpact::log(8, "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
+    my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
+    if ($data) {
+        my $object_field_id = $data->{id};
+        $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
+        $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
+        $DB->do("UPDATE object_field SET hidden=? WHERE id=?", undef, ($local_params->{hidden}, $object_field_id)) || die $DB->errstr unless ($data->{hidden} eq $local_params->{hidden});
+        $DB->do("UPDATE object_field SET sortby=? WHERE id=?", undef, ($local_params->{sortby}, $object_field_id)) || die $DB->errstr unless ($data->{sortby} eq $local_params->{sortby});
+        $DB->do("UPDATE object_field SET readonly=? WHERE id=?", undef, ($local_params->{readonly}, $object_field_id)) || die $DB->errstr unless ($data->{readonly} eq $local_params->{readonly});
+        $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr unless ($data->{description} eq $local_params->{description});
+    } else {
+        $DB->do("INSERT INTO object_field (object_type_id, name, description, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
+        my $object_field_id = $DB->{mysql_insertid};
+        my $field = new MinorImpact::Object::Field($local_params);
+        my $isText = $field->isText();
+        my $data = $DB->selectall_arrayref("SELECT id FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+        foreach my $row (@$data) {
+            my $object_id = $row->{id};
+            if ($isText) {
+                $DB->do("INSERT INTO object_text (object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_id, $object_field_id, $field->defaultValue())) || die $DB->errstr;
+            } else {
+                $DB->do("INSERT INTO object_data (object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_id, $object_field_id, $field->defaultValue())) || die $DB->errstr;
+            }
+        }
+    }
 }
 
+
 # Delete a field from an object.
-sub delField {
+sub del {
     my $params = shift || return;
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
@@ -258,7 +309,13 @@ sub delField {
     
     my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || die $DB->errst;
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
+}
+sub delField { del(@_); }
+
+sub isText {
+    return 0;
 }
 
 1;

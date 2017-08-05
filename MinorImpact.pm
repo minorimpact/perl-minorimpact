@@ -144,7 +144,6 @@ sub user {
         if ($user && $user->validateUser($password)) {
             #MinorImpact::log(8, "password verified for $username");
             my $user_id = $user->id();
-            my $timeout = $self->{conf}{default}{user_timeout} || 86400;
 
             MinorImpact::session('user_id', $user_id);
             $self->{USER} = $user;
@@ -190,7 +189,7 @@ sub session {
     my $self = new MinorImpact();
     my $CGI = MinorImpact::cgi();
 
-    my $timeout = $self->{conf}{default}{user_timeout} || 86400;
+    my $timeout = $self->{conf}{default}{user_timeout} || 2592000;
     my $session_id;
     if ($ENV{REMOTE_ADDR}) {
         $session_id = $CGI->cookie("user_id");
@@ -342,6 +341,8 @@ sub checkDatabaseTables {
             `plural` varchar(50) DEFAULT NULL,
             `url` varchar(255) DEFAULT NULL,
             `system` tinyint(1) DEFAULT 0,
+            `version` int(11) DEFAULT 0,
+            `readonly` tinyint(1) DEFAULT 0,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),
@@ -452,11 +453,15 @@ sub cache {
 
     my $name = shift || return;
     my $value = shift;
-    my $timeout = shift;
+    my $timeout = shift || 3600;
 
     $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
+    if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
+        #MinorImpact::log(8, "removing '$name'");
+        return $cache->remove($name);
+    }
     if (!defined($value)) {
-        my $value = $cache->get($name);
+        $value = $cache->get($name);
         #MinorImpact::log(8, "$name='" . $value . "'");
         return $value;
     }
