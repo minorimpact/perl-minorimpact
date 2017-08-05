@@ -18,6 +18,7 @@ sub add {
 
     my $name = $params->{name};
     my $plural = $params->{plural};
+    my $readonly = ($params->{readonly}?1:0);
     my $system = ($params->{system}?1:0);
 
     my $object_type_id = MinorImpact::Object::typeID($name);
@@ -26,7 +27,7 @@ sub add {
 
     die "'$name' is reserved." if indexOf($name, @reserved);
 
-    $DB->do("INSERT INTO object_type (name, system, plural, create_date) VALUES (?, ?, ?, NOW())", undef, ($name, $system, $plural)) || die $DB->errstr;
+    $DB->do("INSERT INTO object_type (name, system, readonly, plural, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($name, $system, $readonly, $plural)) || die $DB->errstr;
 
     #MinorImpact::log(7, "ending");
     return $DB->{mysql_insertid};

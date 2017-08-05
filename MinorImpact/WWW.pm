@@ -147,6 +147,7 @@ sub edit {
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    $self->redirect($object->back()) if ($object->isReadonly());
 
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
@@ -531,9 +532,10 @@ sub tablist {
     }
     MinorImpact::tt('tablist', {  
                             collections    => [ @collections ],
-                            objects        => [ @objects ],
-                            search         => $search,
                             object_type_id => $object_type_id,
+                            objects        => [ @objects ],
+                            readonly       => MinorImpact::Object::isReadonly($object_type_id),
+                            search         => $search,
                             url_last       => $url_last,
                             url_next       => $url_next,
     });
