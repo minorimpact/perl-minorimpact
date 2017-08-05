@@ -16,6 +16,7 @@ my $OBJECT_CACHE;
 sub new {
     my $package = shift || return;
     my $id = shift || return;
+    my $params = shift || {};
 
     #MinorImpact::log(7, "starting(" . $id . ")");
     my $DB = MinorImpact::db();
@@ -63,7 +64,7 @@ sub new {
     #MinorImpact::log(8, "\$object doesn't exist") unless ($object);
     #MinorImpact::log(7, "ending($id)");
 
-    die "permission denied" unless ($object->validateUser());
+    die "permission denied" unless ($object->validateUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     return $object;
@@ -86,7 +87,7 @@ sub _new {
         #MinorImpact::log(8, "ref(\$params)='" . ref($params) . "'");
 
         $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
-        $params->{object_type_id} = type_id(lc($package)) unless ($params->{object_type_id});
+        $params->{object_type_id} = typeID($params->{object_type_id} || lc($package));
 
         my $user_id = $params->{'user_id'} || MinorImpact::userID();
         die "invalid name" unless ($params->{name});
@@ -94,6 +95,7 @@ sub _new {
         die "invalid type id" unless ($params->{object_type_id});
 
         my $fields = fields($params->{object_type_id});
+        #MinorImpact::log(7, "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
         validateFields($fields, $params);
 
         $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'name'}, $user_id, $params->{'description'}, $params->{object_type_id})) || die("Can't add new object:" . $self->{DB}->errstr);
@@ -142,7 +144,6 @@ sub back {
 sub id {return shift->{data}->{id}; }
 sub name { return shift->get('name', shift); }
 
-# LEGACY
 sub user_id { return shift->userID(); }
 sub userID { return shift->get('user_id'); }   
 
@@ -248,11 +249,6 @@ sub validateFields {
         next unless ($field);
         $field->validate($params->{$field_name});
     }
-    foreach my $field_name (keys %$fields) {
-        my $field = $fields->{$field_name};
-        die "$field_name is a required field" if ($field->get('required') && !defined($params->{$field_name}));
-        $params->{$field_name} = $field->defaultValue() if (!defined($params->{$field_name}));
-    }
     #MinorImpact::log(7, "ending");
 }
 
@@ -266,6 +262,7 @@ sub update {
     $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     my $fields = $self->fields();
+    MinorImpact::log(7, "validating parameters");
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
@@ -505,7 +502,7 @@ sub delete {
         $DB->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $object_id));
     }
 
-    my $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id));
+    $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id));
     foreach my $row (@$data) {
         $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id}));
     }
@@ -674,7 +671,7 @@ sub toString {
         MinorImpact::tt('object_list', { object => $self }, \$string);
     } else {
         my $template = $params->{template} || 'object';
-        MinorImpact::tt('object', { object => $self }, \$string);
+        MinorImpact::tt($template, { object => $self }, \$string);
     }
     #$self->log(7, "ending");
     return $string;

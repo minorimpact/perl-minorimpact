@@ -3,7 +3,6 @@ package MinorImpact::BinLib;
 use Time::Local;
 use Exporter 'import';
 @EXPORT = (
-            "cloneHash",
             "commonRoot",
             "convert_cron_time_item_to_list", 
             "in_array", 
@@ -87,22 +86,6 @@ sub last_run_time {
     my $then = timelocal(0,$min, $hour, $mday, $mon, $year);
     return $then;
 }
-
-sub cloneHash {
-    my $hash = shift || return;
-    my $new_hash = shift || {};
-
-    return unless (ref($hash) eq "HASH");
-    foreach my $key (keys %$hash) {
-        if (ref($hash->{$key}) eq "HASH") {
-            $new_hash->{$key} = cloneHash($hash->{$key});
-        } else {
-            $new_hash->{$key} = $hash->{$key};
-        }
-    }
-    return $new_hash;
-}
-
 
 =head2 BinLib::convert_cron_time_item_to_list($item, $field_time)
 

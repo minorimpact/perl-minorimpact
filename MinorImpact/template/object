@@ -1,6 +1,1 @@
-<!-- TEMPLATE:default.object -->
-[% IF object.isSystem() %]
-    [% object.name() %]
-[% ELSE %]
-    <a href="[% INCLUDE url_index action='home' %]">[% object.name() %]</a>
-[% END %]
+[% IF object.isSystem() %][% object.name() %][% ELSE %]<a href="[% INCLUDE url_index action='home' %]">[% object.name() %]</a>[% END -%]

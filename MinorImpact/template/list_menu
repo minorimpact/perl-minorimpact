@@ -1,7 +1,7 @@
 <!-- TEMPLATE:default.list_menu -->
 <div id=list_menu class="w3-bar w3-light-grey">
 [% IF user %]
-    <a href="[% script_name %]?type_id=[% object_type_id %]&a=add" class="w3-bar-item w3-button">Add [% typeName(object_type_id) %]</a>
+    <a href="[% INCLUDE url_index action='add' %]" class="w3-bar-item w3-button">Add [% typeName(object_type_id) %]</a>
 [% END %]
 [% INCLUDE list_menu_site %]
 </div>

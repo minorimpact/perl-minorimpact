@@ -57,7 +57,18 @@ Content-type: text/html
 <div class="w3-sidebar w3-bar-block w3-collapse w3-animate-left" id="sidebar" style="display:none;width:200px;z-index:4">
     <div class="w3-container">
         <button class="w3-button w3-hide-large" onclick="sidebar_close();"><i class="fa fa-close fa-2x"></i></button>
+        [% INCLUDE sidebar_site %]
         [% IF user %]
+            [% IF user.isAdmin %]
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    &nbsp;
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='admin' reset=1 %]'>Admin</a>
+                </div>
+            </div>
+            [% END %]
             <div class="w3-row">
                 <div class="w3-col s3">
                     <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' reset=1 %]'><i class="fa fa-user fa-2x"></i></a>

@@ -51,7 +51,7 @@ sub _new {
     # We want the value to be an array, not a scalar, so duplicate
     #   it and rewrite it as an array.
     my $local_data = cloneHash($data);
-    my $self->{data} = $local_data;
+    $self->{data} = $local_data;
     if (defined($local_data->{value})) {
         my $value = $data->{value};
         undef($data->{value});
@@ -72,9 +72,10 @@ sub validate {
     #MinorImpact::log(7, "starting");
 
     my $field_type = $self->type();
-    if (defined($value) && !$value && $self->get('required')) {
+    if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
         die $self->name() . " cannot be blank";
     }
+    die $self->name() . ": value is too large." if ($value && length($value) > 255);
     return $value;
 }
 

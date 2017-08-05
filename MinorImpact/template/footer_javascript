@@ -80,7 +80,7 @@
     // won't get duplicated again.  Used to dynamically add array fields
     // to forms.
     function duplicateRow(o) {
-        var \$div = \$(o).closest("div");
+        var \$div = \$(o).closest("div.w3-row");
         if (\$div.data('duped') == 1 || \$(o).val() == '' || \$(o).val() == ' ') {
             return;
         }

@@ -52,4 +52,15 @@ sub toString {
     return join("\n", @strings);
 }
 
+sub validate {
+    my $self = shift || return;
+    my $value = shift;
+
+    die $self->name() . ": value is too large" if ($value && length($value) > 65535);
+    if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
+        die $self->name() . " cannot be blank";
+    }
+    return $value;
+}
+
 1;

@@ -48,7 +48,7 @@ sub add {
     }
 
     my $type_name = MinorImpact::Object::typeName({ object_type_id => $object_type_id });
-    my $local_params = {object_type_id=>$object_type_id};
+    my $local_params = { object_type_id=>$object_type_id };
     #MinorImpact::log(8, "\$type_name='$type_name'");
     my $form;
     eval {
@@ -148,6 +148,7 @@ sub edit {
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id) || $self->redirect();
 
+    my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         # Add the booleans manually, since unchecked values don't get 
@@ -161,9 +162,13 @@ sub edit {
         eval {
             $object->update($params);
         };
-        $error = $@ if ($@);
+        if ($@) {
+            my $error = $@;
+            $error =~s/ at .+ line \d+.*$//;
+            push(@errors, $error) if ($error);
+        }
 
-        if ($object && !$error) {
+        if ($object && scalar(@errors) == 0) {
             my $back = $object->back() || "$script_name?id=" . $object->id();
             $self->redirect($back);
         }
@@ -171,7 +176,7 @@ sub edit {
 
     my $form = $object->form($params);
     $self->tt('edit', { 
-                        error   => $error,
+                        errors  => [ @errors ],
                         form    => $form,
                         no_name => $params->{no_name},
                         object   =>$object,
@@ -538,7 +543,6 @@ sub tags {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    my $local_params = cloneHash($params);
     my $user = $MINORIMPACT->user({ force => 1 });
     my $CGI = $MINORIMPACT->cgi();
     my $script_name = MinorImpact::scriptName();
