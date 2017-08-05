@@ -143,7 +143,7 @@ sub _search {
     my $query = $params->{query}; # || $params;
     $query->{object_type_id} = $query->{object_type} if ($query->{object_type} && !$query->{object_type_id});
     my $select = "SELECT DISTINCT(object.id)";
-    my $from   = "FROM object JOIN object_data AS object_data ON (object.id=object_data.object_id) JOIN object_field ON (object_field.id=object_data.object_field_id)";
+    my $from   = "FROM object LEFT JOIN object_data AS object_data ON (object.id=object_data.object_id) LEFT JOIN object_field ON (object_field.id=object_data.object_field_id)";
     my $where  = "WHERE object.id > 0";
     my @fields;
 

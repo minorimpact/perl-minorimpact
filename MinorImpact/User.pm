@@ -106,7 +106,9 @@ sub delete {
     my $self = shift || return;
     my $params = shift || {};
     
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $user_id = $self->id();
+    # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
     my $DB = $self->{DB};
     my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
     foreach my $object (@objects) {
@@ -115,6 +117,7 @@ sub delete {
     }
     MinorImpact::cache("user_data_$user_id", {});
     $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
+    #MinorImpact::log(7, "ending");
 }
 
 sub id {
