@@ -39,8 +39,8 @@ sub new {
         } else {
             $data = MinorImpact::cache("object_id_type_$id");
             unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT ot.name, ot.version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
-                $data = MinorImpact::cache("object_id_type_$id", $data);
+                $data = $DB->selectrow_hashref("SELECT ot.name AS name, ot.version AS version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+                MinorImpact::cache("object_id_type_$id", $data);
             }
         }
         my $type_name = $data->{name}; 
