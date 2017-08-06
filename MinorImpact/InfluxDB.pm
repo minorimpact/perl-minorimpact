@@ -15,7 +15,9 @@ sub influxdb {
     my $remote = $params->{remote} || "influxdb";
     my $port = $params->{port} || 8086;
 
+    $metric =~s/^([^,]+),([^,=]+),/\1.\2,/;
     my $data = "$metric value=$value";
+    #print "\$data='$data'\n";
     my $UA = new LWP::UserAgent();
     my $req = HTTP::Request->new(POST => "http://$remote:$port/write?db=$db");
     $req->content($data);
