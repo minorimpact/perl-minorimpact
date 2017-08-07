@@ -1,0 +1,1 @@
+<div class="w3-tiny w3-text-grey w3-margin-top">last modified:[% object.get('mod_date') %]</div>

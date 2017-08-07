@@ -1,0 +1,10 @@
+
+[% INCLUDE list_object_site %]
+
+[% INCLUDE pagination %]
+
+[% FOREACH object IN objects %]
+    [% INCLUDE object_list %]
+[% END %]
+
+[% INCLUDE pagination %]

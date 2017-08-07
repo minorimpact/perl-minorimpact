@@ -1,0 +1,7 @@
+[% UNLESS action %]
+    [% IF sort == -1 %]
+        <button id="sort_button" class="w3-btn w3-bar-item" onclick="document.location='[% INCLUDE url_index action="home" sort=1 %]';"><i class="fa fa-sort-alpha-desc fa-2x"></i></button>
+    [% ELSE %]
+        <button id="sort_button" class="w3-btn w3-bar-item" onclick="document.location='[% INCLUDE url_index action="home" sort=-1 %]';"><i class="fa fa-sort-alpha-asc fa-2x"></i></button>
+    [% END %]
+[% END %]

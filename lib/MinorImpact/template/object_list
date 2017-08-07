@@ -1,0 +1,4 @@
+<div class="w3-row">
+    <a href='[% INCLUDE url_index action="home" %]'>[% object.name() %]</a>
+</div>
+<hr>

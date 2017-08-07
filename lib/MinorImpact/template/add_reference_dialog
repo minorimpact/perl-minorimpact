@@ -1,0 +1,16 @@
+<div id='reference_add-dialog' title='Add Reference'>
+    <form>
+        <input type=hidden id=something>
+        <table class='table-default' width=100%>
+            <tr>
+                <td class=data_label> Object Type </td>
+                <td> <select id='object_type_id' name='object_type_id' class='select ui-widget-content ui-corner-all'><option></option></select> </td>
+            </tr>
+            <tr>
+                <td class=data_label> Object </td>
+                <td> <select id='object_id' name='object_id' class='select ui-widget-content ui-corner-all'><option></option></select> </td>
+            </tr>
+        </table>
+    </form>
+    <div id=reference_add-text></div>
+</div>

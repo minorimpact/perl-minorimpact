@@ -1,0 +1,28 @@
+<!-- TEMPLATE:default.object_form -->
+    <form method=POST class="w3-container w3-padding">
+        <input type=hidden name=a       value='[% object ? 'edit' : 'add' %]'>
+        <input type=hidden name=cid     value='[% cid %]'>
+        <input type=hidden name=id      value='[% object ? object.id() : '' %]'>
+        <input type=hidden name=search  value='[% search %]'>
+        <input type=hidden name=sort    value='[% sort %]'>
+        <input type=hidden name=type_id value='[% object_type_id %]'>
+        [% IF not no_name %]
+            <div class="w3-row" style="margin-top:8px">
+                <label>Name*</label>
+                <input type=text name=name value='[% name %]' maxlength=50 class="w3-input w3-border" placeholder="Name...">
+            </div>
+        [% END %]
+        [% form_fields %]
+        <!-- CUSTOM -->
+        <div class="w3-row" style="margin-top:8px">
+            <label>Tags</label>
+            <input type=text name=tags value='[% tags %]' class="w3-input w3-border" placeholder="tag1 tag2 tag3...">
+        </div>
+        <div class="w3-row" style="margin-top:8px">
+            <input type=submit name=submit class="w3-input w3-border">
+        </div>
+    </form
+
+<script>
+    [% javascript %]
+</script>

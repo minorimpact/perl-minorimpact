@@ -1,0 +1,9 @@
+<div class="w3-row" style="margin-top:8px">
+    [% IF field.type() == 'boolean' %]
+        [% input %]
+        <label>[% field.displayName() %][% field.get('required') ? '*' : '' %]</label>
+    [% ELSE %]
+        <label>[% field.displayName() %][% field.get('required') ? '*' : '' %]</label>
+        [% input %]
+    [% END %]
+</div>

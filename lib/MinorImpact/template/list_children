@@ -1,0 +1,10 @@
+Content-type: text/html
+
+<div id=list_menu><a href=[% script_name %]?type_id=[% object_type_id %]&a=add>Add [% object.typeName({object_type_id=>object_type_id, singular=>1}) %]</a></div>
+<table class=list>
+[% FOREACH o IN objects %]
+    <tr>
+        <td>[% o.toString({format=>'list'}) %]</td>
+    </tr>
+[% END %]
+</table>

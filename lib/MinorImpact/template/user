@@ -1,0 +1,13 @@
+[% INCLUDE header title=user.name() %]
+
+<div>
+    <table class=view>
+    <tr>
+        <td class=fieldname>Name</td>
+        <td>[% user.name() %]</td>
+    </tr>
+    </table>
+</div>
+
+[% INCLUDE footer %]
+
