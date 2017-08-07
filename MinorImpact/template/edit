@@ -1,9 +1,0 @@
-[% INCLUDE header %]
-
-<div class='w3-container w3-card-4 w3-margin-top'>
-    <a class='back' href='[% INCLUDE url_index action='home' %]'><i class="fa fa-arrow-left fa-2x"></i></a>
-    [% form %]
-</div>
-
-[% INCLUDE footer %]
-

@@ -1,5 +1,0 @@
-[% IF delete_collection %]
-    <a href="[% INCLUDE url_index action='delete_collection' cid=collection.id() %]"><i class="fa fa-trash fa-2x"></i></a>
-[% END %]
-<a href="[% INCLUDE url_index action='home' cid=collection.id() search='' %]" class="w3-bar-item w3-button">[% collection.name() %]</a>
-    

@@ -1,5 +1,0 @@
-<select name=object onchange="window.location.href='[% script_name %]?id=' + this.value">
-[% FOREACH o IN objects %]
-    <option value=[% o.id() %][% IF selected_object.id() == o.id() %] selected[% END %]>[% o.name() %]</option>
-[% END %]
-</select>

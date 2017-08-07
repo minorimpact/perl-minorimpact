@@ -1,8 +1,0 @@
-[% IF user %]
-    <a class="w3-bar-item w3-button" href="[% script_name %]?a=user">[% user.get('name') %]</a>
-    <a class="w3-bar-item w3-button" href='[% script_name %]?a=logout'>Logout</a></td>
-[% ELSE %]
-    <a class="w3-bar-itea w3-button" href=[% script_name %]?a=login>Log In</a>
-    <a class="w3-bar-item w3-button" href=[% script_name %]?a=register>Register</a>
-[% END %]
-
