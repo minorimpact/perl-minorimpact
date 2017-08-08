@@ -821,7 +821,7 @@ sub form {
                                     javascript     => $script,
                                     object         => $self,
                                     object_type_id => $object_type_id,
-                                    name           => $name,
+                                    name           => htmlEscape($name),
                                     no_name        => $local_params->{no_name},
                                     tags           => $tags,
                                 }, \$form);

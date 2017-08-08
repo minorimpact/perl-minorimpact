@@ -1,4 +1,12 @@
     \$(function () {
+        \$("input.datepicker").datepicker({
+            buttonText: "<i class='fa fa-calendar'></i>",
+            minDate: 0,
+            showOn: "both",
+            dateFormat: "yy-mm-dd",
+            showAnim: "fadeIn"
+        })
+                                     
         \$( "#reference_add-dialog" ).dialog({
             autoOpen: false,
             height: 350,

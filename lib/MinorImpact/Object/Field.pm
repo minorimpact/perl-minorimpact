@@ -1,5 +1,7 @@
 package MinorImpact::Object::Field;
 
+use strict;
+
 use Data::Dumper;
 
 use MinorImpact;
@@ -113,13 +115,13 @@ sub value {
     my $self = shift || return; 
     my $params = shift || {};
 
-    my @values;
+    my @values = ();
     # TODO: Rethink this.  I like the idea of returning an actual object for fields that are references to other 
     #   objects, but too many things are expecting an an actual id, and then do stuff with that.
     #if ($self->type() =~/object\[(\d+)\]$/ && !$params->{id_only}) {
     #    @values = map { new MinorImpact::Object($_); } @{$self->{data}{value}};
     #} else {
-        @values = @{$self->{data}{value}};
+        @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
     #}
     return @values;
 }
@@ -135,7 +137,7 @@ sub get {
     return $self->{data}{$data_field};
 }
 sub id { my $self = shift || return; return $self->{data}{data_id}; }
-sub name { my $self = shift || return; return $self->{data}{name}; }
+sub name { shift->{data}{name}; }
 sub toString { 
     my $self = shift || return; 
     my $value = shift;
@@ -177,8 +179,8 @@ sub formRow {
     my $row;
     if ($self->isArray()) {
         foreach my $value (@values) {
-            $local_params->{row_value} = $value;
             my $row_form;
+            $local_params->{row_value} = htmlEscape($value);
             MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
             $row .= $row_form;
         }
@@ -188,7 +190,7 @@ sub formRow {
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
         $row .= $row_form;
     } else {
-        $local_params->{row_value} = $values[0];
+        $local_params->{row_value} = htmlEscape($values[0]);
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row);
     }
     #MinorImpact::log(7, "ending");
@@ -259,7 +261,7 @@ sub add {
     my $array = ($type =~/^@/);
     $type =~s/^@//;
 
-    if (!defined(indexOf($type, @reserved))) {
+    if (!defined(indexOf(lc($type), @reserved))) {
         my $object_type_id = MinorImpact::Object::typeID($type);
         if ($object_type_id) {
             $local_params->{type} = "object[$object_type_id]";
@@ -267,6 +269,8 @@ sub add {
         } else {
             die "'$type' is not a valid object type.";
         }
+    } else {
+        $type = lc($type);
     }
 
     MinorImpact::log(8, "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");

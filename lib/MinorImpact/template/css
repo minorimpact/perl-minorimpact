@@ -8,4 +8,9 @@ Content-type: text/css
 /* So that text/markdown fields don't sit so low. */
 div p { margin-top:0px; }
 
+.ui-datepicker-trigger{
+    border:none;
+    background:none;
+}
+
 [% INCLUDE css_site %]

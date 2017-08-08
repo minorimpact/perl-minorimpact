@@ -1,5 +1,7 @@
 package MinorImpact::Util;
 
+use strict;
+
 =head1 NAME
 
 
@@ -14,12 +16,13 @@ package MinorImpact::Util;
 use Data::Dumper;
 use Time::Local;
 use Exporter 'import';
-@EXPORT = ( "cloneHash",
+our @EXPORT = ( "cloneHash",
             "dumper",
             "extractTags",
             "f",
             "fleshDate",
             "fromMysqlDate", 
+            "htmlEscape",
             "indexOf",
             "parseTags",
             "randomText",
@@ -67,14 +70,13 @@ sub extractTags {
         my $i = 0;
         foreach my $tag (split("\n", $text)) {
             # ignore the first line.
-            trim(\$tag);
-            next unless ($i++ && $tag =~/^(\w+)$/);
+            next unless ($i++ && $tag =~/^\s*(\w+)\s*$/);
             $tags{$tag}++;
-            $text =~s/^$tag$//m;
+            $text =~s/^\s*$tag\s*$//m;
         }
         $$t = $text if (ref($t));
     }
-    return sort map { lc($_); } keys %tags;
+    return sort uniq map { lc($_); } keys %tags;
 }
 
 # This literally just prints an html header and a FUCK, 
@@ -138,6 +140,18 @@ sub fromMysqlDate {
         return @dates;
     }
     return $dates[0];
+}
+
+sub htmlEscape {
+    my $string = shift || return;
+    my $text = ref($string)?$$string:$string;
+    $text =~ s/&/&amp;/g;
+    $text =~ s/</&lt;/g;
+    $text =~ s/>/&rt;/g;
+    $text =~ s/"/&quote;/g;
+    $text =~ s/'/&#39;/g;
+    $$string = $text if (ref($string));
+    return $text;
 }
 
 sub indexOf {
