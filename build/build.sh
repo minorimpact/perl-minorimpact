@@ -3,8 +3,7 @@
 set -x
 
 LIVE_DIR="/usr/share/perl5/vendor_perl";
-LIVE2_DIR="/usr/lib/perl5/vendor_perl";
-RELEASE_DIR="/usr/local/www/minorimpact.com/html/yum-repo";
+RELEASE_DIR="/data/repo";
 
 while getopts "hn?" cliopts
 do
@@ -38,17 +37,13 @@ PACKAGE_NAME="$NAME-$VERSION"
 BUILD_DIR="/tmp"
 BASE_DIR="$BUILD_DIR/$PACKAGE_NAME"
 ROOT_DIR="$BASE_DIR/$LIVE_DIR"
-ROOT2_DIR="$BASE_DIR/$LIVE2_DIR"
 SOURCE_DIR="$HOME/rpmbuild/SOURCES"
 
 [ -f $SOURCE_DIR/$PACKAGE_NAME.tar.gz ] && rm -f $SOURCE_DIR/$PACKAGE_NAME.tar.gz
 [ -d $ROOT_DIR ] && rm -rf $ROOT_DIR
-[ -d $ROOT2_DIR ] && rm -rf $ROOT2_DIR
 mkdir -p $ROOT_DIR
-mkdir -p $ROOT2_DIR
 
 cp -a $DIRNAME/../* $ROOT_DIR
-cp -a $DIRNAME/../* $ROOT2_DIR
 
 cd $BUILD_DIR
 tar -c -v -z --exclude='.git' --exclude='build' -f ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME/
@@ -59,15 +54,12 @@ rpmbuild -ba $DIRNAME/$NAME.spec
 
 if [ "$REPO" != "norepo" ];
 then
-cd $HOME
-    RPM="$PACKAGE_NAME-$RELEASE.noarch.rpm"
-    cp RPMS/noarch/$RPM $RELEASE_DIR/
+    cd $HOME
     RPM="$PACKAGE_NAME-$RELEASE.noarch.rpm"
     cp rpmbuild/RPMS/noarch/$RPM $RELEASE_DIR/
     createrepo -s sha $RELEASE_DIR
     rm -f $RELEASE_DIR/$NAME-latest.noarch.rpm
     ln -s $RELEASE_DIR/$RPM $RELEASE_DIR/$NAME-latest.noarch.rpm
-    cd $HOME
 fi
 
 
