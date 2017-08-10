@@ -12,13 +12,10 @@ sub new {
     #MinorImpact::log(7, "starting");
     my $self = $package->SUPER::_new($data);
 
+    $self->{attributes}{default_value} = 0;
     bless($self, $package);
     #MinorImpact::log(7, "ending");
     return $self;
-}
-
-sub defaultValue {
-    return 0;
 }
 
 sub addValue {

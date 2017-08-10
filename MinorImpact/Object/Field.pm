@@ -3,6 +3,7 @@ package MinorImpact::Object::Field;
 use strict;
 
 use Data::Dumper;
+use Text::Markdown 'markdown';
 
 use MinorImpact;
 use MinorImpact::Util;
@@ -11,7 +12,18 @@ use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::url;
 
-our @reserved = ('datetime', 'string', 'boolean', 'url', 'text', 'float', 'int');
+=head1 NAME
+
+MinorImpact::Object::Field - Base class for MinorImpact object fields.
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
+our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
+our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'object_type_id', 'system', 'user_id' );
 
 # TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
 #   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
@@ -39,6 +51,7 @@ sub new {
         $self = MinorImpact::Object::Field::_new($package, $data);
         bless($self, $package);
     }
+
     #MinorImpact::log(7, "ending");
     return $self;
 }
@@ -62,12 +75,16 @@ sub _new {
         push(@{$self->{data}{value}}, $value);
     }
 
+    $self->{attributes}{maxlength} = 255;
+    $self->{attributes}{default_value} = '';
+    $self->{attributes}{is_text} = 0;
+
     #MinorImpact::log(7, "ending");
     return $self;
 }
 
 sub defaultValue {
-    return '';
+    return shift->{attribute}{default_value};
 }
 
 sub validate {
@@ -79,7 +96,7 @@ sub validate {
     if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
         die $self->name() . " cannot be blank";
     }
-    die $self->name() . ": value is too large." if ($value && length($value) > 255);
+    die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
     return $value;
 }
 
@@ -144,9 +161,13 @@ sub toString {
     
     my $string;
     if ($value) {
+        # I don't understand why this exists.
         $string = $value;
     } else {
         foreach my $value (@{$self->{data}{value}}) {
+            if ($self->{attributes}{markdown}) {
+                $value = markdown($value);
+            }
             $string .= "$value,";
         }
         $string =~s/,$//;
@@ -217,9 +238,9 @@ sub _input {
     } else {
         $row .= "<label>" . $self->fieldName() . "</label>\n<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
         if ($name eq 'name') {
-            $row .= " maxlength=50" if ($name eq 'name');
+            $row .= " maxlength=50";
         } else {
-            $row .= " maxlength=255" if ($name eq 'name');
+            $row .= " maxlength=" . ($self->{attributes}{maxlength} ||  255);
         }
         if ($params->{duplicate}) {
             $row .= " onchange='duplicateRow(this);'";
@@ -260,8 +281,8 @@ sub add {
     my $type = $local_params->{type};
     my $array = ($type =~/^@/);
     $type =~s/^@//;
-
-    if (!defined(indexOf(lc($type), @reserved))) {
+    die "'" . $local_params->{name} . "' is reserved." if (defined(indexOf($local_params->{name}, @reserved_names, @valid_types)));
+    if (!defined(indexOf(lc($type), @valid_types))) {
         my $object_type_id = MinorImpact::Object::typeID($type);
         if ($object_type_id) {
             $local_params->{type} = "object[$object_type_id]";
@@ -319,7 +340,7 @@ sub del {
 sub delField { del(@_); }
 
 sub isText {
-    return 0;
+    return shift->{attributes}{is_text};
 }
 
 1;

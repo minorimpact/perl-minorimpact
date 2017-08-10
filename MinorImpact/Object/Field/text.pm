@@ -15,6 +15,10 @@ sub new {
     my $self = $package->SUPER::_new($data);
 
     bless($self, $package);
+
+    $self->{attributes}{maxlength} = 65535;
+    $self->{attributes}{markdown} = 1;
+    $self->{attributes}{is_text} = 1;
     #MinorImpact::log(7, "ending");
     return $self;
 }
@@ -34,37 +38,6 @@ sub _input {
     $row .= ">$value</textarea>\n";
 
     return $row;
-}
-
-sub toString {
-    my $self = shift || return;
-    my $value = shift;
-
-    my @strings;
-    
-    if ($value) {
-        push (@strings, $value);
-    } else {
-        foreach my $value (@{$self->{data}{value}}) {
-            push(@strings, markdown($value));
-        }
-    }
-    return join("\n", @strings);
-}
-
-sub validate {
-    my $self = shift || return;
-    my $value = shift;
-
-    die $self->name() . ": value is too large" if ($value && length($value) > 65535);
-    if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
-        die $self->name() . " cannot be blank";
-    }
-    return $value;
-}
-
-sub isText {
-    return 1;
 }
 
 1;

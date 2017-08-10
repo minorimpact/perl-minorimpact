@@ -12,13 +12,11 @@ sub new {
     #MinorImpact::log(7, "starting");
     my $self = $package->SUPER::_new($data);
 
+    $self->{attributes}{default_value} = '0000-00-00 00:00:00';
+    $self->{attributes}{maxlength} = 20;
     bless($self, $package);
     #MinorImpact::log(7, "ending");
     return $self;
-}
-
-sub defaultValue {
-    return '0000-00-00 00:00:00';
 }
 
 sub _input {
@@ -28,7 +26,7 @@ sub _input {
     my $name = $params->{name};
     my $value = $params->{row_value};
     my $row;
-    $row .= "<input class='w3-input w3-border datepicker' id='$name' type=text name='$name' value='$value' maxlength=20";
+    $row .= "<input class='w3-input w3-border datepicker' id='$name' type=text name='$name' value='$value' maxlength=" . $self->{attributes}{maxlength};
     if ($params->{duplicate}) {
         $row .= " onchange='duplicateRow(this);'";
     }
