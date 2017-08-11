@@ -33,11 +33,11 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
     my $self;
     eval {
         my $field_type = $data->{type};
-        MinorImpact::log(7, "\$field_type=$field_type");
+        #MinorImpact::log(7, "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
     MinorImpact::log(8, "$@") if ($@);
@@ -53,14 +53,15 @@ sub new {
         bless($self, $package);
     }
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $self;
 }
 
 sub _new {
     my $package = shift || return;
     my $data = shift || return;
-    MinorImpact::log(7, "starting");
+
+    #MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -69,34 +70,95 @@ sub _new {
     $self->{attributes}{maxlength} = 255;
 
     my $local_data = cloneHash($data);
+
+    # Override the default field attributes with anything added by an
+    #   inherited class.
     $local_data->{attributes} ||= {};
-
     $self->{attributes} = { %{$self->{attributes}}, %{$local_data->{attributes}} };
-    $self->{attributes}{default_value} = $data->{default_value} || '';
-
+    $self->{attributes}{default_value} = $data->{default_value} if ($data->{default_value});
     delete($local_data->{attributes});
 
-    # TODO: We're basically sending this the database row that we want to be turned into a field.  We should really just give
-    #   it an object_type and an object_field_id and let it suck it in for itself.
-    # We want the value to be an array, not a scalar, so duplicate
-    #   it and rewrite it as an array.
     $self->{data} = $local_data;
     #MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
     if (defined($self->{data}{value}) && !ref($self->{data}{value})) {
+        # We want the value to be an array, not a scalar, so duplicate
+        #   it and rewrite it as an array.
         my $value = $self->{data}{value};
         #MinorImpact::log(8, "\$value='$value'");
         $self->{data}{value} = [];
-        push(@{$self->{data}{value}}, split("\0", $value)) if ($value);
+        push(@{$self->{data}{value}}, split(/\0/, $value)) if ($value);
     } elsif (!defined($self->{data}{value})) {
-        $self->{data}{value} = []; # $self->{attributes}{default_value} ];
+        $self->{data}{value} = [];
     }
 
-    MinorImpact::log(7, "ending");
+    if ($self->{data}{id} && $self->{data}{object_id}) {
+        #MinorImpact::log(8, "\$self->{data}{id}='" . $self->{data}{id} . "'");
+        #MinorImpact::log(8, "\$self->{data}{object_id}='" . $self->{data}{object_id} . "'");
+        my $DB = MinorImpact::db();
+        if ($self->{attributes}{is_text}) {
+            my $data = $DB->selectall_arrayref("select value from object_text where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
+            foreach my $row (@$data) {
+                #MinorImpact::log(8,"\$row->{value}='" . $row->{value} . "'");
+                push(@{$self->{data}{value}}, $row->{value});
+            }
+        } else {
+            my $data = $DB->selectall_arrayref("select value from object_data where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
+            foreach my $row (@$data) {
+                #MinorImpact::log(8,"\$row->{value}='" . $row->{value} . "'");
+                push(@{$self->{data}{value}}, $row->{value});
+            }
+        }
+    }
+    if (scalar(@{$self->{data}{value}}) == 0 && defined($self->{attributes}{default_value})) {
+        push(@{$self->{data}{value}}, $self->{attributes}{default_value});
+    }
+
+    #MinorImpact::log(7, "ending");
     return $self;
 }
 
 sub defaultValue {
     return shift->{attribute}{default_value};
+}
+
+sub update {
+    my $self = shift || return;
+
+    #MinorImpact::log("starting");
+    my @values = ();
+    foreach my $v (@_) {
+        if (ref($v) eq 'ARRAY') {
+            push(@values, @{$v});
+        } else {
+            push(@values, $v);
+        }
+    }
+
+    if ($self->id() && $self->object_id()) {
+        my $object_id = $self->object_id();
+        MinorImpact::cache("object_data_$object_id", {});
+        my $DB = MinorImpact::db();
+        if ($self->isText()) {
+            $DB->do("delete from object_text where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
+        } else {
+            $DB->do("delete from object_data where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
+        }
+        foreach my $split_value (map { split(/\0/, $_); } @values) {
+            my $sql;
+            if ($self->isText()) {
+                $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+            } else {
+                $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+            }
+            #MinorImpact::log(8, "$sql \@fields=" . $object_id . ", " . $self->id() . ", $split_value");
+            $DB->do($sql, undef, ($object_id, $self->id(), $split_value)) || die $DB->errstr;
+        }
+    }
+    $self->{data}{value} = [];
+    foreach my $split_value (map { split(/\0/, $_); } @values) {
+        push(@{$self->{data}{value}}, $split_value);
+    }
+    #MinorImpact::log("ending");
 }
 
 sub validate {
@@ -115,18 +177,13 @@ sub validate {
     return $value;
 }
 
-sub addValue {
-    my $self = shift || return;
-    my $data = shift || return;
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
-    
-    $self->{data}{data_id} = $data->{id};
-    $self->{data}{name} = $data->{name};
-    #MinorImpact::log(8, $self->{data}{name} . "='" . $data->{value} . "'");
-    $self->{data}{value} ||= [];
-    push(@{$self->{data}{value}}, $data->{value});
+sub value { 
+    my $self = shift || return; 
+    my $params = shift || {};
 
-    #MinorImpact::log(7, "ending");
+    my @values = ();
+    @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
+    return @values;
 }
 
 sub fieldName {
@@ -146,15 +203,6 @@ sub displayName {
     return $display_name;
 }
 
-sub value { 
-    my $self = shift || return; 
-    my $params = shift || {};
-
-    my @values = ();
-    @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
-    return @values;
-}
-
 # return a piece of metadata about this field.
 sub get {
     my $self = shift || return;
@@ -165,8 +213,11 @@ sub get {
     }
     return $self->{data}{$data_field};
 }
-sub id { my $self = shift || return; return $self->{data}{data_id}; }
-sub name { shift->{data}{name}; }
+
+sub id { return shift->{data}{id}; }
+sub name { return shift->{data}{name}; }
+sub object_id { return shift->{data}{object_id}; }
+
 sub toString { 
     my $self = shift || return; 
     my $value = shift;
@@ -354,8 +405,6 @@ sub del {
 }
 sub delField { del(@_); }
 
-sub isText {
-    return shift->{attributes}{is_text};
-}
+sub isText { return shift->{attributes}{is_text}; }
 
 1;

@@ -227,7 +227,9 @@ sub edit_settings {
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $cgi_params = $CGI->Vars;
-        $settings->update($cgi_params);
+        eval {
+            $settings->update($cgi_params);
+        };
         if ($@) {
             my $error = $@;
             MinorImpact::log(3, $error);

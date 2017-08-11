@@ -195,11 +195,18 @@ Returns the user's 'name' field.  A shortcut to get('name').
 
 sub name { return shift->get('name'); }
 
+=item search( \%params )
+
+A passthru function that appends the user_id of the user object to to the query 
+hash of %params.
+
+=cut
+
 sub search { 
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
 
     my $local_params = cloneHash($params);
 
@@ -209,19 +216,25 @@ sub search {
 
     my @results = MinorImpact::Object::Search::search($local_params);
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return @results;
 }
+
+=item settings()
+
+Returns the user's MinorImpact::settings object.
+
+=cut
 
 sub settings {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
 
-    my $local_params = cloneHash($params);
+    my $local_params = {};
     $local_params->{query} ||= {};
-    $local_params->{query}{object_type_id} = 'settings';
+    $local_params->{query}{object_type_id} = 'MinorImpact::settings';
     $local_params->{query}{debug} .= "MinorImpact::User::settings();";
     my @settings = $self->search($local_params);
     my $settings = $settings[0];
@@ -229,7 +242,7 @@ sub settings {
         $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
     }
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $settings;
 }
 

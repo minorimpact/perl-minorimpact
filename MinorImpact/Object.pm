@@ -300,7 +300,7 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     #if (!$fields) {
     #   dumper($fields);
@@ -317,7 +317,7 @@ sub validateFields {
         next unless ($field);
         $field->validate($params->{$field_name});
     }
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
 }
 
 =item update( { field => value [,...] })
@@ -330,7 +330,7 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
-    MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $object_id = $self->id();
 
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
@@ -344,27 +344,10 @@ sub update {
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
-        MinorImpact::log(8, "updating \$field_name='$field_name'");
+        #MinorImpact::log(8, "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
-        my $field_type = $field->type();
-        MinorImpact::log(8, "\$field_type='$field_type'");
-        if (defined $params->{$field_name}) {
-            $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
-            $self->{DB}->do("delete from object_text where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
-            foreach my $value (split(/\0/, $params->{$field_name})) {
-                MinorImpact::log(8, "$field_name='$value'");
-                if ($field->isText()) {
-                    my $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
-                    #MinorImpact::log(8, "$sql \@fields=" . $self->id() . ", " . $field->get('object_field_id') . ", $value");
-                    $self->{DB}->do($sql, undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
-                } else {
-                    my $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
-                    #MinorImpact::log(8, "$sql \@fields=" . $self->id() . ", " . $field->get('object_field_id') . ", $value");
-                    $self->{DB}->do($sql, undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
-                }
-            }
-        }
+        $field->update($params->{$field_name});
     }
 
     foreach my $param (keys %$params) {
@@ -380,42 +363,36 @@ sub update {
         }
     }
     $self->_reload();
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return;
 }
 
 sub fields {
     my $self = shift || return;
 
-    MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "starting");
 
     my $object_type_id;
     if (ref($self) eq "HASH") {
         $object_type_id = $self->{object_type_id};
+        undef($self);
     } elsif (ref($self)) {
         #MinorImpact::log(7, "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         return $self->{object_data} if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         $object_type_id = $self->typeID();
     } else {
         $object_type_id = $self;
+        undef($self);
     }
     #MinorImpact::log(8, "\$self='" .$self."'");
 
     die "No type_id defined\n" unless ($object_type_id);
 
-    my $fields;
-    my $DB = MinorImpact::db();
-    my $data = MinorImpact::cache("object_field_$object_type_id");
-    unless ($data) {
-        $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
-        MinorImpact::cache("object_field_$object_type_id", $data);
-    }
-    foreach my $row (@$data) {
-        #MinorImpact::log(8, $row->{name});
-        $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
-    }
+    my $params = { object_type_id => $object_type_id };
+    $params->{object_id} = $self->id() if ($self);
+    my $fields = MinorImpact::Object::Type::fields($params);
 
-    MinorImpact::log(7, "ending");
+    #MinorImpact::log(7, "ending");
     return $fields;
 }
 
@@ -555,20 +532,6 @@ sub _reload {
     undef($self->{object_data});
 
     $self->{object_data} = $self->fields();
-    my $data = $self->{DB}->selectall_arrayref("select object_field.name, object_data.id, object_data.value from object_data, object_field where object_field.id=object_data.object_field_id and object_data.object_id=?", {Slice=>{}}, ($self->id()));
-    foreach my $row (@$data) {
-        if ($self->{object_data}->{$row->{name}}) {
-            $self->{object_data}->{$row->{name}}->addValue($row);
-        }
-    }
-
-    my $text = $self->{DB}->selectall_arrayref("select object_field.name, object_text.id, object_text.value from object_text, object_field where object_field.id=object_text.object_field_id and object_text.object_id=?", {Slice=>{}}, ($self->id()));
-    foreach my $row (@$text) {
-        if ($self->{object_data}->{$row->{name}}) {
-            $self->{object_data}->{$row->{name}}->addValue($row);
-        }
-    }
-
 
     $self->{tags} = $self->{DB}->selectall_arrayref("SELECT * FROM object_tag WHERE object_id=?", {Slice=>{}}, ($object_id)) || [];
     $object_data->{data} = $self->{data};

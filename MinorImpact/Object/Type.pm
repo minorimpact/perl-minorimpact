@@ -73,6 +73,30 @@ sub delField {
     return MinorImpact::Object::Field::del(@_);
 }
 
+sub fields {
+    my $params = shift || return;
+
+    #MinorImpact::log(7, "starting");
+
+    my $object_type_id = $params->{object_type_id} || die "No object type id defined\n";
+    my $object_id = $params->{object_id};
+
+    my $fields;
+    my $DB = MinorImpact::db();
+    my $data = MinorImpact::cache("object_field_$object_type_id");
+    unless ($data) {
+        $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+        MinorImpact::cache("object_field_$object_type_id", $data);
+    }
+    foreach my $row (@$data) {
+        #MinorImpact::log(8, $row->{name});
+        $row->{object_id} = $object_id if ($object_id);
+        $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
+    }
+
+    #MinorImpact::log(7, "ending");
+    return $fields;
+}
 
 sub setVersion {
     #MinorImpact::log(7, "starting");
