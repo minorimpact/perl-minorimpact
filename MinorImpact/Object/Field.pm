@@ -82,14 +82,14 @@ sub _new {
     # We want the value to be an array, not a scalar, so duplicate
     #   it and rewrite it as an array.
     $self->{data} = $local_data;
-    MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
+    #MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
     if (defined($self->{data}{value}) && !ref($self->{data}{value})) {
         my $value = $self->{data}{value};
-        MinorImpact::log(8, "\$value='$value'");
+        #MinorImpact::log(8, "\$value='$value'");
         $self->{data}{value} = [];
-        push(@{$self->{data}{value}}, split("\0", $value));
+        push(@{$self->{data}{value}}, split("\0", $value)) if ($value);
     } elsif (!defined($self->{data}{value})) {
-        $self->{data}{value} = [ $self->{attributes}{default_value} ];
+        $self->{data}{value} = []; # $self->{attributes}{default_value} ];
     }
 
     MinorImpact::log(7, "ending");
@@ -119,12 +119,15 @@ sub validate {
 sub addValue {
     my $self = shift || return;
     my $data = shift || return;
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(8, "$data->{name}='$data->{value}'");
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
     
     $self->{data}{data_id} = $data->{id};
     $self->{data}{name} = $data->{name};
+    #MinorImpact::log(8, $self->{data}{name} . "='" . $data->{value} . "'");
+    $self->{data}{value} ||= [];
     push(@{$self->{data}{value}}, $data->{value});
+
+    #MinorImpact::log(7, "ending");
 }
 
 sub fieldName {
@@ -149,13 +152,7 @@ sub value {
     my $params = shift || {};
 
     my @values = ();
-    # TODO: Rethink this.  I like the idea of returning an actual object for fields that are references to other 
-    #   objects, but too many things are expecting an an actual id, and then do stuff with that.
-    #if ($self->type() =~/object\[(\d+)\]$/ && !$params->{id_only}) {
-    #    @values = map { new MinorImpact::Object($_); } @{$self->{data}{value}};
-    #} else {
-        @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
-    #}
+    @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
     return @values;
 }
 
@@ -349,11 +346,12 @@ sub del {
     my $object_type_id = $params->{object_type_id} || die "No object type id";
     my $name = $params->{name} || die "Field name can't be blank.";
 
-    
-    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || die $DB->errst;
+    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || die $DB->errstr;
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
+    MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_id", {});
 }
 sub delField { del(@_); }
 
