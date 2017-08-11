@@ -23,6 +23,7 @@ sub add {
     #MinorImpact::log(8, "\$object_type_id='$object_type_id'");
     
     if ($object_type_id) {
+        MinorImpact::cache("object_field_$object_type_id", {});
         MinorImpact::cache("object_type_$object_type_id", {});
         my $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr();
         $DB->do("UPDATE object_type SET plural=? WHERE id=?", undef, ($plural, $object_type_id)) || die $DB->errstr unless ($data->{plural} eq $plural);
@@ -83,6 +84,7 @@ sub setVersion {
     die "Invalid object type" unless ($object_type_id =~/^\d+$/);
     #MinorImpact::log(8, "\$object_type_id='$object_type_id', \$version='$version'");
 
+    MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
     my $DB = MinorImpact::db();
     my $sql = "UPDATE object_type SET version=? WHERE id=?";

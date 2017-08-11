@@ -13,14 +13,16 @@
         [% END %]
         [% form_fields %]
         <!-- CUSTOM -->
-        <div class="w3-row" style="margin-top:8px">
-            <label>Tags</label>
-            <input type=text name=tags value='[% tags %]' class="w3-input w3-border" placeholder="tag1 tag2 tag3...">
-        </div>
+        [% IF not no_tags %]
+            <div class="w3-row" style="margin-top:8px">
+                <label>Tags</label>
+                <input type=text name=tags value='[% tags %]' class="w3-input w3-border" placeholder="tag1 tag2 tag3...">
+            </div>
+        [% END %]
         <div class="w3-row" style="margin-top:8px">
             <input type=submit name=submit class="w3-input w3-border">
         </div>
-    </form
+    </form>
 
 <script>
     [% javascript %]

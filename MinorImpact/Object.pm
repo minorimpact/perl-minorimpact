@@ -64,13 +64,13 @@ sub new {
             my $object_type_id = typeID($id->{object_type_id});
             $data = MinorImpact::cache("object_type_$object_type_id");
             unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT name, version FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
+                $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
                 MinorImpact::cache("object_type_$object_type_id", $data);
             }
         } else {
             $data = MinorImpact::cache("object_id_type_$id");
             unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT ot.name AS name, ot.version AS version FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+                $data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
                 MinorImpact::cache("object_id_type_$id", $data);
             }
         }
@@ -309,8 +309,8 @@ sub validateFields {
     #   dumper($params);
     #}
 
-    die "No fields to validate." unless ($fields);
-    die "No parameters to validate." unless($params);
+    #die "No fields to validate." unless ($fields);
+    #die "No parameters to validate." unless($params);
 
     foreach my $field_name (keys %$params) {  
         my $field = $fields->{$field_name};
@@ -897,6 +897,7 @@ sub form {
                                     name           => $name,
                                     no_name        => $local_params->{no_name},
                                     tags           => $tags,
+                                    no_tags        => $local_params->{no_tags},
                                 }, \$form);
     #MinorImpact::log(7, "ending");
     return $form;

@@ -3,6 +3,7 @@ package MinorImpact::Object::Field::text;
 use Text::Markdown 'markdown';
 
 use MinorImpact;
+use MinorImpact::Util;
 use MinorImpact::Object::Field;
 
 our @ISA = qw(MinorImpact::Object::Field);
@@ -12,13 +13,15 @@ sub new {
     my $data = shift || return;
 
     #MinorImpact::log(7, "starting");
-    my $self = $package->SUPER::_new($data);
 
+    my $local_data = cloneHash($data);
+    $local_data->{attributes}{maxlength} = 65535;
+    $local_data->{attributes}{markdown} = 1;
+    $local_data->{attributes}{is_text} = 1;
+
+    my $self = $package->SUPER::_new($local_data);
     bless($self, $package);
 
-    $self->{attributes}{maxlength} = 65535;
-    $self->{attributes}{markdown} = 1;
-    $self->{attributes}{is_text} = 1;
     #MinorImpact::log(7, "ending");
     return $self;
 }

@@ -49,11 +49,9 @@ sub new {
     }
 
     unless ($self) {
+
         $self = MinorImpact::Object::Field::_new($package, $data);
         bless($self, $package);
-        $self->{attributes}{default_value} = '';
-        $self->{attributes}{isText} = 0;
-        $self->{attributes}{maxlength} = 255;
     }
 
     MinorImpact::log(7, "ending");
@@ -67,18 +65,31 @@ sub _new {
 
     my $self = {};
 
+    $self->{attributes} = {};
+    $self->{attributes}{isText} = 0;
+    $self->{attributes}{maxlength} = 255;
+
+    my $local_data = cloneHash($data);
+    $local_data->{attributes} ||= {};
+
+    $self->{attributes} = { %{$self->{attributes}}, %{$local_data->{attributes}} };
+    $self->{attributes}{default_value} = $data->{default_value} || '';
+
+    delete($local_data->{attributes});
+
     # TODO: We're basically sending this the database row that we want to be turned into a field.  We should really just give
     #   it an object_type and an object_field_id and let it suck it in for itself.
     # We want the value to be an array, not a scalar, so duplicate
     #   it and rewrite it as an array.
-    my $local_data = cloneHash($data);
     $self->{data} = $local_data;
     MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
-    if (defined($local_data->{value})) {
+    if (defined($self->{data}{value}) && !ref($self->{data}{value})) {
         my $value = $self->{data}{value};
         MinorImpact::log(8, "\$value='$value'");
         $self->{data}{value} = [];
         push(@{$self->{data}{value}}, split("\0", $value));
+    } elsif (!defined($self->{data}{value})) {
+        $self->{data}{value} = [ $self->{attributes}{default_value} ];
     }
 
     MinorImpact::log(7, "ending");
@@ -279,7 +290,8 @@ sub add {
     $local_params->{hidden} = $local_params->{hidden}?1:0;
     $local_params->{sortby} = $local_params->{sortby}?1:0;
     $local_params->{readonly} = $local_params->{readonly}?1:0;
-    $local_params->{description} = $local_params->{description};
+    $local_params->{description} = $local_params->{description} || '';
+    $local_params->{default_value} = $local_params->{default_value} || '';
 
     my $type = $local_params->{type};
     my $array = ($type =~/^@/);
@@ -297,6 +309,8 @@ sub add {
         $type = lc($type);
     }
 
+    MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_id", {});
     MinorImpact::log(8, "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
     my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
     if ($data) {
@@ -307,8 +321,9 @@ sub add {
         $DB->do("UPDATE object_field SET sortby=? WHERE id=?", undef, ($local_params->{sortby}, $object_field_id)) || die $DB->errstr unless ($data->{sortby} eq $local_params->{sortby});
         $DB->do("UPDATE object_field SET readonly=? WHERE id=?", undef, ($local_params->{readonly}, $object_field_id)) || die $DB->errstr unless ($data->{readonly} eq $local_params->{readonly});
         $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr unless ($data->{description} eq $local_params->{description});
+        $DB->do("UPDATE object_field SET default_value=? WHERE id=?", undef, ($local_params->{default_value}, $object_field_id)) || die $DB->errstr unless ($data->{default_value} eq $local_params->{default_value});
     } else {
-        $DB->do("INSERT INTO object_field (object_type_id, name, description, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
+        $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
         my $field = new MinorImpact::Object::Field($local_params);
         my $isText = $field->isText();

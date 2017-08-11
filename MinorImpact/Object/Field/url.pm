@@ -10,11 +10,13 @@ sub new {
     my $data = shift || return;
 
     #MinorImpact::log(7, "starting");
-    my $self = $package->SUPER::_new($data);
 
+    my $local_data = cloneHash($data);
+    $local_data->{attributes}{maxlength} = 2048;
+    $local_data->{attributes}{is_text} = 1;
+
+    my $self = $package->SUPER::_new($local_data);
     bless($self, $package);
-    $self->{attributes}{maxlength} = 2048;
-    $self->{attributes}{is_text} = 1;
     #MinorImpact::log(7, "ending");
     return $self;
 }

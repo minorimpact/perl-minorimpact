@@ -1,0 +1,3 @@
+[% INCLUDE header title='Admin' %]
+
+[% INCLUDE footer %]

@@ -1,5 +1,7 @@
 package MinorImpact::WWW;
 
+use strict;
+
 use JSON;
 
 use MinorImpact;
@@ -31,6 +33,7 @@ sub add {
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
 
+    my $script_name = MinorImpact::scriptName();
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
     my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
     $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
@@ -89,6 +92,7 @@ sub add_reference {
     my $user = $MINORIMPACT->user({ force => 1 });
     my $CGI = MinorImpact::cgi();
     my $DB = MinorImpact::db();
+    my $script_name = MinorImpact::scriptName();
 
     my $object_id = $CGI->param('object_id');
     my $object_text_id = $CGI->param('object_text_id');
@@ -100,6 +104,18 @@ sub add_reference {
     if ($object_text_id && $data && $object && $object->user_id() eq $user->id()) {
         $DB->do("INSERT INTO object_reference(object_text_id, data, object_id, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_text_id, $data, $object->id())) || die $DB->errstr;
     }
+}
+
+sub admin {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $user = $MINORIMPACT->user({ force => 1 });
+    $MINORIMPACT->redirect() unless ($user->isAdmin());
+
+    my $CGI = $MINORIMPACT->cgi();
+
+    MinorImpact::tt('admin');
 }
 
 sub collections {
@@ -158,6 +174,7 @@ sub edit {
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
+    my $script_name = MinorImpact::scriptName();
 
     my $search = $CGI->param('search');
 
@@ -199,6 +216,37 @@ sub edit {
                     });
 }
 
+sub edit_settings {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $CGI = $MINORIMPACT->cgi();
+    my $user = $MINORIMPACT->user({ force => 1 });
+    my $settings = $user->settings();
+
+    my @errors;
+    if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
+        my $cgi_params = $CGI->Vars;
+        $settings->update($cgi_params);
+        if ($@) {
+            my $error = $@;
+            MinorImpact::log(3, $error);
+            $error =~s/ at .+ line \d+.*$//;
+            push(@errors, $error) if ($error);
+        }
+
+        if (scalar(@errors) == 0) {
+            $MINORIMPACT->redirect("?a=settings");
+        }
+    }
+    my $form = $settings->form();
+
+    MinorImpact::tt('edit_settings', { 
+                        errors  => [ @errors ],
+                        form => $form,
+    });
+}
+
 =item edit_user()
 
 =cut
@@ -226,7 +274,7 @@ sub edit_user {
         }
     }
 
-    my $form = $user->fieldsForm();
+    my $form = $user->form();
 
     MinorImpact::tt('edit_user', { 
                         errors  => [ @errors ],
@@ -251,6 +299,7 @@ sub home {
     my $search = $CGI->param('search') || '';
     my $sort = $CGI->param('sort') || 1;
     my $tab_id = $CGI->param('tab_id') || 0;
+    my $script_name = MinorImpact::scriptName();
 
     my @collections = sort { $a->cmp($b); } $user->getCollections();
     my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
@@ -351,7 +400,7 @@ sub home {
     my $url_last;
     my $url_next;
     if (scalar(@objects)) {
-        $url_last = $page>1?"$script_name?a=home&cid=$collection_id&search=$serac&sort=$sorth&page=" . ($page - 1):'';
+        $url_last = $page>1?"$script_name?a=home&cid=$collection_id&search=$search&sort=$sort&page=" . ($page - 1):'';
         $url_next = (scalar(@objects)>$limit)?"$script_name?a=home&cid=$collection_id&sort=$sort&search=$search&page=" . ($page + 1):'';
         pop(@objects) if ($url_next);
     }
@@ -386,6 +435,7 @@ sub index {
     my $CGI = $self->cgi();
 
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
+    my $object;
 
     if ($object_id) {
         eval {
@@ -486,7 +536,7 @@ sub register {
             }
         }
     }
-    $tt->process('register', { email => $email, errors => [ @errors ], username => $username }) || die $tt->error();
+    MinorImpact::tt('register', { email => $email, errors => [ @errors ], username => $username });
     #MinorImpact::log(7, "ending");
 }
 
@@ -518,7 +568,11 @@ sub settings {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::tt('settings');
+    my $user = $MINORIMPACT->user({ force => 1 });
+
+    my $settings = $user->settings($params);
+
+    MinorImpact::tt('settings', { settings => $settings });
 }
 
 sub tablist {
@@ -569,6 +623,7 @@ sub tablist {
     #   Right now I know there's 'more' because I'm asking for one more than will fit on the page, but
     #   I can't do a proper 'X of Y' until I can get the whole caboodle.
     my $max;
+    my @objects;
     if ($object) {
         @objects = $object->getChildren($local_params);
     } else {
@@ -585,7 +640,7 @@ sub tablist {
         return;
     }
 
-    my $url_lasty;
+    my $url_last;
     my $url_next;
     if ($limit) {
         $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$object_type_id&search=$search&&page=" . ($page - 1):'';
@@ -657,7 +712,6 @@ sub viewHistory {
     }
     $history->{$field} = $value;
 
-    $session->{view_history} = $history;
     MinorImpact::session('view_history', $history);
 }
 

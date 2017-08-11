@@ -7,8 +7,6 @@ use MinorImpact::Util;
 
 our @ISA = qw(MinorImpact::Object);
 
-our $VERSION = 1;
-
 sub new {
     my $package = shift;
     my $params = shift;
@@ -31,6 +29,7 @@ sub new {
     return $self;
 }
 
+our $VERSION = 1;
 sub dbConfig {
     #MinorImpact::log(7, "starting");
 

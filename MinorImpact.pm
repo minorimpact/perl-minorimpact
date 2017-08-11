@@ -16,11 +16,12 @@ use URI::Escape;
 
 use MinorImpact::BinLib;
 use MinorImpact::collection;
-use MinorImpact::WWW;
 use MinorImpact::Config;
 use MinorImpact::Object;
+use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
+use MinorImpact::WWW;
 
 my $VERSION = 1;
 
@@ -338,6 +339,7 @@ sub checkDatabaseTables {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `name` varchar(50) DEFAULT NULL,
             `description` text,
+            `default_value` varchar(255) NOT NULL,
             `plural` varchar(50) DEFAULT NULL,
             `url` varchar(255) DEFAULT NULL,
             `system` tinyint(1) DEFAULT 0,
@@ -426,6 +428,9 @@ sub checkDatabaseTables {
             PRIMARY KEY (`id`)
             )");
     }
+
+    MinorImpact::collections::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collections"));
+    MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     #MinorImpact::log(7, "ending");
 }
 
@@ -547,6 +552,8 @@ sub www {
         MinorImpact::WWW::add($self, $params);
     } elsif ( $action eq 'add_reference') {
         MinorImpact::WWW::add_reference($self, $params);
+    } elsif ( $action eq 'admin') {
+        MinorImpact::WWW::admin($self, $params);
     } elsif ( $action eq 'collections') {
         MinorImpact::WWW::collections($self, $params);
     } elsif ( $action eq 'css') {
@@ -557,6 +564,8 @@ sub www {
         MinorImpact::WWW::delete_collection($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $params);
+    } elsif ( $action eq 'edit_settings') {
+        MinorImpact::WWW::edit_settings($self, $params);
     } elsif ( $action eq 'edit_user') {
         MinorImpact::WWW::edit_user($self, $params);
     } elsif ( $action eq 'home') {

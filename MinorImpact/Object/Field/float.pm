@@ -22,11 +22,13 @@ sub new {
     my $data = shift || return;
 
     #MinorImpact::log(7, "starting");
-    my $self = $package->SUPER::_new($data);
+    my $local_data = cloneHash($data);
+    $local_data->{attributes}{maxlength} = 15;
+    $local_data->{attributes}{default_value} = '0.0';
+
+    my $self = $package->SUPER::_new($local_data);
     bless($self, $package);
 
-    $self->{attributes}{maxlength} = 15;
-    $self->{attributes}{default_value} = '0.0';
     #MinorImpact::log(7, "ending");
     return $self;
 }

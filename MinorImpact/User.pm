@@ -1,5 +1,7 @@
 package MinorImpact::User;
 
+use strict;
+
 use MinorImpact;
 use MinorImpact::Util;
 
@@ -117,16 +119,16 @@ sub delete {
     #MinorImpact::log(7, "ending");
 }
 
-sub fieldsForm {
+sub form {
     my $self = shift || return;
 
     my $field;
-    my $fields;
+    my $form;
    
     #MinorImpact::log(8, "\$self->get('email')='" . $self->get('email') . "'");
     $field = new MinorImpact::Object::Field({ name => 'email', type => 'string', value => $self->get('email') });
-    $fields .= $field->rowForm();
-    return $fields;
+    $form .= $field->rowForm();
+    return $form;
 }
 
 =item get( $field )
@@ -149,6 +151,7 @@ sub getCollections {
     my $collections = MinorImpact::cache("user_collections_" . $self->id());
     unless ($collections) {
         my $local_params = cloneHash($params);
+        $local_params->{query} ||= {};
         $local_params->{query} = { 
                             %{$local_params->{query}},
                             debug          => 'MinorImpact::User::getCollections();',
@@ -191,6 +194,44 @@ Returns the user's 'name' field.  A shortcut to get('name').
 =cut 
 
 sub name { return shift->get('name'); }
+
+sub search { 
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting(" . $self->id() . ")");
+
+    my $local_params = cloneHash($params);
+
+    $local_params->{query} ||= {};
+    $local_params->{query}{user_id} = $self->id();
+    $local_params->{query}{debug} .= "MinorImpact::User::search();";
+
+    my @results = MinorImpact::Object::Search::search($local_params);
+
+    MinorImpact::log(7, "ending");
+    return @results;
+}
+
+sub settings {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log(7, "starting(" . $self->id() . ")");
+
+    my $local_params = cloneHash($params);
+    $local_params->{query} ||= {};
+    $local_params->{query}{object_type_id} = 'settings';
+    $local_params->{query}{debug} .= "MinorImpact::User::settings();";
+    my @settings = $self->search($local_params);
+    my $settings = $settings[0];
+    unless ($settings) {
+        $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
+    }
+
+    MinorImpact::log(7, "ending");
+    return $settings;
+}
 
 =item update( \%fields )
 

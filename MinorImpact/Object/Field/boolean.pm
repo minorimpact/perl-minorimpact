@@ -2,6 +2,7 @@ package MinorImpact::Object::Field::boolean;
 
 use MinorImpact;
 use MinorImpact::Object::Field;
+use MinorImpact::Util;
 
 our @ISA = qw(MinorImpact::Object::Field);
 
@@ -10,9 +11,12 @@ sub new {
     my $data = shift || return;
 
     #MinorImpact::log(7, "starting");
-    my $self = $package->SUPER::_new($data);
 
-    $self->{attributes}{default_value} = 0;
+    my $local_data = cloneHash($data);
+    $local_data->{attributes}{default_value} = 0;
+
+    my $self = $package->SUPER::_new($local_data);
+
     bless($self, $package);
     #MinorImpact::log(7, "ending");
     return $self;
