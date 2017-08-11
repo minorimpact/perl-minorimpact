@@ -49,7 +49,6 @@ sub new {
     }
 
     unless ($self) {
-
         $self = MinorImpact::Object::Field::_new($package, $data);
         bless($self, $package);
     }

@@ -393,7 +393,7 @@ sub fields {
     if (ref($self) eq "HASH") {
         $object_type_id = $self->{object_type_id};
     } elsif (ref($self)) {
-        MinorImpact::log(7, "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
+        #MinorImpact::log(7, "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         return $self->{object_data} if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         $object_type_id = $self->typeID();
     } else {
