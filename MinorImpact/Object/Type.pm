@@ -31,7 +31,7 @@ sub add {
         return $object_type_id;
     }
 
-    die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::reserved)));
+    die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
 
     $DB->do("INSERT INTO object_type (name, system, readonly, plural, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($name, $system, $readonly, $plural)) || die $DB->errstr;
 

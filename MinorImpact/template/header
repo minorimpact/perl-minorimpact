@@ -78,6 +78,14 @@ Content-type: text/html
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='settings' reset=1 %]' title='Site settings'><i class="fa fa-gear fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='settings' reset=1 %]' title='Site settings'>Settings</a>
+                </div>
+            </div>
+            <div class="w3-row">
+                <div class="w3-col s3">
                     <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='tags' cid='' sort='' %]'><i class="fa fa-tags fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">

@@ -1,5 +1,28 @@
 package MinorImpact::Object;
 
+=head1 NAME 
+
+MinorImpact::Object - The base class for MinorImpact objects.
+
+=head1 SYNOPSIS
+
+    use MinorImpact;
+    use MinorImpact::Object;
+    $object = new MinorImpact::Object({ object_type_id => 'type', name => $name, description => 'bar' });
+    $description = $object->get('description');
+    print $object->name() . ": $description\n";
+
+    # output
+    foo: bar
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
 use strict;
 
 use Data::Dumper;
@@ -12,6 +35,14 @@ use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
 
 my $OBJECT_CACHE;
+
+=item MinorImpact::Object::new( $id )
+
+=item MinorImpact::Object::new( { field => value[, ...] })
+
+Create a new MinorImpact::Object.
+
+=cut
 
 sub new {
     my $package = shift || return;
@@ -130,6 +161,15 @@ sub _new {
     return $self;
 }
 
+=item back( \%options )
+
+Returns the url that makes the most sense when returning from viewing or editing this 
+object. Options:
+
+  url     Additional url parameters that you want to be included in the link.
+
+=cut
+
 sub back {
     my $self = shift || return;
     my $params = shift || {};
@@ -150,11 +190,30 @@ sub back {
     return $url;
 }
 
+=item id() 
+
+Returns the id of the this objec.t
+
+=cut
+
 sub id {return shift->{data}->{id}; }
+
+=item name( \%options )
+
+Returns the 'name' value for this object.   Shortcut for ->get('name', \%options). 
+
+=cut
+
 sub name { return shift->get('name', shift); }
 
-sub user_id { return shift->userID(); }
+=item userID()
+
+The ID of the user this object belongs to.
+
+=cut
+
 sub userID { return shift->get('user_id'); }   
+sub user_id { return shift->userID(); }
 
 sub selectList {
     my $self = shift || return;
@@ -241,7 +300,7 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
 
     #if (!$fields) {
     #   dumper($fields);
@@ -258,14 +317,20 @@ sub validateFields {
         next unless ($field);
         $field->validate($params->{$field_name});
     }
-    #MinorImpact::log(7, "ending");
+    MinorImpact::log(7, "ending");
 }
+
+=item update( { field => value [,...] })
+
+Update the value of one or more of the object fields.
+
+=cut
 
 sub update {
     my $self = shift || return;
     my $params = shift || return;
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    MinorImpact::log(7, "starting(" . $self->id() . ")");
     my $object_id = $self->id();
 
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
@@ -279,15 +344,17 @@ sub update {
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
+        MinorImpact::log(8, "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
         my $field_type = $field->type();
+        MinorImpact::log(8, "\$field_type='$field_type'");
         if (defined $params->{$field_name}) {
             $self->{DB}->do("delete from object_data where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
             $self->{DB}->do("delete from object_text where object_id=? and object_field_id=?", undef, ($self->id(), $field->get('object_field_id'))) || die $self->{DB}->errstr;
             foreach my $value (split(/\0/, $params->{$field_name})) {
-                #MinorImpact::log(8, "$field_name='$value'");
-                if ($field_type =~/text$/ || $field_type eq 'url') {
+                MinorImpact::log(8, "$field_name='$value'");
+                if ($field->isText()) {
                     my $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
                     #MinorImpact::log(8, "$sql \@fields=" . $self->id() . ", " . $field->get('object_field_id') . ", $value");
                     $self->{DB}->do($sql, undef, ($self->id(), $field->get('object_field_id'), $value)) || die $self->{DB}->errstr;
@@ -313,18 +380,21 @@ sub update {
         }
     }
     $self->_reload();
-    #MinorImpact::log(7, "ending");
+    MinorImpact::log(7, "ending");
     return;
 }
 
 sub fields {
     my $self = shift || return;
 
+    MinorImpact::log(7, "starting");
+
     my $object_type_id;
     if (ref($self) eq "HASH") {
         $object_type_id = $self->{object_type_id};
     } elsif (ref($self)) {
-        return $self->{object_data} if ($self->{object_data});
+        MinorImpact::log(7, "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
+        return $self->{object_data} if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         $object_type_id = $self->typeID();
     } else {
         $object_type_id = $self;
@@ -344,6 +414,8 @@ sub fields {
         #MinorImpact::log(8, $row->{name});
         $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
     }
+
+    MinorImpact::log(7, "ending");
     return $fields;
 }
 
@@ -810,10 +882,11 @@ sub form {
         $local_params->{name} = $name;
         $local_params->{value} = \@values;
         $local_params->{query}{user_id} = $user->id();
-        $form_fields .= $field->formRow($local_params);
+        $form_fields .= $field->rowForm($local_params);
     }
 
     my $name = $CGI->param('name') || ($self && $self->name());
+    $name = htmlEscape($name);
     my $search = $CGI->param('search');
     my $tags = $CGI->param('tags') || ($self && join(' ', $self->tags()));
     MinorImpact::tt('form_object', {
@@ -821,7 +894,7 @@ sub form {
                                     javascript     => $script,
                                     object         => $self,
                                     object_type_id => $object_type_id,
-                                    name           => htmlEscape($name),
+                                    name           => $name,
                                     no_name        => $local_params->{no_name},
                                     tags           => $tags,
                                 }, \$form);
@@ -988,7 +1061,16 @@ sub match {
 
     return 1;
 }
-        
+
+=item $object->validateUser( \%options ) 
+
+Verify that a given user has permission to instantiate this object.  Returns true for "system"
+object types. Options:
+
+  user              A MinorImpact::User object.  Defaults to the the current logged 
+                    in user if one exists.
+
+=cut
 
 sub validateUser {
     my $self = shift || return;
@@ -1014,6 +1096,14 @@ sub validateUser {
     return $valid;
 }
 
+=item version()
+
+The value of the $VERSION variable ihe inherited class, or 0.
+
+=back 
+
+=cut
+
 sub version {
     my $self = shift || return;
 
@@ -1023,5 +1113,12 @@ sub version {
     #MinorImpact::log(8, "${class}::VERSION='$version'");
     return $version;
 }
+
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;

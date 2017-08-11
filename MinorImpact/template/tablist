@@ -8,17 +8,16 @@ Content-type: text/html
 <script>
     \$(function () {
         \$("a.paginate").click(function(e) {
-            //alert(\$(this).attr('href'));
             e.preventDefault();
             var href = \$(this).attr('href');
             var tabs = \$("#tabs");
-            var currentTabIndex = tabs.tabs("option", "active");
-            //var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
-            var tab = \$(tabs.data()['ui-tabs'].tabs[currentTabIndex]);
-            tab.find('.ui-tabs-anchor').attr('href', href);
-            // If cached initially. Remove cache then
-            tab.data( "loaded", false);
-            tabs.tabs("load", currentTabIndex);
+            if (tabs) {
+                var currentTabIndex = tabs.tabs("option", "active");
+                var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
+                tab.find('.ui-tabs-anchor').attr('href', href);
+                tab.data( "loaded", false);
+                tabs.tabs("load", currentTabIndex);
+            }
         });
     });
 </script>

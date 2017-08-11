@@ -5,6 +5,23 @@ use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 
+=item1 NAME
+
+MinorImpact::WWW
+
+=item1 SYNOPSIS
+
+=item1 METHODS
+
+=over 4
+
+=cut
+
+=item add()
+
+=cut
+
+
 sub add {
     my $self = shift || return;
     my $params = shift || {};
@@ -40,8 +57,8 @@ sub add {
             };
             push(@errors, $@) if ($@);
         }
-        if ($object && !$error) {
-            my $back = $object->back() || "$script_name?id=" . $object->id();
+        if ($object && !scalar(@errors)) {
+            my $back = $object->back() || "$script_name?a=home&id=" . $object->id();
             $self->redirect($back);
         }
     }
@@ -178,8 +195,42 @@ sub edit {
     $self->tt('edit', { 
                         errors  => [ @errors ],
                         form    => $form,
-                        no_name => $params->{no_name},
                         object   =>$object,
+                    });
+}
+
+=item edit_user()
+
+=cut
+
+sub edit_user {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    my $CGI = $MINORIMPACT->cgi();
+    my $user = $MINORIMPACT->user({ force => 1 });
+
+    my @errors;
+    if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
+        my $params = $CGI->Vars;
+        $user->update($params);
+        if ($@) {
+            my $error = $@;
+            MinorImpact::log(3, $error);
+            $error =~s/ at .+ line \d+.*$//;
+            push(@errors, $error) if ($error);
+        }
+
+        if (scalar(@errors) == 0) {
+            $MINORIMPACT->redirect("?a=user");
+        }
+    }
+
+    my $form = $user->fieldsForm();
+
+    MinorImpact::tt('edit_user', { 
+                        errors  => [ @errors ],
+                        form => $form,
     });
 }
 
@@ -459,6 +510,17 @@ sub save_search {
     $MINORIMPACT->redirect("?cid=" . $collection->id());
 }
 
+=item settings()
+
+=cut
+
+sub settings {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::tt('settings');
+}
+
 sub tablist {
     my $self = shift || return;
     my $params = shift || {};
@@ -574,6 +636,14 @@ sub user {
     MinorImpact::tt('user');
 }
 
+=item viewHistory()
+
+=item viewHistory( $field )
+
+=item viewHistory( $field, $value )
+
+=cut
+
 sub viewHistory {
     my $field = shift;
     my $value = shift;
@@ -590,5 +660,15 @@ sub viewHistory {
     $session->{view_history} = $history;
     MinorImpact::session('view_history', $history);
 }
+
+=back
+
+=cut
+
+=item1 AUTHOR
+
+Patrick Gillan (pgillan@minorimpact.com)
+
+=cut
 
 1;

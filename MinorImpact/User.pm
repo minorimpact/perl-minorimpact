@@ -3,6 +3,32 @@ package MinorImpact::User;
 use MinorImpact;
 use MinorImpact::Util;
 
+=head1 NAME
+
+MinorImpact::User
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+The object representing application users.
+
+=head2 Getting the current user.
+
+
+    use MinorImpact;
+    my $MINORIMPACT = new MinorImpact();
+    my $user = $MINORIMPACT->user();
+    if (!$user) {
+        die "No currently logged in user.";
+    }
+
+=head1 OBJECT METHODS
+
+=over 4
+
+=cut
+
 sub new {
     my $package = shift;
     my $params = shift;
@@ -34,6 +60,24 @@ sub new {
     return $self;
 }
 
+sub addUser {
+    my $params = shift || return;
+    
+    #MinorImpact::log(7, "starting");
+
+    my $DB = $MinorImpact::SELF->{USERDB};
+    if ($DB && $params->{username} && $params->{password}) {
+        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
+        my $user_id = $DB->{mysql_insertid};
+        #MinorImpact::log(8, "\$user_id=$user_id");
+        return new MinorImpact::User($user_id);
+    }
+    die "Couldn't add user " . $params->{username};
+
+    #MinorImpact::log(7, "ending");
+    return;
+}
+
 sub checkDatabaseTables {
     my $DB = shift || return;
 
@@ -53,6 +97,49 @@ sub checkDatabaseTables {
             ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1") || die $DB->errstr;
         $DB->do("create unique index idx_user_name on user(name)") || die $DB->errstr;
     }
+}
+
+sub delete {
+    my $self = shift || return;
+    my $params = shift || {};
+    
+    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    my $user_id = $self->id();
+    # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
+    my $DB = $self->{DB};
+    my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
+    foreach my $object (@objects) {
+        MinorImpact::log(8, "deleting " . $object->name());
+        $object->delete($params);
+    }
+    MinorImpact::cache("user_data_$user_id", {});
+    $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
+    #MinorImpact::log(7, "ending");
+}
+
+sub fieldsForm {
+    my $self = shift || return;
+
+    my $field;
+    my $fields;
+   
+    #MinorImpact::log(8, "\$self->get('email')='" . $self->get('email') . "'");
+    $field = new MinorImpact::Object::Field({ name => 'email', type => 'string', value => $self->get('email') });
+    $fields .= $field->rowForm();
+    return $fields;
+}
+
+=item get( $field )
+
+Returns the value of $field.
+
+=cut
+
+sub get {
+    my $self = shift || return;
+    my $name = shift || return;
+
+    return $self->{data}->{$name};
 }
 
 sub getCollections {
@@ -76,6 +163,59 @@ sub getCollections {
     return map { new MinorImpact::Object($_); } @$collections; 
 }
 
+=item id()
+
+Returns the user's ID.
+
+=cut
+
+sub id { return shift->{data}->{id}; } 
+
+=item isAdmin()
+
+Returns TRUE if the user has administrative priviledges for this application.
+
+=cut
+
+sub isAdmin {
+    my $self = shift || return;
+    #MinorImpact::log(7, "starting");
+    #MinorImpact::log(7, "ending");
+    return $self->get('admin');
+}
+
+=item name() 
+
+Returns the user's 'name' field.  A shortcut to get('name').
+
+=cut 
+
+sub name { return shift->get('name'); }
+
+=item update( \%fields )
+
+Update one or more user fields.
+
+=cut
+
+sub update {
+    my $self = shift || return;
+    my $params = shift || return;
+
+    MinorImpact::cache("user_data_" . $self->id(), {});
+    $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{name}, $self->id())) || die $self->{DB}->errstr if ($params->{name});
+    $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstr if ($params->{email});
+    $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
+}
+
+=item validateUser( $password )
+
+Returns TRUE if $password is valid.
+
+=back
+
+=cut
+
 sub validateUser {
     my $self = shift || return;
 
@@ -84,74 +224,11 @@ sub validateUser {
     return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
 }
 
-sub addUser {
-    my $params = shift || return;
-    
-    #MinorImpact::log(7, "starting");
 
-    my $DB = $MinorImpact::SELF->{USERDB};
-    if ($DB && $params->{username} && $params->{password}) {
-        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
-        my $user_id = $DB->{mysql_insertid};
-        #MinorImpact::log(8, "\$user_id=$user_id");
-        return new MinorImpact::User($user_id);
-    }
-    die "Couldn't add user " . $params->{username};
+=head1 AUTHOR
 
-    #MinorImpact::log(7, "ending");
-    return;
-}
+Patrick Gillan (pgillan@minorimpact.com)
 
-sub delete {
-    my $self = shift || return;
-    my $params = shift || {};
-    
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
-    my $user_id = $self->id();
-    # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
-    my $DB = $self->{DB};
-    my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
-    foreach my $object (@objects) {
-        MinorImpact::log(8, "deleting " . $object->name());
-        $object->delete($params);
-    }
-    MinorImpact::cache("user_data_$user_id", {});
-    $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
-    #MinorImpact::log(7, "ending");
-}
-
-sub id {
-    my $self = shift || return;
-
-    return $self->{data}->{id};
-}
-
-sub name {
-    my $self = shift || return;
-
-    return $self->{data}->{name};
-}
-
-sub get {
-    my $self = shift || return;
-    my $name = shift || return;
-
-    return $self->{data}->{$name};
-}
-
-sub update {
-    my $self = shift || return;
-    my $params = shift || return;
-
-    MinorImpact::cache("user_data_" . $self->id(), {});
-    $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{'name'}, crypt($params->{'password'}, $$), $self->id()));
-}
-
-sub isAdmin {
-    my $self = shift || return;
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(7, "ending");
-    return $self->get('admin');
-}
+=cut
 
 1;

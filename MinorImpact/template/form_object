@@ -1,4 +1,3 @@
-<!-- TEMPLATE:default.object_form -->
     <form method=POST class="w3-container w3-padding">
         <input type=hidden name=a       value='[% object ? 'edit' : 'add' %]'>
         <input type=hidden name=cid     value='[% cid %]'>

@@ -557,6 +557,8 @@ sub www {
         MinorImpact::WWW::delete_collection($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $params);
+    } elsif ( $action eq 'edit_user') {
+        MinorImpact::WWW::edit_user($self, $params);
     } elsif ( $action eq 'home') {
         MinorImpact::WWW::home($self, $params);
     } elsif ( $action eq 'login') {
@@ -569,6 +571,8 @@ sub www {
         MinorImpact::WWW::register($self, $params);
     } elsif ( $action eq 'save_search') {
         MinorImpact::WWW::save_search($self, $params);
+    } elsif ( $action eq 'settings') {
+        MinorImpact::WWW::settings($self, $params);
     } elsif ( $action eq 'tablist') {
         MinorImpact::WWW::tablist($self, $params);
     } elsif ( $action eq 'tags') {

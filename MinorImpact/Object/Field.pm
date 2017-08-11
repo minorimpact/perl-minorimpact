@@ -33,14 +33,15 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
     my $self;
     eval {
         my $field_type = $data->{type};
-        #MinorImpact::log(7, "\$field_type=$field_type");
+        MinorImpact::log(7, "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
-    if ($@ =~/^error:/) {
+    MinorImpact::log(8, "$@") if ($@);
+    if ($@ && $@ !~/Can't locate object method "new" via package/) {
         my $error = $@;
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
@@ -50,16 +51,19 @@ sub new {
     unless ($self) {
         $self = MinorImpact::Object::Field::_new($package, $data);
         bless($self, $package);
+        $self->{attributes}{default_value} = '';
+        $self->{attributes}{isText} = 0;
+        $self->{attributes}{maxlength} = 255;
     }
 
-    #MinorImpact::log(7, "ending");
+    MinorImpact::log(7, "ending");
     return $self;
 }
 
 sub _new {
     my $package = shift || return;
     my $data = shift || return;
-    #MinorImpact::log(7, "starting");
+    MinorImpact::log(7, "starting");
 
     my $self = {};
 
@@ -69,17 +73,15 @@ sub _new {
     #   it and rewrite it as an array.
     my $local_data = cloneHash($data);
     $self->{data} = $local_data;
+    MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
     if (defined($local_data->{value})) {
-        my $value = $data->{value};
-        undef($data->{value});
-        push(@{$self->{data}{value}}, $value);
+        my $value = $self->{data}{value};
+        MinorImpact::log(8, "\$value='$value'");
+        $self->{data}{value} = [];
+        push(@{$self->{data}{value}}, split("\0", $value));
     }
 
-    $self->{attributes}{maxlength} = 255;
-    $self->{attributes}{default_value} = '';
-    $self->{attributes}{is_text} = 0;
-
-    #MinorImpact::log(7, "ending");
+    MinorImpact::log(7, "ending");
     return $self;
 }
 
@@ -93,10 +95,13 @@ sub validate {
     #MinorImpact::log(7, "starting");
 
     my $field_type = $self->type();
+    #MinorImpact::log(8, "$field_type,'$value'");
     if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
         die $self->name() . " cannot be blank";
     }
     die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
+
+    #MinorImpact::log(8, "ending");
     return $value;
 }
 
@@ -120,12 +125,12 @@ sub fieldName {
 sub displayName {
     my $self = shift || return;
 
-    my $displayname = $self->name();
-    $displayname =~s/_id$//;
-    $displayname =~s/_date$//;
-    $displayname =~s/_/ /g;
-    $displayname = ucfirst($displayname);
-    return $displayname;
+    my $display_name = $self->name();
+    $display_name =~s/_id$//;
+    $display_name =~s/_date$//;
+    $display_name =~s/_/ /g;
+    $display_name = ucfirst($display_name);
+    return $display_name;
 }
 
 sub value { 
@@ -182,7 +187,7 @@ sub type {
 }
 
 # Returns a row in a table that contains the field name and the input field.
-sub formRow {
+sub rowForm {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -190,13 +195,11 @@ sub formRow {
 
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
-    $local_params->{debug} .= "Object::Field::formRow();";
 
-    my @values = @{$local_params->{value}};
+    my @values;
+    @values = @{$local_params->{value}} if (defined($local_params->{value}));
     @values = $self->value({id_only=>1}) unless (scalar(@values));
     
-    my $field_name = $self->displayName();
-
     my $row;
     if ($self->isArray()) {
         foreach my $value (@values) {
@@ -223,7 +226,7 @@ sub _input {
     my $self = shift || return;
     my $params = shift || {};
 
-    my $name = $params->{name};
+    my $name = $params->{name} || $self->name();
     my $value = $params->{row_value};
     my $row;
     if ($self->type() =~/object\[(\d+)\]$/) {
@@ -236,7 +239,7 @@ sub _input {
         $local_params->{required} = $self->get('required');
         $row .= "" .  MinorImpact::Object::selectList($local_params);
     } else {
-        $row .= "<label>" . $self->fieldName() . "</label>\n<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
+        $row .= "<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
         if ($name eq 'name') {
             $row .= " maxlength=50";
         } else {
