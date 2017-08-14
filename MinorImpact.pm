@@ -104,7 +104,7 @@ sub new {
             $self->redirect("?a=login");
         }
     }
-    if ($options->{https} && $ENV{HTTPS} ne 'on') {
+    if ($options->{https} && ($ENV{HTTPS} ne 'on' && !$ENV{HTTP_X_FORWARDED_FOR})) {
         MinorImpact::log(3, "not https");
         $self->redirect();
     }
@@ -507,13 +507,11 @@ sub tt {
 
         (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
         my $global_template_directory = File::Spec->catfile($path, "$package/template");
-        #eval {
-        #    $user = $self->user();
-        #};
 
         my $variables = {
             cid         => $cid,
             home        => $self->{conf}{default}{home_script},
+            ENV         => \%ENV,
             script_name => MinorImpact::scriptName(),
             search      => $search,
             sort        => $sort,

@@ -1,3 +1,11 @@
 [% INCLUDE header title='Admin' %]
 
+<h2>Environment Variables</h2>
+   [% FOREACH key IN ENV.keys %]
+    <div class='w3-row'>
+       <div class='w3-col s4'>[% key %]</div>
+       <div class='w3-col s8'>='[% ENV.$key %]'</div>
+    </div>
+   [% END %]
+
 [% INCLUDE footer %]
