@@ -9,6 +9,7 @@ use DBI;
 use Digest::MD5 qw(md5 md5_hex);
 use File::Spec;
 use JSON;
+use Sys::Syslog;
 use Template;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Time::Local;
@@ -22,6 +23,14 @@ use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::WWW;
+
+=head1 NAME
+
+=head1 METHODS
+
+=over 4
+
+=cut
 
 my $VERSION = 1;
 
@@ -43,10 +52,10 @@ sub new {
     my $options = shift || {};
 
     my $self = $SELF;
-    #MinorImpact::log(8, "starting");
+    #MinorImpact::log('debug', "starting");
 
     unless ($self) {
-        MinorImpact::log(3, "creating new MinorImpact object") unless ($options->{no_log});
+        MinorImpact::log('notice', "creating new MinorImpact object") unless ($options->{no_log});
 
         my $config;
         if ($options->{config}) {
@@ -79,11 +88,17 @@ sub new {
         }
         $self->{CGI} = new CGI;
         $self->{conf} = $config;
-        $self->{conf}{default}{home_script} ||= "index.cgi";
         $self->{conf}{application} = $options;
-        $self->{conf}{no_log} = 1 if ($options->{no_log});
+        $self->{conf}{default}{application_id} ||= 'minorimpact';
+        $self->{conf}{default}{home_script} ||= "index.cgi";
+        $self->{conf}{default}{no_log} = 1 if ($options->{no_log});
+        $self->{conf}{default}{log_method} ||= 'syslog';
 
         $self->{starttime} = [gettimeofday];
+
+        if ($self->{conf}{default}{log_method} eq 'syslog') {
+            openlog($self->{conf}{default}{application_id}, 'nofatal,pid', 'local4');
+        }
 
         checkDatabaseTables($self->{DB});
     }
@@ -93,23 +108,23 @@ sub new {
         my $user = $self->user();
         if ($user) {
             if ($options->{user_id} && $user->id() != $options->{user_id}) {
-                MinorImpact::log(3, "logged in user doesn't match");
+                MinorImpact::log('notice', "logged in user doesn't match");
                 $self->redirect("?a=login");
             } elsif ($options->{admin} && !$user->isAdmin()) {
-                MinorImpact::log(3, "not an admin user");
+                MinorImpact::log('notice', "not an admin user");
                 $self->redirect("?a=login");
             }
         } else {
-            MinorImpact::log(3, "no logged in user");
+            MinorImpact::log('notice', "no logged in user");
             $self->redirect("?a=login");
         }
     }
     if ($options->{https} && ($ENV{HTTPS} ne 'on' && !$ENV{HTTP_X_FORWARDED_FOR})) {
-        MinorImpact::log(3, "not https");
+        MinorImpact::log('notice', "not https");
         $self->redirect();
     }
 
-    #MinorImpact::log(8, "ending");
+    #MinorImpact::log('debug', "ending");
     return $self;
 }
 
@@ -117,7 +132,7 @@ sub user {
     my $self = shift || {};
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     if (ref($self) eq 'HASH') {
         $params = $self;
@@ -133,7 +148,7 @@ sub user {
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
     if ($username && $password) {
-        MinorImpact::log(3, "validating " . $username);
+        MinorImpact::log('notice', "validating " . $username);
         my $user_hash = md5_hex("$username:$password");
         # If this is the first page, the cookie hasn't been set, so if there are a ton of items
         #   we're gonna validate against the database over and over again... so just validate against
@@ -143,7 +158,7 @@ sub user {
         }
         my $user = new MinorImpact::User($username);
         if ($user && $user->validateUser($password)) {
-            #MinorImpact::log(8, "password verified for $username");
+            #MinorImpact::log('debug', "password verified for $username");
             my $user_id = $user->id();
 
             MinorImpact::session('user_id', $user_id);
@@ -160,7 +175,7 @@ sub user {
 
     my $user_id = MinorImpact::session('user_id');
     if ($user_id) {
-        #MinorImpact::log(8, "cached user_id=$user_id");
+        #MinorImpact::log('debug', "cached user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
         if ($user) {
             $self->{USER} = $user;
@@ -173,8 +188,8 @@ sub user {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
     #}
-    #MinorImpact::log(8, "no user found");
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "no user found");
+    #MinorImpact::log('info', "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
 }
@@ -197,7 +212,7 @@ sub session {
     } else {
         $session_id = $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
     }
-    #MinorImpact::log(8, "\$session_id='$session_id'\n");
+    #MinorImpact::log('debug', "\$session_id='$session_id'\n");
     my $session;
     if ($session_id) {
         $session = cache("session:$session_id");
@@ -226,7 +241,7 @@ sub redirect {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user();
@@ -235,7 +250,7 @@ sub redirect {
     my $cid = $CGI->param('cid');
     my $sort = $CGI->param('sort');
 
-    #MinorImpact::log(8, "\$self='" . $self . "'");
+    #MinorImpact::log('debug', "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
@@ -251,7 +266,7 @@ sub redirect {
     }
 
     my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
-    #MinorImpact::log(8, "\$location='$location'");
+    #MinorImpact::log('debug', "\$location='$location'");
 
     my $domain = "https://$ENV{HTTP_HOST}";
     my $script_name = MinorImpact::scriptName();
@@ -265,9 +280,9 @@ sub redirect {
     $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
 
     #print $self->{CGI}->header(-location=>$location);
-    MinorImpact::log(3, "redirecting to $location");
+    MinorImpact::log('notice', "redirecting to $location");
     print "Location:$location\n\n";
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     exit;
 }
 
@@ -283,35 +298,44 @@ sub param {
     return $CGI->param($param);
 }
 
+=item log( $log_level, $message )
+
+=cut
+
 sub log {
     my $level = shift || return;
     my $message = shift || return;
 
-    return if ($MinorImpact::SELF && $MinorImpact::SELF->{conf}->{no_log});
+    my $self = $MinorImpact::SELF;
+    return unless ($self && !$self->{conf}{default}{no_log});
 
-    my $date = toMysqlDate();
-    my $file = "/tmp/debug.log";
     my $sub = (caller(1))[3];
     if ($sub =~/log$/) {
         $sub = (caller(2))[3];
     }
     $sub .= "()";
     chomp($message);
+    my $log = "$level $sub $message";
 
-    my $log = "$date|$$|$level|$sub|$message\n";
-    open(LOG, ">>$file") || die;
-    print LOG $log;
-    #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
-    #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-    #foreach $i (0, 1, 2, 3) {
-    #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
-    #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-    #}
-    close(LOG);
+    if ($self->{conf}{default}{log_method} eq 'file') {
+        my $date = toMysqlDate();
+        my $file = $self->{conf}{default}{log_file} || return;;
+        open(LOG, ">>$file") || die "Can't open $file";
+        print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
+        #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
+        #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #foreach $i (0, 1, 2, 3) {
+        #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
+        #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #}
+        close(LOG);
+    } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
+        syslog('info', $log);
+    }
 }
 
 sub checkDatabaseTables {
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     my $DB = shift || return;
 
     eval {
@@ -429,15 +453,15 @@ sub checkDatabaseTables {
             )");
     }
 
-    MinorImpact::collections::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collections"));
+    MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
 }
 
 sub cache {
     my $self = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     if (!ref($self)) {
         unshift(@_, $self);
         $self = $MinorImpact::SELF;
@@ -462,26 +486,26 @@ sub cache {
 
     $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
     if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
-        #MinorImpact::log(8, "removing '$name'");
+        #MinorImpact::log('debug', "removing '$name'");
         return $cache->remove($name);
     }
     if (!defined($value)) {
         $value = $cache->get($name);
-        #MinorImpact::log(8, "$name='" . $value . "'");
+        #MinorImpact::log('debug', "$name='" . $value . "'");
         return $value;
     }
 
-    #MinorImpact::log(8, "setting $name='" . $value . "' ($timeout)");
+    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
     $cache->set($name, $value, $timeout);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $cache;
 }
 
 sub tt {
     my $self = shift || return; 
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);
@@ -531,6 +555,12 @@ sub tt {
     $TT->process(@_) || die $TT->error();
 }
 
+=item www()
+
+=back
+
+=cut
+
 sub www {
     my $self = shift || return;
     my $params = shift || {};
@@ -540,10 +570,10 @@ sub www {
 
     #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));
 
-    MinorImpact::log(8, "\$action='$action'");
+    MinorImpact::log('debug', "\$action='$action'");
 
     if ($params->{actions}{$action}) {
-        #MinorImpact::log(8, "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
+        #MinorImpact::log('debug', "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ( $action eq 'add') {
@@ -590,5 +620,11 @@ sub www {
         MinorImpact::WWW::index($self, $params);
     }
 }
+
+=head1 AUTHOR
+
+Patrick Gillan (pgillan@minorimpact.com)
+
+=cut
 
 1;

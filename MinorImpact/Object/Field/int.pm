@@ -21,7 +21,7 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $local_data = cloneHash($data);
     $local_data->{attributes}{maxlength} = 15;
@@ -29,7 +29,7 @@ sub new {
 
     my $self = $package->SUPER::_new($local_data);
     bless($self, $package);
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $self;
 }
 

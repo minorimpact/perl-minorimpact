@@ -9,7 +9,7 @@ use MinorImpact::Util;
 sub add {
     my $params = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $MI = new MinorImpact();
     my $DB = $MI->db();
@@ -20,7 +20,7 @@ sub add {
     my $system = ($params->{system}?1:0);
 
     my $object_type_id = MinorImpact::Object::typeID($name);
-    #MinorImpact::log(8, "\$object_type_id='$object_type_id'");
+    #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
     
     if ($object_type_id) {
         MinorImpact::cache("object_field_$object_type_id", {});
@@ -36,7 +36,7 @@ sub add {
 
     $DB->do("INSERT INTO object_type (name, system, readonly, plural, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($name, $system, $readonly, $plural)) || die $DB->errstr;
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $DB->{mysql_insertid};
 }
 
@@ -76,7 +76,7 @@ sub delField {
 sub fields {
     my $params = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $object_type_id = $params->{object_type_id} || die "No object type id defined\n";
     my $object_id = $params->{object_id};
@@ -89,32 +89,32 @@ sub fields {
         MinorImpact::cache("object_field_$object_type_id", $data);
     }
     foreach my $row (@$data) {
-        #MinorImpact::log(8, $row->{name});
+        #MinorImpact::log('debug', $row->{name});
         $row->{object_id} = $object_id if ($object_id);
         $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
     }
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $fields;
 }
 
 sub setVersion {
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     my $object_type_id = shift || die "No object type id";
     my $version = shift || die "No version number specified";
 
     $object_type_id = MinorImpact::Object::typeID($object_type_id);
     die "Invalid version number" unless ($version =~/^\d+$/);
     die "Invalid object type" unless ($object_type_id =~/^\d+$/);
-    #MinorImpact::log(8, "\$object_type_id='$object_type_id', \$version='$version'");
+    #MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$version='$version'");
 
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
     my $DB = MinorImpact::db();
     my $sql = "UPDATE object_type SET version=? WHERE id=?";
-    #MinorImpact::log(8, "sql='$sql' \@fields='$version', '$object_type_id'");
+    #MinorImpact::log('debug', "sql='$sql' \@fields='$version', '$object_type_id'");
     $DB->do($sql, undef, ($version, $object_type_id)) || die $DB->errstr;
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
 }
 
 1;

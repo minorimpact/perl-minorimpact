@@ -10,13 +10,13 @@ our @ISA = qw(MinorImpact::Object);
 sub new {
     my $package = shift;
     my $params = shift;
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     if (ref($params) eq 'HASH') {
         if ($params->{search}) {
             my $search = $params->{search};
             my @tags = extractTags(\$search);
-            #MinorImpact::log(8, "\@tags='" . join(",", @tags) . "'");
+            #MinorImpact::log('debug', "\@tags='" . join(",", @tags) . "'");
             $params->{text} = ($params->{text}?" ":"") . trim($search);
             $params->{tag} = ($params->{tag}?"\0":"") . join("\0", @tags);
         }
@@ -25,13 +25,13 @@ sub new {
     my $self = $package->SUPER::_new($params);
     bless($self, $package);
 
-    #$self->log(7, "ending");
+    #$self->log('info', "ending");
     return $self;
 }
 
 our $VERSION = 1;
 sub dbConfig {
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
@@ -54,29 +54,29 @@ sub dbConfig {
 
     MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return;
 }
 
 sub searchParams {
     my $self = shift || return;
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('info', "starting(" . $self->id() . ")");
     my $params = { debug => 'collection::searchParams();' }; 
     foreach my $tag ($self->get('tag')) {
         $params->{tag} .= "$tag,";
     }
     $params->{tag} =~s/[^\w]+$//;
-    #MinorImpact::log(8, "\$params->{tag}='" . $params->{tag} . "'");
+    #MinorImpact::log('debug', "\$params->{tag}='" . $params->{tag} . "'");
 
     foreach my $text ($self->get('text')) {
         $params->{text} .= " $text";
     }
     trim($params->{text});
 
-    #MinorImpact::log(8, "\$params->{text}='" . $params->{text} . "'");
+    #MinorImpact::log('debug', "\$params->{text}='" . $params->{text} . "'");
     
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $params;
 }
 
@@ -84,7 +84,7 @@ sub searchText {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('info', "starting(" . $self->id() . ")");
     my $text;
     foreach my $tag ($self->get('tag')) {
         $text .= "tag:$tag ";
@@ -94,7 +94,7 @@ sub searchText {
         $text .= "$t ";
     }
     
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $text;
 }
 

@@ -28,7 +28,7 @@ sub add {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
@@ -43,7 +43,7 @@ sub add {
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         if ($action eq 'add') {
-            #MinorImpact::log(8, "submitted action eq 'add'");
+            #MinorImpact::log('debug', "submitted action eq 'add'");
             $params->{user_id} = $user->id();
             $params->{object_type_id} = $object_type_id;
 
@@ -68,7 +68,7 @@ sub add {
 
     my $type_name = MinorImpact::Object::typeName({ object_type_id => $object_type_id });
     my $local_params = { object_type_id=>$object_type_id };
-    #MinorImpact::log(8, "\$type_name='$type_name'");
+    #MinorImpact::log('debug', "\$type_name='$type_name'");
     my $form;
     eval {
         $form = $type_name->form($local_params);
@@ -232,7 +232,7 @@ sub edit_settings {
         };
         if ($@) {
             my $error = $@;
-            MinorImpact::log(3, $error);
+            MinorImpact::log('notice', $error);
             $error =~s/ at .+ line \d+.*$//;
             push(@errors, $error) if ($error);
         }
@@ -266,7 +266,7 @@ sub edit_user {
         $user->update($params);
         if ($@) {
             my $error = $@;
-            MinorImpact::log(3, $error);
+            MinorImpact::log('notice', $error);
             $error =~s/ at .+ line \d+.*$//;
             push(@errors, $error) if ($error);
         }
@@ -288,7 +288,7 @@ sub home {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
@@ -329,9 +329,9 @@ sub home {
 
         @types = $object->getChildTypes();
         if (scalar(@types) == 1) {
-            #MinorImpact::log(8, "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
+            #MinorImpact::log('debug', "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
             @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
-            #MinorImpact::log(8, "found: " . scalar(@objects));
+            #MinorImpact::log('debug', "found: " . scalar(@objects));
         }
     } elsif ($params->{objects}) {
         @objects = @{$params->{objects}};
@@ -340,7 +340,7 @@ sub home {
         if ($search) {
             $local_params->{query}{search} = $search;
         } elsif ($collection) {
-            #MinorImpact::log(8, "\$collection->id()='" . $collection->id() . "'");
+            #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
             $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
         }
@@ -429,7 +429,7 @@ sub index {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $user = $self->user();
     $self->redirect("?a=home") if ($user);
@@ -452,7 +452,7 @@ sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
     
@@ -471,7 +471,7 @@ sub login {
     }
 
     MinorImpact::tt('login', { errors => [ @errors ], redirect => $redirect, username => $username });
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
 }
 
 sub logout {
@@ -500,7 +500,7 @@ sub register {
     my $MI = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $CGI = $MI->cgi();
 
@@ -510,10 +510,10 @@ sub register {
     my $password2 = $CGI->param('password2');
     my $submit = $CGI->param('submit');
 
-    MinorImpact::log(8, "\$submit='$submit'");
+    MinorImpact::log('debug', "\$submit='$submit'");
     my @errors;
     if ($submit) {
-        #MinorImpact::log(8, "submit");
+        #MinorImpact::log('debug', "submit");
         if (!$username) {
            push(@errors, "'$username' is not a valid username");
         }
@@ -526,7 +526,7 @@ sub register {
         if (!scalar(@errors)) {
             my $user;
             eval {
-                #MinorImpact::log(8, "FUCK");
+                #MinorImpact::log('debug', "FUCK");
                 MinorImpact::User::addUser({ email=>$email, password=>$password, username=>$username });
                 $user  = $MI->user({ password=>$password, username=>$username });
             };
@@ -539,26 +539,26 @@ sub register {
         }
     }
     MinorImpact::tt('register', { email => $email, errors => [ @errors ], username => $username });
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
 }
 
 sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
 
     my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
-    #MinorImpact::log(8, "\$search='$search'");
+    #MinorImpact::log('debug', "\$search='$search'");
 
     MinorImpact::cache("user_collections_" . $user->id(), {});
     my $collection_data = {name => $name, search => $search, user_id => $user->id()};
     my $collection = new MinorImpact::collection($collection_data);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     $MINORIMPACT->redirect("?cid=" . $collection->id());
 }
 

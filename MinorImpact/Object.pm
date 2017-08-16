@@ -49,7 +49,7 @@ sub new {
     my $id = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $id . ")");
+    #MinorImpact::log('debug', "starting(" . $id . ")");
     my $DB = MinorImpact::db();
     my $object;
 
@@ -79,30 +79,30 @@ sub new {
         my $package_version = version($type_name);
 
         if ($version < $package_version) {
-            MinorImpact::log(3, "Object/Database version mismatch: '$package_version' vs '$version'");
+            MinorImpact::log('notice', "Object/Database version mismatch: '$package_version' vs '$version'");
             eval {
                 $type_name->dbConfig();
             };
             if ($@) {
-                MinorImpact::log(1, $@);
+                MinorImpact::log('crit', $@);
             }
         }   
-        #MinorImpact::log(7, "trying to create new '$type_name' with id='$id' (v$package_version)");
+        #MinorImpact::log('info', "trying to create new '$type_name' with id='$id' (v$package_version)");
         $object = $type_name->new($id) if ($type_name);
     };
     my $error = $@;
     if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
-        MinorImpact::log(1, "id='$id',$error");
+        MinorImpact::log('crit', "id='$id',$error");
         die $error;
     }
     unless ($object) {
         $object = MinorImpact::Object::_new($package, $id);
     }
     #
-    #MinorImpact::log(8, "\$object doesn't exist") unless ($object);
-    #MinorImpact::log(7, "ending($id)");
+    #MinorImpact::log('debug', "\$object doesn't exist") unless ($object);
+    #MinorImpact::log('debug', "ending($id)");
 
     die "permission denied" unless ($object->validateUser() || $params->{admin});
 
@@ -117,14 +117,14 @@ sub _new {
     my $self = {};
     bless($self, $package);
 
-    #MinorImpact::log(7, "starting(" . $params . ")");
-    #MinorImpact::log(8, "package='$package'");
+    #MinorImpact::log('debug', "starting(" . $params . ")");
+    #MinorImpact::log('debug', "package='$package'");
     $self->{DB} = MinorImpact::db() || die;
     $self->{CGI} = MinorImpact::cgi() || die;
 
     my $object_id;
     if (ref($params) eq 'HASH') {
-        #MinorImpact::log(8, "ref(\$params)='" . ref($params) . "'");
+        #MinorImpact::log('debug', "ref(\$params)='" . ref($params) . "'");
 
         $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
         $params->{object_type_id} = typeID($params->{object_type_id} || lc($package));
@@ -135,13 +135,13 @@ sub _new {
         die "invalid type id" unless ($params->{object_type_id});
 
         my $fields = fields($params->{object_type_id});
-        #MinorImpact::log(7, "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
+        #MinorImpact::log('info', "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
         validateFields($fields, $params);
 
         $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'name'}, $user_id, $params->{'description'}, $params->{object_type_id})) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
-            MinorImpact::log(3, "Couldn't insert new object record");
+            MinorImpact::log('notice', "Couldn't insert new object record");
             die "Couldn't insert new object record";
         }
 
@@ -157,7 +157,7 @@ sub _new {
 
     $self->_reload($object_id);
 
-    #MinorImpact::log(7, "ending(" . $self->id() . ")");
+    #MinorImpact::log('debug', "ending(" . $self->id() . ")");
     return $self;
 }
 
@@ -219,7 +219,7 @@ sub selectList {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{query}{debug} .= "Object::selectList();";
     if (ref($self) eq 'HASH') {
@@ -259,7 +259,7 @@ sub selectList {
         $select .= ">" . $object->name() . "</option>\n";
     }
     $select .= "</select>\n";
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return $select;
 }
 
@@ -269,14 +269,14 @@ sub get {
     my $params = shift || {};
 
     my @values;
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     if (defined($self->{data}->{$name})) {
        return $self->{data}->{$name};
     }
     if (defined($self->{object_data}->{$name})) {
         my $field = $self->{object_data}->{$name};
         my @value = $self->{object_data}->{$name}->value();
-        #MinorImpact::log(8,"$name='" . join(",", @value) . "'");
+        #MinorImpact::log('debug',"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
             if ($params->{one_line}) {
                 ($value) = $value =~/^(.*)$/m;
@@ -300,7 +300,7 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
 
     #if (!$fields) {
     #   dumper($fields);
@@ -317,7 +317,7 @@ sub validateFields {
         next unless ($field);
         $field->validate($params->{$field_name});
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 =item update( { field => value [,...] })
@@ -330,21 +330,21 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $object_id = $self->id();
 
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($params->{'description'}, $self->id())) if (defined($params->{description}));
-    $self->log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
+    $self->log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     MinorImpact::cache("object_data_$object_id", {});
 
     my $fields = $self->fields();
-    #MinorImpact::log(7, "validating parameters");
+    #MinorImpact::log('info', "validating parameters");
     validateFields($fields, $params);
 
     foreach my $field_name (keys %$params) {
-        #MinorImpact::log(8, "updating \$field_name='$field_name'");
+        #MinorImpact::log('debug', "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
         $field->update($params->{$field_name});
@@ -353,7 +353,7 @@ sub update {
     foreach my $param (keys %$params) {
         if ($param =~/^tags$/) {
             $self->{DB}->do("DELETE FROM object_tag WHERE object_id=?", undef, ($self->id()));
-            MinorImpact::log(1, $self->{DB}->errstr) if ($self->{DB}->errstr);
+            MinorImpact::log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
             foreach my $tag (split(/\0/, $params->{$param})) {
                 foreach my $tag (parseTags($tag)) {
                     next unless ($tag);
@@ -363,28 +363,28 @@ sub update {
         }
     }
     $self->_reload();
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return;
 }
 
 sub fields {
     my $self = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $object_type_id;
     if (ref($self) eq "HASH") {
         $object_type_id = $self->{object_type_id};
         undef($self);
     } elsif (ref($self)) {
-        #MinorImpact::log(7, "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
+        #MinorImpact::log('info', "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         return $self->{object_data} if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         $object_type_id = $self->typeID();
     } else {
         $object_type_id = $self;
         undef($self);
     }
-    #MinorImpact::log(8, "\$self='" .$self."'");
+    #MinorImpact::log('debug', "\$self='" .$self."'");
 
     die "No type_id defined\n" unless ($object_type_id);
 
@@ -392,7 +392,7 @@ sub fields {
     $params->{object_id} = $self->id() if ($self);
     my $fields = MinorImpact::Object::Type::fields($params);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return $fields;
 }
 
@@ -401,14 +401,14 @@ sub type_id { return MinorImpact::Object::typeID(@_); }
 sub typeID {
     my $self = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
     my $object_type_id;
     if (ref($self)) {
-        #MinorImpact::log(8, "ref(\$self)='" . ref($self) . "'");
+        #MinorImpact::log('debug', "ref(\$self)='" . ref($self) . "'");
         $object_type_id = $self->{data}->{object_type_id};
     } else {
         my $DB = MinorImpact::db();
-        #MinorImpact::log(8, "\$self='$self'");
+        #MinorImpact::log('debug', "\$self='$self'");
         if ($self =~/^[0-9]+$/) {
             # This seems stupid, but sometimes on the client I don't know whether or not
             #   I have a name or an ID, so I just throw whatever I have into here.  If it
@@ -424,14 +424,14 @@ sub typeID {
             }
         }
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return $object_type_id;
 }
 
 # Returns the 'default' type for the current application, for when we 
 #   desperately need something, but we don't know what.
 sub getType {
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $DB = MinorImpact::db();
 
@@ -444,7 +444,7 @@ sub getType {
     my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
     if (scalar(@$nextlevel) > 0) {
         my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
-        #MinorImpact::log(8, "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
+        #MinorImpact::log('debug', "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
         $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
     } else {
         $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
@@ -467,7 +467,7 @@ sub typeName {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $type_id;
     if (ref($self) eq 'HASH') {
@@ -480,7 +480,7 @@ sub typeName {
         $type_id = $self;
         undef($self);
     }
-    #MinorImpact::log(8, "\$type_id='$type_id'");
+    #MinorImpact::log('debug', "\$type_id='$type_id'");
 
     my $type_name;
     my $plural_name;
@@ -495,15 +495,15 @@ sub typeName {
         }
 
         my $sql = "select name, plural from object_type where $where";
-        #MinorImpact::log(8, "sql=$sql, ($type_id)");
+        #MinorImpact::log('debug', "sql=$sql, ($type_id)");
         ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
     }
 
     if (!$plural_name) {
         $plural_name = $type_name . "s";
     }
-    #MinorImpact::log(8, "type_name=$type_name");
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "type_name=$type_name");
+    #MinorImpact::log('debug', "ending");
 
     if ($params->{plural}) {
         return $plural_name;
@@ -515,7 +515,7 @@ sub _reload {
     my $self = shift || return;
     my $object_id = shift || $self->id();
 
-    #MinorImpact::log(7, "starting(" . $object_id . ")");
+    #MinorImpact::log('debug', "starting(" . $object_id . ")");
 
     my $object_data = MinorImpact::cache("object_data_$object_id");
     if ($object_data) {
@@ -540,14 +540,14 @@ sub _reload {
     $object_data->{tags} = $self->{tags};
     MinorImpact::cache("object_data_$object_id", $object_data, 3600);
 
-    #MinorImpact::log(7, "ending(" . $object_id . ")");
+    #MinorImpact::log('debug', "ending(" . $object_id . ")");
     return;
 }
 
 sub dbConfig {
     # Placeholder.
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(6, "ending");
+    #MinorImpact::log('debug', "starting");
+    #MinorImpact::log('debug', "ending");
     return;
 }
 
@@ -557,7 +557,7 @@ sub delete {
 
     my $object_id = $self->id();
     my $DB = $self->{DB};
-    #MinorImpact::log(7, "starting(" . $object_id . ")");
+    #MinorImpact::log('debug', "starting(" . $object_id . ")");
 
     my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
     foreach my $row (@$data) {
@@ -575,7 +575,7 @@ sub delete {
     $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id));
     $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id));
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 sub log {
@@ -604,7 +604,7 @@ sub getChildTypes {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
     $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
 
     my @childTypes;
@@ -619,7 +619,7 @@ sub getChildTypes {
         next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
         push(@childTypes, $row->{object_type_id});
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return @childTypes;
 }
 
@@ -627,7 +627,7 @@ sub getChildren {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $local_params = cloneHash($params);
     $local_params->{query}{object_type_id} = $local_params->{query}{type_id} if ($local_params->{query}{type_id} && !$local_params->{query}{object_type_id});
     $local_params->{query}{debug} .= "Object::getChildren();";
@@ -650,7 +650,7 @@ sub getChildren {
 sub toString {
     my $self = shift || return;
     my $params = shift || {};
-    #$self->log(7, "starting");
+    #$self->log('debug', "starting");
 
     my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
 
@@ -667,7 +667,7 @@ sub toString {
         $string .= "<div class='w3-container'>\n";
         foreach my $name (keys %{$self->{object_data}}) {
             my $field = $self->{object_data}{$name};
-            #MinorImpact::log(7, "processing $name");
+            #MinorImpact::log('info', "processing $name");
             my $type = $field->type();
             next if ($field->get('hidden'));
             my $value;
@@ -736,7 +736,7 @@ sub toString {
         my $template = $params->{template} || 'object';
         MinorImpact::tt($template, { object => $self }, \$string);
     }
-    #$self->log(7, "ending");
+    #$self->log('debug', "ending");
     return $string;
 }
 
@@ -777,7 +777,7 @@ sub getReferences {
 sub form {
     my $self = shift || {};
     my $params = shift || {};
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('debug', "starting");
     
 
     if (ref($self) eq "HASH") {
@@ -813,7 +813,7 @@ sub form {
         my $view_history = MinorImpact::WWW::viewHistory();
         foreach my $field (keys %$view_history) {
             my $value = $view_history->{$field};
-            #MinorImpact::log(8, "\$view_history->{$field} = '$value'");
+            #MinorImpact::log('debug', "\$view_history->{$field} = '$value'");
             $CGI->param($field, $value) unless ($CGI->param($field));
         }
     }
@@ -829,7 +829,7 @@ sub form {
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
         my $field_type = $field->type();
-        #MinorImpact::log(8, "\$field->{name}='$field->{name}'");
+        #MinorImpact::log('debug', "\$field->{name}='$field->{name}'");
         next if ($field->get('hidden') || $field->get('readonly'));
         my @params = $CGI->param($name);
         my @values;
@@ -862,7 +862,7 @@ sub form {
                                     tags           => $tags,
                                     no_tags        => $local_params->{no_tags},
                                 }, \$form);
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('debug', "ending");
     return $form;
 }
 
@@ -895,9 +895,9 @@ sub fieldID {
     my $field_name = shift || return;
 
     my $object_type_id = MinorImpact::Object::type_id($object_type);
-    #MinorImpact::log(8, "object_type_id='$object_type_id',field_name='$field_name'");
+    #MinorImpact::log('debug', "object_type_id='$object_type_id',field_name='$field_name'");
     my $DB = MinorImpact::db();
-    #MinorImpact::log(8, "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
+    #MinorImpact::log('debug', "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
     my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $field_name));
     if (scalar(@{$data}) > 0) {
         return @{$data}[0]->{id};
@@ -983,7 +983,7 @@ sub match {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     # Check tags first.
     if ($params->{tag}) {
@@ -1040,7 +1040,7 @@ sub validateUser {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     return 1 if ($self->isSystem());
 
@@ -1051,12 +1051,12 @@ sub validateUser {
 
     my $test_user = $params->{user} || MinorImpact::user($params);
     return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
-    #MinorImpact::log(8, "\$test_user->id()='" . $test_user->id() . "'");
-    #MinorImpact::log(8, "\$self->userID()='" . $self->userID() . "'");
+    #MinorImpact::log('debug', "\$test_user->id()='" . $test_user->id() . "'");
+    #MinorImpact::log('debug', "\$self->userID()='" . $self->userID() . "'");
 
     my $valid = $test_user->id() && $self->userID() && ($test_user->id() == $self->userID());
-    #MinorImpact::log(8, $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
-    #MinorImpact::log(7, "ending:$valid");
+    #MinorImpact::log('debug', $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
+    #MinorImpact::log('debug', "ending:$valid");
     return $valid;
 }
 
@@ -1074,7 +1074,7 @@ sub version {
     no strict 'refs';
     my $class = ref($self) || $self;
     my $version = ${$class . "::VERSION"} || 0;
-    #MinorImpact::log(8, "${class}::VERSION='$version'");
+    #MinorImpact::log('debug', "${class}::VERSION='$version'");
     return $version;
 }
 

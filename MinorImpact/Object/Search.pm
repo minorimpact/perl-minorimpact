@@ -52,8 +52,8 @@ sub parseSearchString {
             push(@ands, $token);
         }
     }
-    #MinorImpact::log(8, "\@ands='" . join(",", @ands) . "'");
-    #MinorImpact::log(8, "\@ors='" . join(",", @ors) . "'");
+    #MinorImpact::log('debug', "\@ands='" . join(",", @ands) . "'");
+    #MinorImpact::log('debug', "\@ors='" . join(",", @ors) . "'");
 
     #my @tags = extractTags(\$string);
     #foreach my $tag (@tags) {
@@ -68,7 +68,7 @@ sub parseSearchString {
 sub search {
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $local_params = cloneHash($params);
 
@@ -98,14 +98,14 @@ sub search {
                 my @children = $object->getChildren({ query => { %{$params->{query}{child}}, id_only => 1 } });
                 push(@objects, $object) if (scalar(@children));
             } elsif (defined($params->{query}{no_child})) {
-                MinorImpact::log(8, "NO CHILD: $id");
+                MinorImpact::log('debug', "NO CHILD: $id");
                 my @children = $object->getChildren({ query => { %{$params->{query}{no_child}}, id_only => 1 } });
                 push(@objects, $object) unless (scalar(@children));
             } else {
                 push(@objects, $object);
             }
         };
-        MinorImpact::log(3, $@) if ($@);
+        MinorImpact::log('notice', $@) if ($@);
     }
     if (defined($params->{query}{sort}) && $params->{query}{sort} != 0) {
         @objects = sort {$a->cmp($b); } @objects;
@@ -121,7 +121,7 @@ sub search {
     }
 
     unless ($params->{query}{type_tree}) {
-        #MinorImpact::log(7, "ending");
+        #MinorImpact::log('info', "ending");
         return @objects;
     }
 
@@ -130,14 +130,14 @@ sub search {
     foreach my $object (@objects) {
         push(@{$objects->{$object->typeID()}}, $object);
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $objects;
 }
 
 sub _search {
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     my $DB = MinorImpact::db();
 
     my $query = $params->{query}; # || $params;
@@ -159,7 +159,7 @@ sub _search {
     foreach my $param (keys %$query) {
         next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields|child)$/);
         next unless (defined($query->{$param}));
-        #MinorImpact::log(8, "building query \$query->{$param}='" . $query->{$param} . "'");
+        #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $query->{name});
@@ -205,7 +205,7 @@ sub _search {
         } elsif ($query->{object_type_id}) {
             # If we specified a particular type of object to look for, then we can query
             # by arbitrary fields. If we didn't limit the object type, and just searched by field names, the results could be... chaotic.
-            #MinorImpact::log(8, "trying to get a field id for '$param'");
+            #MinorImpact::log('debug', "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             if ($object_field_id) {
                 $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
@@ -217,14 +217,14 @@ sub _search {
     }
 
     my $sql = "$select $from $where";
-    MinorImpact::log(3, "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
+    MinorImpact::log('notice', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
 
     my $objects;
     my $hash = md5_hex($sql);
-    #MinorImpact::log(8, "hash='" . $hash . "'");
+    #MinorImpact::log('debug', "hash='" . $hash . "'");
 
     if ($cache) {
-        #MinorImpact::log(8, "ref=" . ref($cache->get_keys()));
+        #MinorImpact::log('debug', "ref=" . ref($cache->get_keys()));
         #$objects = MinorImpact::cache("search_$hash");
     }
 
@@ -233,7 +233,7 @@ sub _search {
         MinorImpact::cache("search_$hash", $objects);
     }
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return map { $_->{id}; } @$objects;
 }
 

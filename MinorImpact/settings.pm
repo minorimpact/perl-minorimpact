@@ -11,18 +11,18 @@ our @ISA = qw(MinorImpact::Object);
 sub new {
     my $package = shift;
     my $params = shift;
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $self = $package->SUPER::_new($params);
     bless($self, $package);
 
-    #$self->log(7, "ending");
+    #$self->log('info', "ending");
     return $self;
 }
 
 our $VERSION = 2;
 sub dbConfig {
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
@@ -31,7 +31,7 @@ sub dbConfig {
 
     MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return;
 }
 

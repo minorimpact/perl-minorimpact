@@ -10,7 +10,7 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $local_data = cloneHash($data);
     $local_data->{attributes}{default_value} = 0;
@@ -18,7 +18,7 @@ sub new {
     my $self = $package->SUPER::_new($local_data);
 
     bless($self, $package);
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $self;
 }
 
@@ -32,11 +32,11 @@ sub addValue {
 
 sub toString {
     my $self = shift || return;
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $value = @{$self->{data}{value}}[0];
     my $string = $value?"yes":"no";
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $string;
 }
 

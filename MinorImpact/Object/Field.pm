@@ -33,14 +33,14 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
     my $self;
     eval {
         my $field_type = $data->{type};
-        #MinorImpact::log(7, "\$field_type=$field_type");
+        #MinorImpact::log('info', "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
-    MinorImpact::log(8, "$@") if ($@);
+    MinorImpact::log('debug', "$@") if ($@);
     if ($@ && $@ !~/Can't locate object method "new" via package/) {
         my $error = $@;
         $error =~s/ at \/.*$//;
@@ -53,7 +53,7 @@ sub new {
         bless($self, $package);
     }
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $self;
 }
 
@@ -61,7 +61,7 @@ sub _new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $self = {};
 
@@ -79,12 +79,12 @@ sub _new {
     delete($local_data->{attributes});
 
     $self->{data} = $local_data;
-    #MinorImpact::log(8, "\$name='" . $self->{data}{name} . "'");
+    #MinorImpact::log('debug', "\$name='" . $self->{data}{name} . "'");
     if (defined($self->{data}{value}) && !ref($self->{data}{value})) {
         # We want the value to be an array, not a scalar, so duplicate
         #   it and rewrite it as an array.
         my $value = $self->{data}{value};
-        #MinorImpact::log(8, "\$value='$value'");
+        #MinorImpact::log('debug', "\$value='$value'");
         $self->{data}{value} = [];
         push(@{$self->{data}{value}}, split(/\0/, $value)) if ($value);
     } elsif (!defined($self->{data}{value})) {
@@ -92,19 +92,19 @@ sub _new {
     }
 
     if ($self->{data}{id} && $self->{data}{object_id}) {
-        #MinorImpact::log(8, "\$self->{data}{id}='" . $self->{data}{id} . "'");
-        #MinorImpact::log(8, "\$self->{data}{object_id}='" . $self->{data}{object_id} . "'");
+        #MinorImpact::log('debug', "\$self->{data}{id}='" . $self->{data}{id} . "'");
+        #MinorImpact::log('debug', "\$self->{data}{object_id}='" . $self->{data}{object_id} . "'");
         my $DB = MinorImpact::db();
         if ($self->{attributes}{is_text}) {
             my $data = $DB->selectall_arrayref("select value from object_text where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
             foreach my $row (@$data) {
-                #MinorImpact::log(8,"\$row->{value}='" . $row->{value} . "'");
+                #MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
                 push(@{$self->{data}{value}}, $row->{value});
             }
         } else {
             my $data = $DB->selectall_arrayref("select value from object_data where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
             foreach my $row (@$data) {
-                #MinorImpact::log(8,"\$row->{value}='" . $row->{value} . "'");
+                #MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
                 push(@{$self->{data}{value}}, $row->{value});
             }
         }
@@ -113,7 +113,7 @@ sub _new {
         push(@{$self->{data}{value}}, $self->{attributes}{default_value});
     }
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $self;
 }
 
@@ -150,7 +150,7 @@ sub update {
             } else {
                 $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
             }
-            #MinorImpact::log(8, "$sql \@fields=" . $object_id . ", " . $self->id() . ", $split_value");
+            #MinorImpact::log('debug', "$sql \@fields=" . $object_id . ", " . $self->id() . ", $split_value");
             $DB->do($sql, undef, ($object_id, $self->id(), $split_value)) || die $DB->errstr;
         }
     }
@@ -164,16 +164,16 @@ sub update {
 sub validate {
     my $self = shift || return;
     my $value = shift;
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $field_type = $self->type();
-    #MinorImpact::log(8, "$field_type,'$value'");
+    #MinorImpact::log('debug', "$field_type,'$value'");
     if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
         die $self->name() . " cannot be blank";
     }
     die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
 
-    #MinorImpact::log(8, "ending");
+    #MinorImpact::log('debug', "ending");
     return $value;
 }
 
@@ -249,7 +249,7 @@ sub rowForm {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "start");
+    #MinorImpact::log('info', "start");
 
     my $name = $self->name()|| return;
     my $local_params = cloneHash($params);
@@ -275,7 +275,7 @@ sub rowForm {
         $local_params->{row_value} = htmlEscape($values[0]);
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row);
     }
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $row;
 }
 
@@ -358,7 +358,7 @@ sub add {
 
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
-    MinorImpact::log(8, "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
+    MinorImpact::log('debug', "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
     my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
     if ($data) {
         my $object_field_id = $data->{id};

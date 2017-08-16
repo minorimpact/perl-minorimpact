@@ -35,7 +35,7 @@ sub new {
     my $package = shift;
     my $params = shift;
 
-   #MinorImpact::log(7, "starting");
+   #MinorImpact::log('info', "starting");
 
     my $self = {};
 
@@ -65,18 +65,18 @@ sub new {
 sub addUser {
     my $params = shift || return;
     
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
     if ($DB && $params->{username} && $params->{password}) {
         $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
-        #MinorImpact::log(8, "\$user_id=$user_id");
+        #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
     }
     die "Couldn't add user " . $params->{username};
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return;
 }
 
@@ -105,18 +105,18 @@ sub delete {
     my $self = shift || return;
     my $params = shift || {};
     
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('info', "starting(" . $self->id() . ")");
     my $user_id = $self->id();
     # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
     my $DB = $self->{DB};
     my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
     foreach my $object (@objects) {
-        MinorImpact::log(8, "deleting " . $object->name());
+        MinorImpact::log('debug', "deleting " . $object->name());
         $object->delete($params);
     }
     MinorImpact::cache("user_data_$user_id", {});
     $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
 }
 
 sub form {
@@ -125,7 +125,7 @@ sub form {
     my $field;
     my $form;
    
-    #MinorImpact::log(8, "\$self->get('email')='" . $self->get('email') . "'");
+    #MinorImpact::log('debug', "\$self->get('email')='" . $self->get('email') . "'");
     $field = new MinorImpact::Object::Field({ name => 'email', type => 'string', value => $self->get('email') });
     $form .= $field->rowForm();
     return $form;
@@ -182,8 +182,8 @@ Returns TRUE if the user has administrative priviledges for this application.
 
 sub isAdmin {
     my $self = shift || return;
-    #MinorImpact::log(7, "starting");
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('info', "ending");
     return $self->get('admin');
 }
 
@@ -206,7 +206,7 @@ sub search {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('info', "starting(" . $self->id() . ")");
 
     my $local_params = cloneHash($params);
 
@@ -216,7 +216,7 @@ sub search {
 
     my @results = MinorImpact::Object::Search::search($local_params);
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return @results;
 }
 
@@ -230,7 +230,7 @@ sub settings {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log(7, "starting(" . $self->id() . ")");
+    #MinorImpact::log('info', "starting(" . $self->id() . ")");
 
     my $local_params = {};
     $local_params->{query} ||= {};
@@ -242,7 +242,7 @@ sub settings {
         $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
     }
 
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $settings;
 }
 

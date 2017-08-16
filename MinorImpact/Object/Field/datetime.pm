@@ -12,7 +12,7 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $local_data = cloneHash($data);
     $local_data->{attributes}{default_value} = '0000-00-00 00:00:00';
@@ -20,7 +20,7 @@ sub new {
 
     my $self = $package->SUPER::_new($local_data);
     bless($self, $package);
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $self;
 }
 
@@ -41,7 +41,7 @@ sub _input {
 
 sub toString {
     my $self = shift || return;
-    #MinorImpact::log(7, "starting");
+    #MinorImpact::log('info', "starting");
 
     my $string;
     foreach my $value ($self->value()) {
@@ -49,7 +49,7 @@ sub toString {
     }
     $string =~s/,$//;
     $string =~s/ 00:00:00//g;
-    #MinorImpact::log(7, "ending");
+    #MinorImpact::log('info', "ending");
     return $string;
 }
 
