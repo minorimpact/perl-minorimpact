@@ -132,7 +132,7 @@ sub user {
     my $self = shift || {};
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     if (ref($self) eq 'HASH') {
         $params = $self;
@@ -188,8 +188,8 @@ sub user {
     #   my $user = new MinorImpact::User($ENV{'user'});
     #    return $user;
     #}
-    #MinorImpact::log('debug', "no user found");
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('info', "no user found");
+    #MinorImpact::log('debug', "ending");
     MinorImpact::redirect("?a=login") if ($params->{force});
     return;
 }
@@ -241,7 +241,7 @@ sub redirect {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user();
@@ -280,9 +280,9 @@ sub redirect {
     $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
 
     #print $self->{CGI}->header(-location=>$location);
-    MinorImpact::log('notice', "redirecting to $location");
+    MinorImpact::log('info', "redirecting to $location");
     print "Location:$location\n\n";
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     exit;
 }
 
@@ -330,12 +330,12 @@ sub log {
         #}
         close(LOG);
     } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
-        syslog('info', $log);
+        syslog($level, $log);
     }
 }
 
 sub checkDatabaseTables {
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
 
     eval {
@@ -455,13 +455,13 @@ sub checkDatabaseTables {
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 sub cache {
     my $self = shift || return;
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
     if (!ref($self)) {
         unshift(@_, $self);
         $self = $MinorImpact::SELF;
@@ -498,14 +498,14 @@ sub cache {
     #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
     $cache->set($name, $value, $timeout);
 
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     return $cache;
 }
 
 sub tt {
     my $self = shift || return; 
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);

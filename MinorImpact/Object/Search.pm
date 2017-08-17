@@ -217,7 +217,7 @@ sub _search {
     }
 
     my $sql = "$select $from $where";
-    MinorImpact::log('notice', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
+    MinorImpact::log('info', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
 
     my $objects;
     my $hash = md5_hex($sql);
