@@ -1,3 +1,4 @@
+<!-- TEMPLATE:default.footer_javascript -->
 <script>
     \$(function () {
         \$("input.datepicker").datepicker({
@@ -153,4 +154,5 @@
         document.getElementById("overlay").style.display = "none";
     }
 </script>
-    [% INCLUDE footer_javascript_site %]
+
+[% INCLUDE footer_javascript_site %]
