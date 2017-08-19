@@ -202,6 +202,10 @@ sub back {
     return $url;
 }
 
+sub churn {
+    return;
+}
+
 =item id() 
 
 Returns the id of the this objec.t
