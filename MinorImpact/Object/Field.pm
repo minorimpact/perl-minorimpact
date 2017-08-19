@@ -23,7 +23,7 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 =cut
 
 our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
-our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'object_type_id', 'system', 'user_id' );
+our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'object_type_id', 'public', 'read_only', 'system', 'user_id' );
 
 # TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
 #   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
@@ -396,13 +396,14 @@ sub del {
     my $object_type_id = $params->{object_type_id} || die "No object type id";
     my $name = $params->{name} || die "Field name can't be blank.";
 
-    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || die $DB->errstr;
+    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || return; # Do we really want do die on this hill? die $DB->errstr;
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
 }
+sub deleteField { del(@_); }
 sub delField { del(@_); }
 
 sub isText { return shift->{attributes}{is_text}; }

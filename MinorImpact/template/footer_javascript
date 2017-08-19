@@ -1,3 +1,4 @@
+<script>
     \$(function () {
         \$("input.datepicker").datepicker({
             buttonText: "<i class='fa fa-calendar'></i>",
@@ -151,4 +152,5 @@
         document.getElementById("sidebar").style.display = "none";
         document.getElementById("overlay").style.display = "none";
     }
+</script>
     [% INCLUDE footer_javascript_site %]

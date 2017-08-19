@@ -157,12 +157,15 @@ sub _search {
     }
 
     foreach my $param (keys %$query) {
-        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields|child)$/);
+        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields|child|no_child)$/);
         next unless (defined($query->{$param}));
         #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $query->{name});
+        } elsif ($param eq "public") {
+            $where .= " AND object.public = ?",
+            push(@fields, ($query->{public}?1:0));
         } elsif ($param eq "object_type_id") {
             $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
             if ($query->{object_type_id} =~/^[0-9]+$/) {

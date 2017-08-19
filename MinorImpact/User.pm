@@ -41,7 +41,7 @@ sub new {
 
     $self->{DB} = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
 
-    checkDatabaseTables($self->{DB});
+    dbConfig($self->{DB});
 
     my $user_id = $params;
     #MinorImpact::log(8 "\$user_id='$params'");
@@ -80,13 +80,14 @@ sub addUser {
     return;
 }
 
-sub checkDatabaseTables {
+sub dbConfig {
     my $DB = shift || return;
 
     eval {
         $DB->do("DESC `user`") || die $DB->errstr;
     };
     if ($@) {
+        MinorImpact::log('notice', $@);
         $DB->do("CREATE TABLE `user` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `name` varchar(50) NOT NULL,
@@ -96,27 +97,52 @@ sub checkDatabaseTables {
                 `create_date` datetime NOT NULL,
                 `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`)
-            ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1") || die $DB->errstr;
+            )") || die $DB->errstr;
         $DB->do("create unique index idx_user_name on user(name)") || die $DB->errstr;
     }
+}
+
+sub count {
+    my $params = shift || {};
+
+    my $DB = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
+
+    my $sql = "SELECT count(*) FROM user WHERE id > 0";
+    my @fields = ();
+    if ($params->{name}) {
+        $sql .= " AND name LIKE ?";
+        push(@fields, $params->{name});
+    }
+    my $users = $DB->selectrow_array($sql, undef, @fields) || die $DB->errstr;
+    return $users;
 }
 
 sub delete {
     my $self = shift || return;
     my $params = shift || {};
     
-    #MinorImpact::log('info', "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $user_id = $self->id();
     # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
     my $DB = $self->{DB};
-    my @objects = MinorImpact::Object::Search::search({ query => { user_id => $user_id } });
-    foreach my $object (@objects) {
-        MinorImpact::log('debug', "deleting " . $object->name());
-        $object->delete($params);
+    my @object_ids = $self->searchObjects({ query => { id_only => 1, debug => 'MinorImpact::User::delete();' } });
+    my $object_count = scalar(@object_ids);
+    #MinorImpact::log('debug', "\$object_count='$object_count'");
+    my $deleted = 0;
+    foreach my $object_id (@object_ids) {
+        my $object = new MinorImpact::Object($object_id);
+        if ($object) {
+             MinorImpact::log('info', "deleting object " . $object->name());
+            $object->delete($params);
+            $deleted++;
+        }
     }
-    MinorImpact::cache("user_data_$user_id", {});
-    $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
-    #MinorImpact::log('info', "ending");
+    if ($object_count == $deleted) {
+        MinorImpact::log('info', "deleting user $user_id");
+        MinorImpact::cache("user_data_$user_id", {});
+        $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
+    }
+    #MinorImpact::log('debug', "ending");
 }
 
 sub form {
@@ -195,6 +221,33 @@ Returns the user's 'name' field.  A shortcut to get('name').
 
 sub name { return shift->get('name'); }
 
+sub search {
+    my $params = shift || {};
+
+    my $DB = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
+
+    my $sql = "SELECT id FROM user WHERE id > 0";
+    my @fields = ();
+    if ($params->{name}) {
+        $sql .= " AND name LIKE ?";
+        push(@fields, $params->{name});
+    }
+
+    if ($params->{order_by}) {
+        $sql .= " ORDER BY " . $params->{order_by};
+    }
+    if ($params->{limit}) {
+        $sql .= " LIMIT ?";
+        push(@fields, $params->{limit});
+    }
+        
+    MinorImpact::log('info', "$sql, (" . join(',', @fields) . ")");
+    my $users = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields) || die $DB->errstr;
+    return map { $_->{id}; } @$users if ($params->{id_only});
+
+    return map { new MinorImpact::User($_->{id}); } @$users;
+}
+
 =item search( \%params )
 
 A passthru function that appends the user_id of the user object to to the query 
@@ -202,21 +255,21 @@ hash of %params.
 
 =cut
 
-sub search { 
+sub searchObjects { 
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     my $local_params = cloneHash($params);
 
     $local_params->{query} ||= {};
     $local_params->{query}{user_id} = $self->id();
-    $local_params->{query}{debug} .= "MinorImpact::User::search();";
+    $local_params->{query}{debug} .= "MinorImpact::User::searchObjects();";
 
     my @results = MinorImpact::Object::Search::search($local_params);
 
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     return @results;
 }
 
@@ -230,19 +283,22 @@ sub settings {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting(" . $self->id() . ")");
+    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     my $local_params = {};
     $local_params->{query} ||= {};
-    $local_params->{query}{object_type_id} = 'MinorImpact::settings';
+    $local_params->{query}{object_type_id} = MinorImpact::Object::typeID('MinorImpact::settings');
     $local_params->{query}{debug} .= "MinorImpact::User::settings();";
-    my @settings = $self->search($local_params);
+    my @settings = $self->searchObjects($local_params);
     my $settings = $settings[0];
     unless ($settings) {
-        $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
+        eval {
+            $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
+        };
+        MinorImpact::log('notice', $@) if ($@);
     }
 
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     return $settings;
 }
 

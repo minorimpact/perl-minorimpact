@@ -28,7 +28,7 @@ sub add {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
@@ -67,7 +67,7 @@ sub add {
     }
 
     my $type_name = MinorImpact::Object::typeName({ object_type_id => $object_type_id });
-    my $local_params = { object_type_id=>$object_type_id };
+    my $local_params = { object_type_id=>$object_type_id, no_cache => 1 };
     #MinorImpact::log('debug', "\$type_name='$type_name'");
     my $form;
     eval {
@@ -172,6 +172,9 @@ sub edit {
     my $self = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting");
+    my $local_params = cloneHash($params);
+    $local_params->{no_cache} = 1;
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
     my $script_name = MinorImpact::scriptName();
@@ -179,7 +182,7 @@ sub edit {
     my $search = $CGI->param('search');
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
-    my $object = new MinorImpact::Object($object_id) || $self->redirect();
+    my $object = new MinorImpact::Object($object_id, $local_params) || $self->redirect();
     $self->redirect($object->back()) if ($object->isReadonly());
 
     my @errors;
@@ -208,12 +211,13 @@ sub edit {
         }
     }
 
-    my $form = $object->form($params);
+    my $form = $object->form($local_params);
     $self->tt('edit', { 
                         errors  => [ @errors ],
                         form    => $form,
                         object   =>$object,
                     });
+    MinorImpact::log('debug', "ending");
 }
 
 sub edit_settings {
@@ -288,7 +292,7 @@ sub home {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
@@ -429,9 +433,16 @@ sub index {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $user = $self->user();
+    # TODO: Maybe we don't want to do this by default...?  If we think of index
+    #   as the public face the application, and home as the user specific home
+    #   page, then why not let the user see it? Or maybe... maybe this is
+    #   something we want to leave entirely in the hands of the developer to
+    #   build.  After all, we have no real way of knowing what *should* go
+    #   here, whereas on the home page we can just throw up a bunch of shit
+    #   the user owns and they should be happy.
     $self->redirect("?a=home") if ($user);
 
     my $CGI = $self->cgi();
@@ -445,14 +456,15 @@ sub index {
         };
     }
 
-    MinorImpact::tt('index');
+    MinorImpact::tt('index', { object => $object });
+    #MinorImpact::log('debug', 'ending');
 }
 
 sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
     
@@ -471,7 +483,7 @@ sub login {
     }
 
     MinorImpact::tt('login', { errors => [ @errors ], redirect => $redirect, username => $username });
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 sub logout {
@@ -500,7 +512,7 @@ sub register {
     my $MI = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $CGI = $MI->cgi();
 
@@ -510,7 +522,7 @@ sub register {
     my $password2 = $CGI->param('password2');
     my $submit = $CGI->param('submit');
 
-    MinorImpact::log('debug', "\$submit='$submit'");
+    #MinorImpact::log('debug', "\$submit='$submit'");
     my @errors;
     if ($submit) {
         #MinorImpact::log('debug', "submit");
@@ -539,14 +551,14 @@ sub register {
         }
     }
     MinorImpact::tt('register', { email => $email, errors => [ @errors ], username => $username });
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
 
@@ -558,7 +570,7 @@ sub save_search {
     my $collection_data = {name => $name, search => $search, user_id => $user->id()};
     my $collection = new MinorImpact::collection($collection_data);
 
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     $MINORIMPACT->redirect("?cid=" . $collection->id());
 }
 

@@ -5,9 +5,7 @@
     Copyright 2017 <a href='https://minorimpact.com'>Minor Impact</a>
 </div>
 
-<script>
 [% INCLUDE footer_javascript %]
-</script>
 
 </body>
 

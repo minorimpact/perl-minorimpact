@@ -30,9 +30,12 @@ use JSON;
 use Text::Markdown 'markdown';
 
 use MinorImpact;
-use MinorImpact::Util;
+use MinorImpact::collection;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
+use MinorImpact::page;
+use MinorImpact::settings;
+use MinorImpact::Util;
 
 my $OBJECT_CACHE;
 
@@ -62,13 +65,13 @@ sub new {
         if (ref($id) eq "HASH") {
             die "Can't create a new object without an object type id." unless ($id->{object_type_id});
             my $object_type_id = typeID($id->{object_type_id});
-            $data = MinorImpact::cache("object_type_$object_type_id");
+            $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
             unless ($data) {
                 $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
                 MinorImpact::cache("object_type_$object_type_id", $data);
             }
         } else {
-            $data = MinorImpact::cache("object_id_type_$id");
+            $data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
             unless ($data) {
                 $data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
                 MinorImpact::cache("object_id_type_$id", $data);
@@ -84,11 +87,11 @@ sub new {
                 $type_name->dbConfig();
             };
             if ($@) {
-                MinorImpact::log('crit', $@);
+                MinorImpact::log('err', $@);
             }
         }   
         #MinorImpact::log('info', "trying to create new '$type_name' with id='$id' (v$package_version)");
-        $object = $type_name->new($id) if ($type_name);
+        $object = $type_name->new($id, $params) if ($type_name);
     };
     my $error = $@;
     if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
@@ -98,7 +101,7 @@ sub new {
         die $error;
     }
     unless ($object) {
-        $object = MinorImpact::Object::_new($package, $id);
+        $object = MinorImpact::Object::_new($package, $id, $params);
     }
     #
     #MinorImpact::log('debug', "\$object doesn't exist") unless ($object);
@@ -107,55 +110,64 @@ sub new {
     die "permission denied" unless ($object->validateUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
+    #MinorImpact::log('debug', "ending");
     return $object;
 }
 
 sub _new {
     my $package = shift;
-    my $params = shift;
+    my $id = shift;
+    my $params = shift || {};
 
     my $self = {};
     bless($self, $package);
 
-    #MinorImpact::log('debug', "starting(" . $params . ")");
+    #MinorImpact::log('debug', "starting(" . $id . ")");
     #MinorImpact::log('debug', "package='$package'");
+    #MinorImpact::log('debug', "caching=" . ($params->{no_cache}?'off':'on'));
     $self->{DB} = MinorImpact::db() || die;
     $self->{CGI} = MinorImpact::cgi() || die;
 
     my $object_id;
-    if (ref($params) eq 'HASH') {
-        #MinorImpact::log('debug', "ref(\$params)='" . ref($params) . "'");
+    my $object_type_id;
+    if (ref($id) eq 'HASH') {
+        #MinorImpact::log('debug', "ref(\$id)='" . ref($id) . "'");
 
-        $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
-        $params->{object_type_id} = typeID($params->{object_type_id} || lc($package));
+        $object_type_id = $id->{type_id} if ($id->{type_id} && !$id->{object_type_id});
+        $object_type_id = typeID($object_type_id || lc($package));
 
-        my $user_id = $params->{'user_id'} || MinorImpact::userID();
-        die "invalid name" unless ($params->{name});
+        my $user_id = $id->{'user_id'} || MinorImpact::userID();
+        die "invalid name" unless ($id->{name});
         die "invalid user id" unless ($user_id);
-        die "invalid type id" unless ($params->{object_type_id});
+        die "invalid type id" unless ($object_type_id);
 
-        my $fields = fields($params->{object_type_id});
-        #MinorImpact::log('info', "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
-        validateFields($fields, $params);
 
-        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'name'}, $user_id, $params->{'description'}, $params->{object_type_id})) || die("Can't add new object:" . $self->{DB}->errstr);
+        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user_id, $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
             MinorImpact::log('notice', "Couldn't insert new object record");
             die "Couldn't insert new object record";
         }
-
-        # These two fields are the absolute minimum requirement to be considered a valid object.
-        $self->{data}{id} = $object_id;
-        $self->{data}{object_type_id} = $params->{object_type_id};
-        $self->update($params);
-    } elsif ($params =~/^\d+$/) {
-        $object_id = $params;
+    } elsif ($id =~/^\d+$/) {
+        $object_id = $id;
     } else {
         $object_id = $self->{CGI}->param("id") || $MinorImpact::SELF->redirect('index.cgi');
     }
 
-    $self->_reload($object_id);
+    # These two fields are the absolute minimum requirement to be considered a valid object.
+    $self->{data} = {};
+    $self->{data}{id} = $object_id;
+    $self->{data}{object_type_id} = $object_type_id;
+
+    if (ref($id) eq 'HASH') {
+        my $fields = fields($id->{object_type_id});
+        #MinorImpact::log('info', "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
+        validateFields($fields, $id);
+
+        $self->update($id, $params);
+    } else {
+        $self->_reload($params);
+    }
 
     #MinorImpact::log('debug', "ending(" . $self->id() . ")");
     return $self;
@@ -206,6 +218,20 @@ Returns the 'name' value for this object.   Shortcut for ->get('name', \%options
 
 sub name { return shift->get('name', shift); }
 
+=item public()
+
+=cut
+
+sub public { return shift->get('public'); }
+
+=item userID()
+
+The ID of the user this object belongs to.
+
+=cut
+
+sub userID { return shift->get('user_id'); }   
+sub user_id { return shift->userID(); }
 =item userID()
 
 The ID of the user this object belongs to.
@@ -328,33 +354,39 @@ Update the value of one or more of the object fields.
 
 sub update {
     my $self = shift || return;
-    my $params = shift || return;
+    my $data = shift || return;
+    my $params = shift || {};
 
     #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $object_id = $self->id();
 
-    $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($params->{'name'}, $self->id())) if ($params->{name});
-    $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($params->{'description'}, $self->id())) if (defined($params->{description}));
+    unless ($self->name() || $data->{name}) {
+        # Every object needs a name, even if it's not user editable or visible.
+        $data->{name} = $self->typeName() . "-" . $self->id();
+    }
+    $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($data->{'name'}, $self->id())) if ($data->{name});
+    $self->{DB}->do("UPDATE object SET public=? WHERE id=?", undef, (($data->{'public'}?1:0), $self->id())) if (defined($data->{public}));;
+    $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
     $self->log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     MinorImpact::cache("object_data_$object_id", {});
 
     my $fields = $self->fields();
     #MinorImpact::log('info', "validating parameters");
-    validateFields($fields, $params);
+    validateFields($fields, $data);
 
-    foreach my $field_name (keys %$params) {
+    foreach my $field_name (keys %$data) {
         #MinorImpact::log('debug', "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
-        $field->update($params->{$field_name});
+        $field->update($data->{$field_name});
     }
 
-    foreach my $param (keys %$params) {
+    foreach my $param (keys %$data) {
         if ($param =~/^tags$/) {
             $self->{DB}->do("DELETE FROM object_tag WHERE object_id=?", undef, ($self->id()));
             MinorImpact::log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
-            foreach my $tag (split(/\0/, $params->{$param})) {
+            foreach my $tag (split(/\0/, $data->{$param})) {
                 foreach my $tag (parseTags($tag)) {
                     next unless ($tag);
                     $self->{DB}->do("INSERT INTO object_tag (name, object_id) VALUES (?,?)", undef, ($tag, $self->id())) || die("Can't add object tag:" . $self->{DB}->errstr);
@@ -369,6 +401,7 @@ sub update {
 
 sub fields {
     my $self = shift || return;
+    my $params = shift || {};
 
     #MinorImpact::log('debug', "starting");
 
@@ -388,9 +421,10 @@ sub fields {
 
     die "No type_id defined\n" unless ($object_type_id);
 
-    my $params = { object_type_id => $object_type_id };
-    $params->{object_id} = $self->id() if ($self);
-    my $fields = MinorImpact::Object::Type::fields($params);
+    my $local_params = cloneHash($params);
+    $local_params->{object_type_id} = $object_type_id;
+    $local_params->{object_id} = $self->id() if ($self);
+    my $fields = MinorImpact::Object::Type::fields($local_params);
 
     #MinorImpact::log('debug', "ending");
     return $fields;
@@ -450,6 +484,7 @@ sub getType {
         $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
     }
 
+    #MinorImpact::log('debug', "ending");
     return $type_id;
 }
 
@@ -513,12 +548,15 @@ sub typeName {
 
 sub _reload {
     my $self = shift || return;
-    my $object_id = shift || $self->id();
+    my $params = shift || {};
+
+    my $object_id = $self->id() || die "Can't get object id";
 
     #MinorImpact::log('debug', "starting(" . $object_id . ")");
 
-    my $object_data = MinorImpact::cache("object_data_$object_id");
+    my $object_data = MinorImpact::cache("object_data_$object_id") unless ($params->{no_cache});
     if ($object_data) {
+        #MinorImpact::log('debug', "collecting object_data from cache");
         $self->{data} = $object_data->{data};
         $self->{type_data} = $object_data->{type_data};
         $self->{object_data} = $object_data->{object_data};
@@ -583,12 +621,22 @@ sub log {
     my $level = shift || return;
     my $message = shift || return;
 
-    MinorImpact::log($level, $message);
-    return;
+    return MinorImpact::log($level, $message);
 }
 
 sub tags {
-    my $self = shift || return;
+    my $self = shift;
+   
+    my @tags = ();
+    unless ($self) {
+        my $DB = MinorImpact::db();
+        my $all_tags = $DB->selectall_arrayref("SELECT distinct(name) FROM object_tag", {Slice=>{}});
+        foreach my $tag (@$all_tags) {
+            push(@tags, $tag->{name});
+        }
+        return @tags;  
+    }
+   
     if (scalar(@_)) {
         $self->update({ tags => join(",", @_) });
     }
@@ -934,19 +982,31 @@ sub hasTag {
     return scalar(grep(/^$tag$/, $self->tags()));
 }
 
+
+sub isNoName {
+    my $self = shift || return;
+    return isType($self, 'no_name', shift || {});
+}
+
+sub isPublic {
+    my $self = shift || return;
+    return isType($self, 'public', shift || {});
+}
+
 sub isReadonly {
     my $self = shift || return;
-    return isType($self, 'readonly');
+    return isType($self, 'readonly', shift || {});
 }
 
 sub isSystem {
     my $self = shift || return;
-    return isType($self, 'system');
+    return isType($self, 'system', shift || {});
 }
 
 sub isType {
     my $self = shift || return;
     my $thingie = shift || return;
+    my $params = shift || {};
 
     # TODO: You know that point where you get too tired to care any more, and however good something ends
     #   up being depends entirely on how high you were able get before that point?  I think I'm there.
@@ -967,8 +1027,10 @@ sub isType {
             $object_type_id = MinorImpact::Object::typeID($object_type_id);
         }
         my $DB = MinorImpact::db();
-        my $data = MinorImpact::cache("object_type_$object_type_id");
+        MinorImpact::log('debug', "caching is turned " . ($params->{no_cache}?'off':'on'));
+        my $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
         unless ($data) {
+            MinorImpact::log('debug', "\$object_type_id='" . $object_type_id . "'");
             $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
             MinorImpact::cache("object_type_$object_type_id", $data);
         }
@@ -1042,7 +1104,7 @@ sub validateUser {
 
     #MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
-    return 1 if ($self->isSystem());
+    return 1 if ($self->isSystem() || $self->get('public'));
 
     if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
         my $object = new MinorImpact::Object($params->{proxy_object_id}) || die "Cannot create proxy object for validation.";

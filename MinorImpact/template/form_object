@@ -5,10 +5,16 @@
         <input type=hidden name=search  value='[% search %]'>
         <input type=hidden name=sort    value='[% sort %]'>
         <input type=hidden name=type_id value='[% object_type_id %]'>
-        [% IF not no_name %]
+        [% IF not object.isNoName() %]
             <div class="w3-row" style="margin-top:8px">
                 <label>Name*</label>
                 <input type=text name=name value='[% name %]' maxlength=50 class="w3-input w3-border" placeholder="Name...">
+            </div>
+        [% END %]
+        [% IF object.isPublic() %]
+            <div class="w3-row" style="margin-top:8px">
+                <input type=checkbox name=public [% public ? 'checked':'' %]>
+                <label>Public</label>
             </div>
         [% END %]
         [% form_fields %]
@@ -24,6 +30,8 @@
         </div>
     </form>
 
+[% IF javascript %]
 <script>
     [% javascript %]
 </script>
+[% END %]

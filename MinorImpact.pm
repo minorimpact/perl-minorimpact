@@ -16,10 +16,8 @@ use Time::Local;
 use URI::Escape;
 
 use MinorImpact::BinLib;
-use MinorImpact::collection;
 use MinorImpact::Config;
 use MinorImpact::Object;
-use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::WWW;
@@ -100,7 +98,7 @@ sub new {
             openlog($self->{conf}{default}{application_id}, 'nofatal,pid', 'local4');
         }
 
-        checkDatabaseTables($self->{DB});
+        dbConfig($self->{DB});
     }
 
     if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
@@ -334,7 +332,7 @@ sub log {
     }
 }
 
-sub checkDatabaseTables {
+sub dbConfig {
     #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
 
@@ -346,14 +344,14 @@ sub checkDatabaseTables {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `user_id` int(11) NOT NULL,
             `name` varchar(50) NOT NULL,
-            `description` text,
+            `public tinyint(1) default 0,
             `object_type_id` int(11) NOT NULL,
             `create_date` datetime NOT NULL,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
         )") || die $DB->errstr;
         $DB->do("create index idx_object_user_id on object(user_id)") || die $DB->errstr;
-        $DB->do(" create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
+        $DB->do("create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
     }
     eval {
         $DB->do("DESC `object_type`") || die $DB->errstr;
@@ -369,6 +367,8 @@ sub checkDatabaseTables {
             `system` tinyint(1) DEFAULT 0,
             `version` int(11) DEFAULT 0,
             `readonly` tinyint(1) DEFAULT 0,
+            `no_name` tinyint(1) DEFAULT 0,
+            `public` tinyint(1) DEFAULT 0,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),
@@ -386,7 +386,8 @@ sub checkDatabaseTables {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `object_type_id` int(11) NOT NULL,
             `name` varchar(50) NOT NULL,
-            `description` text,
+            `description` varchar(255),
+            `default_value` varchar(255),
             `type` varchar(15) DEFAULT NULL,
             `hidden` tinyint(1) DEFAULT '0',
             `readonly` tinyint(1) DEFAULT '0',
@@ -454,6 +455,7 @@ sub checkDatabaseTables {
     }
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
+    MinorImpact::page::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::page"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     #MinorImpact::log('debug', "ending");
 }
