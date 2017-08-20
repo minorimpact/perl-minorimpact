@@ -1,5 +1,7 @@
 package MinorImpact;
 
+use strict;
+
 use Cache::Memcached;
 use CHI;
 use CGI;
@@ -22,6 +24,9 @@ use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::WWW;
 
+my $VERSION = 1;
+my $SELF;
+
 =head1 NAME
 
 =head1 METHODS
@@ -29,21 +34,6 @@ use MinorImpact::WWW;
 =over 4
 
 =cut
-
-my $VERSION = 1;
-
-sub db {
-    return $SELF->{DB};
-}
-
-sub cgi { 
-    return $SELF->{CGI}; 
-}
-
-sub scriptName {
-    my ($script_name) = $0 =~/\/([^\/]+.cgi)$/;
-    return $script_name;
-}
 
 sub new {
     my $package = shift;
@@ -126,210 +116,12 @@ sub new {
     return $self;
 }
 
-sub user {
-    my $self = shift || {};
-    my $params = shift || {};
-
-    #MinorImpact::log('debug', "starting");
-
-    if (ref($self) eq 'HASH') {
-        $params = $self;
-        undef($self);
-    }
-    if (!$self) {
-        $self = new MinorImpact();
-    }
-
-    my $CGI = MinorImpact::cgi();
-
-    # If the username and password are provided, then validate the user.
-    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
-    my $password = $params->{password} || $CGI->param('password');
-    if ($username && $password) {
-        MinorImpact::log('notice', "validating " . $username);
-        my $user_hash = md5_hex("$username:$password");
-        # If this is the first page, the cookie hasn't been set, so if there are a ton of items
-        #   we're gonna validate against the database over and over again... so just validate against
-        #   a stored hash and return the cached user.
-        if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
-            return $self->{USER};
-        }
-        my $user = new MinorImpact::User($username);
-        if ($user && $user->validateUser($password)) {
-            #MinorImpact::log('debug', "password verified for $username");
-            my $user_id = $user->id();
-
-            MinorImpact::session('user_id', $user_id);
-            $self->{USER} = $user;
-            $self->{USERHASH} = $user_hash;
-            return $user;
-        }
-    }
-
-    # We only need to check the cache and validate once per session.  Now that we're doing
-    #   permission checking per object, this will save us a shitload.
-    return $self->{USER} if ($self->{USER});
-
-
-    my $user_id = MinorImpact::session('user_id');
-    if ($user_id) {
-        #MinorImpact::log('debug', "cached user_id=$user_id");
-        my $user = new MinorImpact::User($user_id);
-        if ($user) {
-            $self->{USER} = $user;
-            return $user;
-        }
-    }
-
-    # Not sure what this is supposed to do.  Maybe it auto validates from the command line
-    #if ($ENV{'USER'}) {
-    #   my $user = new MinorImpact::User($ENV{'user'});
-    #    return $user;
-    #}
-    #MinorImpact::log('info', "no user found");
-    #MinorImpact::log('debug', "ending");
-    MinorImpact::redirect("?a=login") if ($params->{force});
-    return;
+sub cgi { 
+    return $SELF->{CGI}; 
 }
 
-sub userID {
-    return user()->id();
-}
-
-sub session {
-    my $name = shift || return;
-    my $value = shift;
-
-    my $self = new MinorImpact();
-    my $CGI = MinorImpact::cgi();
-
-    my $timeout = $self->{conf}{default}{user_timeout} || 2592000;
-    my $session_id;
-    if ($ENV{REMOTE_ADDR}) {
-        $session_id = $CGI->cookie("user_id");
-    } else {
-        $session_id = $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
-    }
-    #MinorImpact::log('debug', "\$session_id='$session_id'\n");
-    my $session;
-    if ($session_id) {
-        $session = cache("session:$session_id");
-    } else {
-        # ... otherwise, generate a new session_id.
-        $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
-        if ($ENV{REMOTE_ADDR}) {
-            my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
-            print "Set-Cookie: $cookie\n";
-        }
-        $session = {};
-    }
-
-    if ($name && !defined($value)) {
-        return $session->{$name};
-    }
-
-    if ($name && defined($value)) {
-        $session->{$name} = $value;
-    }
-    
-    return cache("session:$session_id", $session, $timeout);
-}
-
-sub redirect {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    #MinorImpact::log('debug', "starting");
-
-    my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::user();
-
-    my $search = $CGI->param('search');
-    my $cid = $CGI->param('cid');
-    my $sort = $CGI->param('sort');
-
-    #MinorImpact::log('debug', "\$self='" . $self . "'");
-    if (ref($self) eq 'HASH') {
-        $params = $self;
-        undef($self);
-    } elsif (!ref($self)) {
-        $params->{redirect} = $self;
-        undef($self);
-    }
-
-    if (ref($params) ne 'HASH') {
-        my $redirect = $params;
-        $params = {};
-        $params->{redirect} = $redirect;
-    }
-
-    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
-    #MinorImpact::log('debug', "\$location='$location'");
-
-    my $domain = "https://$ENV{HTTP_HOST}";
-    my $script_name = MinorImpact::scriptName();
-    if ($location =~/^\?/) {
-        $location = "$domain/cgi-bin/$script_name$location";
-    } elsif ($location =~/^\//) {
-        $location = "$domain$location";
-    } elsif ($location !~/^\//) {
-        $location = "$domain/cgi-bin/$location";
-    }
-    $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
-
-    #print $self->{CGI}->header(-location=>$location);
-    MinorImpact::log('info', "redirecting to $location");
-    print "Location:$location\n\n";
-    #MinorImpact::log('debug', "ending");
-    exit;
-}
-
-sub param {
-    my $self = shift || return;
-    my $param = shift;
-
-    unless (ref($self) eq 'MinorImpact') {
-        $param = $self;
-        $self = $SELF;
-    }
-    my $CGI = $self->{CGI};
-    return $CGI->param($param);
-}
-
-=item log( $log_level, $message )
-
-=cut
-
-sub log {
-    my $level = shift || return;
-    my $message = shift || return;
-
-    my $self = $MinorImpact::SELF;
-    return unless ($self && !$self->{conf}{default}{no_log});
-
-    my $sub = (caller(1))[3];
-    if ($sub =~/log$/) {
-        $sub = (caller(2))[3];
-    }
-    $sub .= "()";
-    chomp($message);
-    my $log = "$level $sub $message";
-
-    if ($self->{conf}{default}{log_method} eq 'file') {
-        my $date = toMysqlDate();
-        my $file = $self->{conf}{default}{log_file} || return;;
-        open(LOG, ">>$file") || die "Can't open $file";
-        print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
-        #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
-        #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-        #foreach $i (0, 1, 2, 3) {
-        #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
-        #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-        #}
-        close(LOG);
-    } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
-        syslog($level, $log);
-    }
+sub db {
+    return $SELF->{DB};
 }
 
 sub dbConfig {
@@ -460,6 +252,54 @@ sub dbConfig {
     #MinorImpact::log('debug', "ending");
 }
 
+sub param {
+    my $self = shift || return;
+    my $param = shift;
+
+    unless (ref($self) eq 'MinorImpact') {
+        $param = $self;
+        $self = $SELF;
+    }
+    my $CGI = $self->cgi();
+    return $CGI->param($param);
+}
+
+=item log( $log_level, $message )
+
+=cut
+
+sub log {
+    my $level = shift || return;
+    my $message = shift || return;
+
+    my $self = $MinorImpact::SELF;
+    return unless ($self && !$self->{conf}{default}{no_log});
+
+    my $sub = (caller(1))[3];
+    if ($sub =~/log$/) {
+        $sub = (caller(2))[3];
+    }
+    $sub .= "()";
+    chomp($message);
+    my $log = "$level $sub $message";
+
+    if ($self->{conf}{default}{log_method} eq 'file') {
+        my $date = toMysqlDate();
+        my $file = $self->{conf}{default}{log_file} || return;;
+        open(LOG, ">>$file") || die "Can't open $file";
+        print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
+        #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
+        #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #foreach $i (0, 1, 2, 3) {
+        #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
+        #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #}
+        close(LOG);
+    } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
+        syslog($level, $log);
+    }
+}
+
 sub cache {
     my $self = shift || return;
 
@@ -502,6 +342,99 @@ sub cache {
 
     #MinorImpact::log('debug', "ending");
     return $cache;
+}
+
+sub redirect {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log('debug', "starting");
+
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user();
+
+    my $search = $CGI->param('search');
+    my $cid = $CGI->param('cid');
+    my $sort = $CGI->param('sort');
+
+    #MinorImpact::log('debug', "\$self='" . $self . "'");
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    } elsif (!ref($self)) {
+        $params->{redirect} = $self;
+        undef($self);
+    }
+
+    if (ref($params) ne 'HASH') {
+        my $redirect = $params;
+        $params = {};
+        $params->{redirect} = $redirect;
+    }
+
+    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
+    #MinorImpact::log('debug', "\$location='$location'");
+
+    my $domain = "https://$ENV{HTTP_HOST}";
+    my $script_name = MinorImpact::scriptName();
+    if ($location =~/^\?/) {
+        $location = "$domain/cgi-bin/$script_name$location";
+    } elsif ($location =~/^\//) {
+        $location = "$domain$location";
+    } elsif ($location !~/^\//) {
+        $location = "$domain/cgi-bin/$location";
+    }
+    $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
+
+    #print $self->{CGI}->header(-location=>$location);
+    MinorImpact::log('info', "redirecting to $location");
+    print "Location:$location\n\n";
+    #MinorImpact::log('debug', "ending");
+    exit;
+}
+
+sub scriptName {
+    my ($script_name) = $0 =~/\/([^\/]+.cgi)$/;
+    return $script_name;
+}
+
+sub session {
+    my $name = shift || return;
+    my $value = shift;
+
+    my $self = new MinorImpact();
+    my $CGI = MinorImpact::cgi();
+
+    my $timeout = $self->{conf}{default}{user_timeout} || 2592000;
+    my $session_id;
+    if ($ENV{REMOTE_ADDR}) {
+        $session_id = $CGI->cookie("user_id");
+    } else {
+        $session_id = $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
+    }
+    #MinorImpact::log('debug', "\$session_id='$session_id'\n");
+    my $session;
+    if ($session_id) {
+        $session = cache("session:$session_id");
+    } else {
+        # ... otherwise, generate a new session_id.
+        $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
+        if ($ENV{REMOTE_ADDR}) {
+            my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
+            print "Set-Cookie: $cookie\n";
+        }
+        $session = {};
+    }
+
+    if ($name && !defined($value)) {
+        return $session->{$name};
+    }
+
+    if ($name && defined($value)) {
+        $session->{$name} = $value;
+    }
+    
+    return cache("session:$session_id", $session, $timeout);
 }
 
 sub tt {
@@ -555,6 +488,76 @@ sub tt {
         
     }
     $TT->process(@_) || die $TT->error();
+}
+
+sub user {
+    my $self = shift || {};
+    my $params = shift || {};
+
+    #MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+    if (!$self) {
+        $self = new MinorImpact();
+    }
+
+    my $CGI = MinorImpact::cgi();
+
+    # If the username and password are provided, then validate the user.
+    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
+    my $password = $params->{password} || $CGI->param('password');
+    if ($username && $password) {
+        MinorImpact::log('notice', "validating " . $username);
+        my $user_hash = md5_hex("$username:$password");
+        # If this is the first page, the cookie hasn't been set, so if there are a ton of items
+        #   we're gonna validate against the database over and over again... so just validate against
+        #   a stored hash and return the cached user.
+        if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
+            return $self->{USER};
+        }
+        my $user = new MinorImpact::User($username);
+        if ($user && $user->validateUser($password)) {
+            #MinorImpact::log('debug', "password verified for $username");
+            my $user_id = $user->id();
+
+            MinorImpact::session('user_id', $user_id);
+            $self->{USER} = $user;
+            $self->{USERHASH} = $user_hash;
+            return $user;
+        }
+    }
+
+    # We only need to check the cache and validate once per session.  Now that we're doing
+    #   permission checking per object, this will save us a shitload.
+    return $self->{USER} if ($self->{USER});
+
+
+    my $user_id = MinorImpact::session('user_id');
+    if ($user_id) {
+        #MinorImpact::log('debug', "cached user_id=$user_id");
+        my $user = new MinorImpact::User($user_id);
+        if ($user) {
+            $self->{USER} = $user;
+            return $user;
+        }
+    }
+
+    # Not sure what this is supposed to do.  Maybe it auto validates from the command line
+    #if ($ENV{'USER'}) {
+    #   my $user = new MinorImpact::User($ENV{'user'});
+    #    return $user;
+    #}
+    #MinorImpact::log('info', "no user found");
+    #MinorImpact::log('debug', "ending");
+    MinorImpact::redirect("?a=login") if ($params->{force});
+    return;
+}
+
+sub userID {
+    return user()->id();
 }
 
 =item www()
