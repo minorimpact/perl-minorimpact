@@ -1,7 +1,7 @@
 Summary: MinorImpact Code Library
 Name: perl-MinorImpact
-Version: 0.0.4
-Release: 3
+Version: 0.0.5
+Release: 1
 Epoch: 0
 License: GPL
 URL: http://www.minorimpact.com
@@ -36,9 +36,5 @@ rm -rf $RPM_BUILD_ROOT
 
 # Changelog - update this with every build of the package
 %changelog
-* Tue Aug 08 2017  <pgilan@minorimpact.com> 0.0.2-1
-- Removed scripts, limited to strictly libraries.
-* Tue Aug 08 2017  <pgilan@minorimpact.com> 0.0.1-2
-- New build process.
 * Tue Jun 16 2014 <pgilan@minorimpact.com> 0.0.0-1
 - Initial build.
