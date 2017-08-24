@@ -36,7 +36,7 @@ If TRUE, this object will not include a "Name" field in input/edit forms. If
 developer doesn't add a name value programatically during the 'new' or 
 'update' functions of the inherited object class, 
 '$object->type()->name() . "-" . $obect-id()' will be used instead.
-Default: FALSE.
+Default: FALSE
 
 
 =item public => BOOLEAN
@@ -44,6 +44,21 @@ Default: FALSE.
 This option does **not** make the objects public.  If TRUE, the user will have
 the *option* of designating the type a public.  Essentially controls whether or
 the the 'public' checkbox appears on object input/edit forms.
+Default: FALSE
+
+=item readonly => BOOLEAN
+
+'readonly' objects are not editable by the user, and they will never be given 
+option from the standard library.  These differ from 'sytem' objects by virtue
+of having and owners and containing information that's relevant to said user.
+Default: FALSE
+
+=item system => BOOLEAN
+
+Objects marked 'system' are meant to be core parts of the application - think
+dropdowns or statuses.  They can be instantiated by any user, but only an 
+admin user can add or edit them.
+Default: FALSE
 
 =back
 
@@ -59,6 +74,7 @@ sub add {
 
     my $name = $params->{name};
     my $no_name = ($params->{no_name}?1:0);
+    my $no_tags = ($params->{no_tags}?1:0);
     my $plural = $params->{plural};
     my $public = ($params->{public}?1:0);
     my $readonly = ($params->{readonly}?1:0);
@@ -72,6 +88,7 @@ sub add {
         MinorImpact::cache("object_type_$object_type_id", {});
         my $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr();
         $DB->do("UPDATE object_type SET no_name=? WHERE id=?", undef, ($no_name, $object_type_id)) || die $DB->errstr unless ($data->{no_name} eq $no_name);
+        $DB->do("UPDATE object_type SET no_tags=? WHERE id=?", undef, ($no_tags, $object_type_id)) || die $DB->errstr unless ($data->{no_tags} eq $no_tags);
         $DB->do("UPDATE object_type SET plural=? WHERE id=?", undef, ($plural, $object_type_id)) || die $DB->errstr unless ($data->{plural} eq $plural);
         $DB->do("UPDATE object_type SET public=? WHERE id=?", undef, ($public, $object_type_id)) || die $DB->errstr unless ($data->{public} eq $public);
         $DB->do("UPDATE object_type SET readonly=? WHERE id=?", undef, ($readonly, $object_type_id)) || die $DB->errstr unless ($data->{readonly} eq $readonly);
@@ -81,11 +98,15 @@ sub add {
 
     die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
 
-    $DB->do("INSERT INTO object_type (name, system, no_name, public, readonly, plural, create_date) VALUES (?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $public, $readonly, $plural)) || die $DB->errstr;
+    $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural)) || die $DB->errstr;
 
     #MinorImpact::log('debug', "ending");
     return $DB->{mysql_insertid};
 }
+
+sub addField { 
+    return MinorImpact::Object::Field::add(@_); 
+} 
 
 sub del {
     my $params = shift || return;
@@ -112,9 +133,13 @@ sub del {
     $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
 }
 
-sub addField { return MinorImpact::Object::Field::add(@_); } 
-sub deleteField { return MinorImpact::Object::Field::del(@_); }
-sub delField { return MinorImpact::Object::Field::del(@_); }
+sub deleteField { 
+    return MinorImpact::Object::Field::del(@_); 
+}
+
+sub delField { 
+    return MinorImpact::Object::Field::del(@_); 
+}
 
 sub fields {
     my $params = shift || return;

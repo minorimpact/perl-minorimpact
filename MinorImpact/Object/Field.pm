@@ -23,7 +23,7 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 =cut
 
 our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
-our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'object_type_id', 'public', 'read_only', 'system', 'user_id' );
+our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 'object_type_id', 'public', 'user_id' );
 
 # TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
 #   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
@@ -214,9 +214,17 @@ sub get {
     return $self->{data}{$data_field};
 }
 
-sub id { return shift->{data}{id}; }
-sub name { return shift->{data}{name}; }
-sub object_id { return shift->{data}{object_id}; }
+sub id { 
+    return shift->{data}{id}; 
+}
+
+sub name { 
+    return shift->{data}{name}; 
+}
+
+sub object_id { 
+    return shift->{data}{object_id}; 
+}
 
 sub toString { 
     my $self = shift || return; 
@@ -343,7 +351,7 @@ sub add {
     my $type = $local_params->{type};
     my $array = ($type =~/^@/);
     $type =~s/^@//;
-    die "'" . $local_params->{name} . "' is reserved." if (defined(indexOf($local_params->{name}, @reserved_names, @valid_types)));
+    die "'" . $local_params->{name} . "' is reserved." if (defined(indexOf($local_params->{name}, @reserved_names)));
     if (!defined(indexOf(lc($type), @valid_types))) {
         my $object_type_id = MinorImpact::Object::typeID($type);
         if ($object_type_id) {

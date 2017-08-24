@@ -1,0 +1,1 @@
+[% IF object.isSystem() %][% object.name() %][% ELSE %]<a href="[% url({ action=>'object' }) %]">[% object.name() %]</a>[% END -%]

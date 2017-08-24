@@ -23,7 +23,6 @@ MinorImpact::WWW
 
 =cut
 
-
 sub add {
     my $self = shift || return;
     my $params = shift || {};
@@ -35,8 +34,9 @@ sub add {
 
     my $script_name = MinorImpact::scriptName();
     my $action = $CGI->param('action') || $CGI->param('a') || $self->redirect();
-    my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $self->redirect();
+    my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $CGI->param('id') || $self->redirect();
     $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
+    $self->redirect() if (MinorImpact::Object::isReadonly($object_type_id));
 
     my $object;
     my @errors;
@@ -165,14 +165,14 @@ sub delete_collection {
         $collection->delete();
     }
 
-    $self->redirect("?a=collections");
+    $self->redirect({ action => 'collections' });
 }
 
 sub edit {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log('debug', "starting");
+    #MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{no_cache} = 1;
     my $CGI = $self->cgi();
@@ -206,7 +206,7 @@ sub edit {
         }
 
         if ($object && scalar(@errors) == 0) {
-            my $back = $object->back() || "$script_name?id=" . $object->id();
+            my $back = $object->back() || "$script_name?a=object&id=" . $object->id();
             $self->redirect($back);
         }
     }
@@ -217,7 +217,7 @@ sub edit {
                         form    => $form,
                         object   =>$object,
                     });
-    MinorImpact::log('debug', "ending");
+    #MinorImpact::log('debug', "ending");
 }
 
 sub edit_settings {
@@ -242,7 +242,7 @@ sub edit_settings {
         }
 
         if (scalar(@errors) == 0) {
-            $MINORIMPACT->redirect("?a=settings");
+            $MINORIMPACT->redirect({ action => 'settings' });
         }
     }
     my $form = $settings->form();
@@ -276,7 +276,7 @@ sub edit_user {
         }
 
         if (scalar(@errors) == 0) {
-            $MINORIMPACT->redirect("?a=user");
+            $MINORIMPACT->redirect({ action => 'user' });
         }
     }
 
@@ -301,10 +301,10 @@ sub home {
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || 30;
     my $object_id = $CGI->param('object_id') || $CGI->param('id');
-    my $page = $CGI->param('page') || 1;
-    my $search = $CGI->param('search') || '';
-    my $sort = $CGI->param('sort') || 1;
-    my $tab_id = $CGI->param('tab_id') || 0;
+    my $page = $CGI->param('page') || 1; 
+    my $search = $CGI->param('search');
+    my $sort = $CGI->param('sort');
+    my $tab_id = $CGI->param('tab_id');
     my $script_name = MinorImpact::scriptName();
 
     my @collections = sort { $a->cmp($b); } $user->getCollections();
@@ -318,26 +318,31 @@ sub home {
         };
     }
 
+    if (!defined($collection_id)) {
+        $collection_id = MinorImpact::session('collection_id');
+    } else {
+        MinorImpact::session('collection_id', $collection_id || {});
+    }
+    if (!defined($search)) {
+        $search = MinorImpact::session('search');
+    } else {
+        MinorImpact::session('search', $search || {});
+    }
+    if (!defined($sort)) {
+        $sort = MinorImpact::session('sort');
+    } else {
+        MinorImpact::session('sort', $sort || {});
+    }
+    if (!defined($tab_id)) {
+        $tab_id = MinorImpact::session('tab_id');
+    } else {
+        MinorImpact::session('tab_id', $tab_id || {});
+    }
+
     my $local_params = cloneHash($params);
     my @types;
     my @objects;
-    if ($object) {
-        if ($format eq 'json') {
-            # Handle the json stuff and get out of here early.
-            my $data = $object->toData();
-            print "Content-type: text/plain\n\n";
-            print to_json($data);
-            return;
-        }
-        viewHistory($object->typeName() . "_id", $object->id());
-
-        @types = $object->getChildTypes();
-        if (scalar(@types) == 1) {
-            #MinorImpact::log('debug', "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
-            @objects = $object->getChildren({ limit => ($limit + 1), object_type_id => $types[0], page => $page });
-            #MinorImpact::log('debug', "found: " . scalar(@objects));
-        }
-    } elsif ($params->{objects}) {
+    if ($params->{objects}) {
         @objects = @{$params->{objects}};
         $search ||= $collection->searchText() if ($collection);
     } elsif ($collection || $search || defined($params->{query}) ) {
@@ -345,6 +350,7 @@ sub home {
             $local_params->{query}{search} = $search;
         } elsif ($collection) {
             #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
+            $local_params->{query} ||= {};
             $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
         }
@@ -406,14 +412,13 @@ sub home {
     my $url_last;
     my $url_next;
     if (scalar(@objects)) {
-        $url_last = $page>1?"$script_name?a=home&cid=$collection_id&search=$search&sort=$sort&page=" . ($page - 1):'';
-        $url_next = (scalar(@objects)>$limit)?"$script_name?a=home&cid=$collection_id&sort=$sort&search=$search&page=" . ($page + 1):'';
+        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):''})):'';
+        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):''}):'';
         pop(@objects) if ($url_next);
     }
 
     MinorImpact::tt('home', {
                             cid         => $collection_id,
-                            collections => [ @collections ],
                             object      => $object,
                             objects     => [ @objects ],
                             search      => $search,
@@ -434,29 +439,39 @@ sub index {
     my $params = shift || {};
 
     #MinorImpact::log('debug', "starting");
-
-    my $user = $self->user();
-    # TODO: Maybe we don't want to do this by default...?  If we think of index
-    #   as the public face the application, and home as the user specific home
-    #   page, then why not let the user see it? Or maybe... maybe this is
-    #   something we want to leave entirely in the hands of the developer to
-    #   build.  After all, we have no real way of knowing what *should* go
-    #   here, whereas on the home page we can just throw up a bunch of shit
-    #   the user owns and they should be happy.
-    $self->redirect("?a=home") if ($user);
-
+    
     my $CGI = $self->cgi();
+    my $search = $CGI->param('search');
+    my $sort = $CGI->param('sort');
+    my $tab_id = $CGI->param('tab_id');
 
-    my $object_id = $CGI->param('object_id') || $CGI->param('id');
-    my $object;
-
-    if ($object_id) {
-        eval {
-            $object = new MinorImpact::Object($object_id);
-        };
+    if (!defined($search)) {
+        $search = MinorImpact::session('search');
+    } else {
+        MinorImpact::session('search', $search || {});
+    }
+    if (!defined($sort)) {
+        $sort = MinorImpact::session('sort');
+    } else {
+        MinorImpact::session('sort', $sort || {});
+    }
+    if (!defined($tab_id)) {
+        $tab_id = MinorImpact::session('tab_id');
+    } else {
+        MinorImpact::session('tab_id', $tab_id || {});
     }
 
-    MinorImpact::tt('index', { object => $object });
+
+    #my $object_id = $CGI->param('object_id') || $CGI->param('id');
+    #my $object;
+
+    #if ($object_id) {
+    #    eval {
+    #        $object = new MinorImpact::Object($object_id);
+    #    };
+    #}
+
+    MinorImpact::tt('index') ; #, { object => $object });
     #MinorImpact::log('debug', 'ending');
 }
 
@@ -467,12 +482,9 @@ sub login {
     #MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
-    
     my $user = $MINORIMPACT->user();
 
-    if ($user) {
-        $MINORIMPACT->redirect("?a=home");
-    }
+    $MINORIMPACT->redirect({ action => 'home' }) if ($user);
 
     my $username = $CGI->param('username');
     my $redirect = $CGI->param('redirect');
@@ -490,11 +502,86 @@ sub logout {
     my $MINORIMPACT = shift || return;
 
     my $CGI = $MINORIMPACT->cgi();
-    #my $user = $MINORIMPACT->user();
 
+    MinorImpact::clearSession();
     my $user_cookie =  $CGI->cookie(-name=>'user_id', -value=>'', -expires=>'-1d');
     print "Set-Cookie: $user_cookie\n";
-    $MINORIMPACT->redirect("?");
+    my $session_cookie =  $CGI->cookie(-name=>'session_id', -value=>'', -expires=>'-1d');
+    print "Set-Cookie: $session_cookie\n";
+    $MINORIMPACT->redirect({ action => 'index' });
+}
+
+sub object {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log('debug', "starting");
+
+    my $CGI = $self->cgi();
+    my $user = $self->user();
+    my $settings;
+    if ($user) {
+        $settings = $user->settings();
+    }
+
+    my $format = $CGI->param('format') || 'html';
+    my $limit = $CGI->param('limit') || 30;
+    my $object_id = $CGI->param('object_id') || $CGI->param('id');
+    my $page = $CGI->param('page') || 1;
+    my $tab_id = $CGI->param('tab_id') || 0;
+
+    my $object;
+    if ($params->{object}) {
+        $object = $params->{object};
+    } elsif ($object_id) {
+        eval {
+            $object = new MinorImpact::Object($object_id);
+        };
+    }
+
+    my $local_params = cloneHash($params);
+    my @types;
+    my @objects;
+    if ($object) {
+        if ($format eq 'json') {
+            # Handle the json stuff and get out of here early.
+            my $data = $object->toData();
+            print "Content-type: text/plain\n\n";
+            print to_json($data);
+            return;
+        }
+        viewHistory($object->typeName() . "_id", $object->id());
+
+        @types = $object->getChildTypes();
+        if (scalar(@types) == 1) {
+            #MinorImpact::log('debug', "Looking for children of '" . $object->id() . "', \$types[0]='" . $types[0] . "'");
+            @objects = $object->getChildren({ query => { limit => ($limit + 1), object_type_id => $types[0], page => $page } });
+            #MinorImpact::log('debug', "found: " . scalar(@objects));
+        }
+    }
+
+    my $tab_number = 0;
+    # TODO: figure out some way for these to be alphabetized
+    $tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
+    foreach my $child_type_id (@types) {
+        last if ($child_type_id == $tab_id);
+        $tab_number++;
+    }
+
+    my $url_last;
+    my $url_next;
+    #if (scalar(@objects)) {
+    #    my $script_name = MinorImpact::scriptName();
+    #    $url_last = $page>1?"$script_name?a=home&cid=$collection_id&search=$search&sort=$sort&page=" . ($page - 1):'';
+    #    $url_next = (scalar(@objects)>$limit)?"$script_name?a=home&cid=$collection_id&sort=$sort&search=$search&page=" . ($page + 1):'';
+    #    pop(@objects) if ($url_next);
+    #}
+
+    MinorImpact::tt('object', {
+                            object      => $object,
+                            tab_number  => $tab_number,
+                            types       => [ @types ],
+                            });
 }
 
 sub object_types {
@@ -544,7 +631,7 @@ sub register {
             };
             push(@errors, $@) if ($@);
             if ($user) {
-                $MI->redirect("?a=home");
+                $MI->redirect({ action => 'home' });
             } else {
                 push(@errors, "Can't create new user");
             }
@@ -571,7 +658,7 @@ sub save_search {
     my $collection = new MinorImpact::collection($collection_data);
 
     #MinorImpact::log('debug', "ending");
-    $MINORIMPACT->redirect("?cid=" . $collection->id());
+    $MINORIMPACT->redirect( { collection_id => $collection->id() });
 }
 
 =item settings()
@@ -597,15 +684,16 @@ sub tablist {
     my $user = $self->user({ force => 1 });
     my $script_name = MinorImpact::scriptName();
 
-    my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit');
     if ($limit eq '') { $limit = 30; }
     elsif ($limit eq 0) { $limit = ''; }
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
     my $page = $CGI->param('page') || 1;
-    my $search = $CGI->param('search') || '';
     my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id') || $CGI->param('type') || return;
+
+    my $search = MinorImpact::session('search');
+    my $collection_id = MinorImpact::session('collection_id');
 
     my $object;
     if ($object_id) {
@@ -624,12 +712,14 @@ sub tablist {
 
     my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
     my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
-    if ($collection) {
-        $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
-    } elsif ($search) {
-        $local_params->{query}{search} = $search;
+    unless ($object) {
+        if ($collection) {
+            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
+            $local_params->{query}{debug} .= "collection::searchParams();";
+        } elsif ($search) {
+            $local_params->{query}{search} = $search;
+        }
     }
-    $local_params->{query}{debug} .= "collection::searchParams();";
     $local_params->{query}{page} = $page;
     $local_params->{query}{limit} = $limit + 1 if ($limit);
 
@@ -657,18 +747,17 @@ sub tablist {
     my $url_last;
     my $url_next;
     if ($limit) {
-        $url_last = $page>1?"$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$object_type_id&search=$search&&page=" . ($page - 1):'';
+        $url_last = ($page > 1)?MinorImpact::url({ action => 'tablist', object_id => $object_id, collection_id => $collection_id, object_type_id => $object_type_id, search => $search, page => ($page - 1) }):'';
         if (scalar(@objects) > $limit) {
-            $url_next = "$script_name?a=tablist&id=$object_id&cid=$collection_id&type_id=$object_type_id&search=$search&page=" . ($page + 1);
+            $url_next = MinorImpact::url({ action => 'tablist', object_id => $object_id, collection_id => $collection_id, object_type_id => $object_type_id, search => $search, page => ($page + 1) });
             pop(@objects);
         }
     }
     MinorImpact::tt('tablist', {  
-                            collections    => [ @collections ],
                             object_type_id => $object_type_id,
                             objects        => [ @objects ],
-                            readonly       => MinorImpact::Object::isReadonly($object_type_id),
-                            search         => $search,
+                            #readonly       => MinorImpact::Object::isReadonly($object_type_id),
+                            #search         => $search,
                             url_last       => $url_last,
                             url_next       => $url_next,
     });

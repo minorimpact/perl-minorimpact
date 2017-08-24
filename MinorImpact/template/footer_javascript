@@ -3,7 +3,6 @@
     \$(function () {
         \$("input.datepicker").datepicker({
             buttonText: "<i class='fa fa-calendar'></i>",
-            minDate: 0,
             showOn: "both",
             dateFormat: "yy-mm-dd",
             showAnim: "fadeIn"
@@ -19,7 +18,7 @@
                     var data = \$(this).data('data');
                     var object_text_id = \$(this).data('object_text_id');
                     var object_id = \$("#object_id").val();
-                    var url = "[% script_name %]?a=add_reference&object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + encodeURI(data);
+                    var url = "[% url({ action=>'add_reference' }) %]&object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + encodeURI(data);
                     //alert(url);
                     \$.get(url, function(data, status){
                         \$( "#reference_add-dialog" ).dialog("close");
@@ -34,7 +33,7 @@
         \$("#object_type_id").change(function() {
             reloadObjects();
         });
-        \$.getJSON("[% script_name %]?a=object_types",function(data) {
+        \$.getJSON("[% url({ action=>'object_types' }) %]",function(data) {
             for (var i=0; i<data.length; i++) {
                 var object_type = data[i];
                 var select = "<option value=" + object_type.id;
@@ -53,7 +52,7 @@
     function reloadObjects() {
         \$("#object_id").html('');
         var parent_id = \$("#reference_add-dialog").data('parent_id', parent_id);
-        \$.getJSON("[% INCLUDE url_index action='list' object_type_id='' %]&format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
+        \$.getJSON("[% url({ action=>'list' }) %]&format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
             for (var i=0; i<data.length; i++) {
                 var object = data[i];
                 var select = "<option value=" + object.id;
@@ -74,7 +73,7 @@
             \$("#reference_add-dialog").data('object_text_id',object_text_id).data('parent_id', parent_id).data('data', text).dialog("open");
             \$("#reference_add-text").html(text);
             \$("#object_id").html('');
-            var url = "[% INCLUDE url_index action='tablist' object_type_id='' %]&format=json&limit=0&type_id=" + \$("#object_type_id").val();
+            var url = "[% url({  action=>'tablist' }) %]&format=json&limit=0&type_id=" + \$("#object_type_id").val();
             \$.getJSON(url, function(data) {
                 for (var i=0; i<data.length; i++) {
                     var object = data[i];

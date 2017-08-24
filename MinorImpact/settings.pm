@@ -20,13 +20,13 @@ sub new {
     return $self;
 }
 
-our $VERSION = 2;
+our $VERSION = 3;
 sub dbConfig {
     #MinorImpact::log('info', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural => "settings", system => 0, });
+    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 0, });
     die "Could not add object_type record\n" unless ($object_type_id);
 
     MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);

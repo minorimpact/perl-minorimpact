@@ -1,34 +1,14 @@
 [% INCLUDE header %]
 
-<!-- TEMPLATE:default.index -->
-[% IF object %]
-    <div class="w3-card-4 w3-margin w3-padding">
-    <div class='w3-bar'>
-        [% IF object.back() %]
-            <a href='[% object.back() %]' title='Back'><i class='fa fa-arrow-left fa-2x'></i></a>
-        [% END %]
-        [% IF object.user_id() == user.id() %]
-            [% UNLESS object.isReadonly() %]
-                <a href='[% INCLUDE url_index action='edit' %]' title='Edit task'><i class='fa fa-edit fa-2x'></i></a>
-            [% END %]
-            <a href='[% INCLUDE url_index action='delete' %]' title='Delete task'><i class='fa fa-trash fa-2x'></i></a>
-            [% INCLUDE index_menu_site %]
-        [% END %]
-    </div>
-    <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
-    [% object.toString({format=>'column'}) %]
-    <div class="w3-tiny w3-right" style="padding-bottom:4px"><em>Last modified [% object.get('mod_date') %]</em></div>
-    </div>
-[% END %]
-
+<!-- TEMPLATE:default.home -->
 [% IF objects.size %]
     [% INCLUDE list_object %]
 [% ELSIF types && types.size > 1 %]
     <div id=tabs>
     <ul>
-    [% FOREACH object_type_id IN types %]
-        <li><a href='[% INCLUDE url_index action='tablist' %]'>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</a></li>
-    [% END %]
+        [% FOREACH object_type_id IN types -%]
+            <li><a href='[% url({ action=>'tablist', object_type_id=>object_type_id }) %]'>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</a></li>
+        [% END -%]
     </ul>
     </div>
 [% END %]

@@ -151,7 +151,7 @@ sub _new {
     } elsif ($id =~/^\d+$/) {
         $object_id = $id;
     } else {
-        $object_id = $self->{CGI}->param("id") || $MinorImpact::SELF->redirect('index.cgi');
+        $object_id = $self->{CGI}->param("id") || MinorImpact::redirect();
     }
 
     # These two fields are the absolute minimum requirement to be considered a valid object.
@@ -186,20 +186,12 @@ sub back {
     my $self = shift || return;
     my $params = shift || {};
     
-    my $CGI = MinorImpact::cgi();
-    my $cid = $CGI->param('cid');
-    my $search = $CGI->param('search');
-    my $sort = $CGI->param('sort');
+    #my $CGI = MinorImpact::cgi();
+    #my $cid = $CGI->param('cid');
+    #my $search = $CGI->param('search');
+    #my $sort = $CGI->param('sort');
 
-    my $script_name = MinorImpact::scriptName();
-    $params ||= "?a=home";
-
-    my $url = "$script_name?" . $params->{url};
-    $url .= "&cid=$cid" if ($cid);
-    $url .= "&search=$search" if ($search);
-    $url .= "&sort=$sort" if ($sort);
-
-    return $url;
+    return MinorImpact::url({ action => 'home' });
 }
 
 sub churn {
@@ -212,7 +204,9 @@ Returns the id of the this objec.t
 
 =cut
 
-sub id {return shift->{data}->{id}; }
+sub id { 
+    return shift->{data}->{id}; 
+}
 
 =item name( \%options )
 
@@ -220,13 +214,17 @@ Returns the 'name' value for this object.   Shortcut for ->get('name', \%options
 
 =cut
 
-sub name { return shift->get('name', shift); }
+sub name { 
+    return shift->get('name', shift); 
+}
 
 =item public()
 
 =cut
 
-sub public { return shift->get('public'); }
+sub public { 
+    return shift->get('public'); 
+}
 
 =item userID()
 
@@ -234,16 +232,13 @@ The ID of the user this object belongs to.
 
 =cut
 
-sub userID { return shift->get('user_id'); }   
-sub user_id { return shift->userID(); }
-=item userID()
+sub userID { 
+    return shift->get('user_id');
+}   
 
-The ID of the user this object belongs to.
-
-=cut
-
-sub userID { return shift->get('user_id'); }   
-sub user_id { return shift->userID(); }
+sub user_id { 
+    return shift->userID(); 
+}
 
 sub selectList {
     my $self = shift || return;
@@ -434,7 +429,9 @@ sub fields {
     return $fields;
 }
 
-sub type_id { return MinorImpact::Object::typeID(@_); }
+sub type_id { 
+    return MinorImpact::Object::typeID(@_); 
+}
 
 sub typeID {
     my $self = shift || return;
@@ -478,18 +475,26 @@ sub getType {
     }
     # If there's no glbal object type, return the first 'toplevel' object, something that no other object
     #   references.
-    my $type_id;
-    my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
-    if (scalar(@$nextlevel) > 0) {
-        my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
-        #MinorImpact::log('debug', "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
-        $type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
-    } else {
-        $type_id = $DB->selectrow_array("SELECT id FROM object_type", {Slice=>{}});
+    my $object_type_id = MinorImpact::cache("default_object_type_id");
+    
+    unless ($object_type_id) {
+        my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
+        if (scalar(@$nextlevel) > 0) {
+            my $sql = "SELECT id FROM object_type WHERE id NOT IN (" . join(", ", ('?') x @$nextlevel) . ")";
+            #MinorImpact::log('debug', "sql=$sql, params=" . join(",", map { $_->[0]; } @$nextlevel));
+            $object_type_id = $DB->selectrow_array($sql, {Slice=>{}}, map {$_->[0]; } @$nextlevel);
+        } else {
+            # Just grab anything that's not a system object or 'readonly'.
+            my $sql = "SELECT id FROM object_type WHERE system = 0 AND readonly = 0";
+            #MinorImpact::log('debug', "sql=$sql");
+            $object_type_id = $DB->selectrow_array($sql, {Slice=>{}});
+            #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
+        }
+        MinorImpact::cache("default_object_type_id", $object_type_id);
     }
 
     #MinorImpact::log('debug', "ending");
-    return $type_id;
+    return $object_type_id;
 }
 
 # Return an array of all the object types.
@@ -508,43 +513,43 @@ sub typeName {
 
     #MinorImpact::log('debug', "starting");
 
-    my $type_id;
+    my $object_type_id;
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
-        $type_id = $params->{object_type_id} || $params->{type_id};
+        $object_type_id = $params->{object_type_id} || $params->{type_id};
     } elsif (ref($self)) {
-        $type_id = $params->{object_type_id} || $params->{type_id} || $self->typeID();
+        $object_type_id = $params->{object_type_id} || $params->{type_id} || $self->typeID();
     } elsif($self) {
-        $type_id = $self;
+        $object_type_id = $self;
         undef($self);
     }
-    #MinorImpact::log('debug', "\$type_id='$type_id'");
+    #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
 
     my $type_name;
     my $plural_name;
-    if ($self && $type_id == $self->typeID()) {
+    if ($self && $object_type_id == $self->typeID()) {
         $type_name = $self->{type_data}->{name};
         $plural_name = $self->{type_data}->{plural};
     } else {
         my $DB = MinorImpact::db();
         my $where = "name=?";
-        if ($type_id =~/^[0-9]+$/) {
+        if ($object_type_id =~/^[0-9]+$/) {
             $where = "id=?";
         }
 
         my $sql = "select name, plural from object_type where $where";
-        #MinorImpact::log('debug', "sql=$sql, ($type_id)");
-        ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($type_id));
+        #MinorImpact::log('debug', "sql=$sql, ($object_type_id)");
+        ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($object_type_id));
     }
 
-    if (!$plural_name) {
-        $plural_name = $type_name . "s";
-    }
     #MinorImpact::log('debug', "type_name=$type_name");
     #MinorImpact::log('debug', "ending");
 
     if ($params->{plural}) {
+        if (!$plural_name) {
+            $plural_name = $type_name . "s";
+        }
         return $plural_name;
     }
     return $type_name;
@@ -740,7 +745,7 @@ sub toString {
                         $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
                         if ($val =~/($test_data)/mgi) {
                             my $match = $1;
-                            my $url = "$script_name?a=home&id=" . $ref->{object_id};
+                            my $url = "$script_name?a=object&id=" . $ref->{object_id};
                             $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
                         }
                     }
@@ -785,7 +790,7 @@ sub toString {
     } elsif ($params->{format} eq 'list') {
         MinorImpact::tt('object_list', { object => $self }, \$string);
     } else {
-        my $template = $params->{template} || 'object';
+        my $template = $params->{template} || 'object_link';
         MinorImpact::tt($template, { object => $self }, \$string);
     }
     #$self->log('debug', "ending");
@@ -831,7 +836,6 @@ sub form {
     my $params = shift || {};
     #MinorImpact::log('debug', "starting");
     
-
     if (ref($self) eq "HASH") {
         $params = $self;
         undef($self);
@@ -844,7 +848,7 @@ sub form {
     my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
-    $local_params->{query}{debug} .= "Object::form();";
+    #$local_params->{query}{debug} .= "Object::form();";
     my $type;
     if ($self) {
         $local_params->{object_type_id} = $self->typeID();
@@ -856,7 +860,7 @@ sub form {
     my $form;
  
     # Suck in any default values passed in the parameters.
-    foreach my $field (keys %{$params->{default_values}}) {
+    foreach my $field (keys %{$local_params->{default_values}}) {
         $CGI->param($field,$params->{default_values}->{$field});
     }
 
@@ -871,10 +875,20 @@ sub form {
     }
 
     my $fields;
+    my $no_name;
+    my $public;
+    my $no_tags;
     if ($self) {
         $fields = $self->{object_data};
+        $no_name = $self->isNoName($local_params);
+        $no_tags = $self->isNoTags($local_params);
+        $public = $self->isPublic($local_params);
     } else {
-        $fields = MinorImpact::Object::fields($object_type_id);
+        #MinorImpact::log('debug', "caching is " . ($local_params->{no_cache}?"off":"on"));
+        $fields = MinorImpact::Object::fields($object_type_id, $local_params);
+        $no_name = isNoName($object_type_id, $local_params);
+        $no_tags = isNoTags($object_type_id, $local_params);
+        $public = isPublic($object_type_id, $local_params);
     }
     my $script;
     my $form_fields;
@@ -897,6 +911,7 @@ sub form {
         $local_params->{name} = $name;
         $local_params->{value} = \@values;
         $local_params->{query}{user_id} = $user->id();
+        $local_params->{query}{debug} .= "Object::form();";
         $form_fields .= $field->rowForm($local_params);
     }
 
@@ -910,9 +925,10 @@ sub form {
                                     object         => $self,
                                     object_type_id => $object_type_id,
                                     name           => $name,
-                                    no_name        => $local_params->{no_name},
+                                    no_name        => $no_name,
+                                    no_tags        => $no_tags,
+                                    public         => $public,
                                     tags           => $tags,
-                                    no_tags        => $local_params->{no_tags},
                                 }, \$form);
     #MinorImpact::log('debug', "ending");
     return $form;
@@ -986,7 +1002,6 @@ sub hasTag {
     return scalar(grep(/^$tag$/, $self->tags()));
 }
 
-
 sub isNoName {
     my $self = shift || return;
     return isType($self, 'no_name', shift || {});
@@ -1005,6 +1020,11 @@ sub isReadonly {
 sub isSystem {
     my $self = shift || return;
     return isType($self, 'system', shift || {});
+}
+
+sub isNoTags {
+    my $self = shift || return;
+    return isType($self, 'no_tags', shift || {});
 }
 
 sub isType {
@@ -1030,8 +1050,9 @@ sub isType {
         unless ($object_type_id =~/^\d+$/) {
             $object_type_id = MinorImpact::Object::typeID($object_type_id);
         }
+        MinorImpact::log('debug', "\$thingie='$thingie'");
+        MinorImpact::log('debug', "cachet is turned " . ($params->{no_cache}?'off':'on'));
         my $DB = MinorImpact::db();
-        MinorImpact::log('debug', "caching is turned " . ($params->{no_cache}?'off':'on'));
         my $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
         unless ($data) {
             MinorImpact::log('debug', "\$object_type_id='" . $object_type_id . "'");
@@ -1143,7 +1164,6 @@ sub version {
     #MinorImpact::log('debug', "${class}::VERSION='$version'");
     return $version;
 }
-
 
 =head1 AUTHOR
 

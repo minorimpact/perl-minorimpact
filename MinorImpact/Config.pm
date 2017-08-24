@@ -56,7 +56,6 @@ sub encode {
     return $ret;
 }
 
-
 sub get {
     my $self = shift || return;
     my $category = shift || return;

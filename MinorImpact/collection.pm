@@ -29,7 +29,7 @@ sub new {
     return $self;
 }
 
-our $VERSION = 1;
+our $VERSION = 2;
 sub dbConfig {
     #MinorImpact::log('info', "starting");
 
@@ -37,6 +37,7 @@ sub dbConfig {
     my $name = __PACKAGE__;
     my $object_type_id = MinorImpact::Object::Type::add({
         name => $name, 
+        readonly => 1,
         system => 0,
     });
     die "Could not add object_type record\n" unless ($object_type_id);

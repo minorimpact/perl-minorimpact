@@ -25,7 +25,7 @@ use MinorImpact::Util;
 use MinorImpact::WWW;
 
 my $VERSION = 1;
-my $SELF;
+our $SELF;
 
 =head1 NAME
 
@@ -97,14 +97,14 @@ sub new {
         if ($user) {
             if ($options->{user_id} && $user->id() != $options->{user_id}) {
                 MinorImpact::log('notice', "logged in user doesn't match");
-                $self->redirect("?a=login");
+                $self->redirect({ action => 'login' });
             } elsif ($options->{admin} && !$user->isAdmin()) {
                 MinorImpact::log('notice', "not an admin user");
-                $self->redirect("?a=login");
+                $self->redirect({ action => 'login' });
             }
         } else {
             MinorImpact::log('notice', "no logged in user");
-            $self->redirect("?a=login");
+            $self->redirect({ action => 'login' });
         }
     }
     if ($options->{https} && ($ENV{HTTPS} ne 'on' && !$ENV{HTTP_X_FORWARDED_FOR})) {
@@ -116,8 +116,57 @@ sub new {
     return $self;
 }
 
+sub cache {
+    my $self = shift || return;
+
+    #MinorImpact::log('debug', "starting");
+    if (!ref($self)) {
+        unshift(@_, $self);
+        $self = $MinorImpact::SELF;
+    }
+
+    my $cache;
+    if ($self->{CACHE}) {
+        $cache = $self->{CACHE};
+    } else {
+        if ($self->{conf}{default}{memcached_server}) {
+            $cache = new Cache::Memcached({ servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] });
+        } else {
+            $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
+        }
+        die "Can't create cache\n" unless ($cache);
+        $self->{CACHE} = $cache;
+    }
+
+    my $name = shift || return;
+    my $value = shift;
+    my $timeout = shift || 3600;
+
+    $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
+    if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
+        #MinorImpact::log('debug', "removing '$name'");
+        return $cache->remove($name);
+    }
+    if (!defined($value)) {
+        $value = $cache->get($name);
+        #MinorImpact::log('debug', "$name='" . $value . "'");
+        return $value;
+    }
+
+    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
+    $cache->set($name, $value, $timeout);
+
+    #MinorImpact::log('debug', "ending");
+    return $cache;
+}
+
 sub cgi { 
     return $SELF->{CGI}; 
+}
+
+sub clearSession {
+    my $session_id = MinorImpact::sessionID() || die "cannot get session ID";
+    return MinorImpact::cache("session:$session_id", {});
 }
 
 sub db {
@@ -252,18 +301,6 @@ sub dbConfig {
     #MinorImpact::log('debug', "ending");
 }
 
-sub param {
-    my $self = shift || return;
-    my $param = shift;
-
-    unless (ref($self) eq 'MinorImpact') {
-        $param = $self;
-        $self = $SELF;
-    }
-    my $CGI = $self->cgi();
-    return $CGI->param($param);
-}
-
 =item log( $log_level, $message )
 
 =cut
@@ -300,48 +337,16 @@ sub log {
     }
 }
 
-sub cache {
+sub param {
     my $self = shift || return;
+    my $param = shift;
 
-    #MinorImpact::log('debug', "starting");
-    if (!ref($self)) {
-        unshift(@_, $self);
-        $self = $MinorImpact::SELF;
+    unless (ref($self) eq 'MinorImpact') {
+        $param = $self;
+        $self = $SELF;
     }
-
-    my $cache;
-    if ($self->{CACHE}) {
-        $cache = $self->{CACHE};
-    } else {
-        if ($self->{conf}{default}{memcached_server}) {
-            $cache = new Cache::Memcached({ servers => [ $self->{conf}{default}{memcached_server} . ":11211" ] });
-        } else {
-            $cache = new CHI( driver => "File", root_dir => "/tmp/cache/" );
-        }
-        die "Can't create cache\n" unless ($cache);
-        $self->{CACHE} = $cache;
-    }
-
-    my $name = shift || return;
-    my $value = shift;
-    my $timeout = shift || 3600;
-
-    $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
-    if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
-        #MinorImpact::log('debug', "removing '$name'");
-        return $cache->remove($name);
-    }
-    if (!defined($value)) {
-        $value = $cache->get($name);
-        #MinorImpact::log('debug', "$name='" . $value . "'");
-        return $value;
-    }
-
-    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
-    $cache->set($name, $value, $timeout);
-
-    #MinorImpact::log('debug', "ending");
-    return $cache;
+    my $CGI = $self->cgi();
+    return $CGI->param($param);
 }
 
 sub redirect {
@@ -350,12 +355,12 @@ sub redirect {
 
     #MinorImpact::log('debug', "starting");
 
-    my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::user();
+    #my $CGI = MinorImpact::cgi();
+    #my $user = MinorImpact::user();
 
-    my $search = $CGI->param('search');
-    my $cid = $CGI->param('cid');
-    my $sort = $CGI->param('sort');
+    #my $search = $CGI->param('search');
+    #my $collection_id = $CGI->param('cid');
+    #my $sort = $CGI->param('sort');
 
     #MinorImpact::log('debug', "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
@@ -369,26 +374,27 @@ sub redirect {
     if (ref($params) ne 'HASH') {
         my $redirect = $params;
         $params = {};
-        $params->{redirect} = $redirect;
+        $params->{url} = $redirect;
     }
 
-    my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
+    #my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
     #MinorImpact::log('debug', "\$location='$location'");
 
-    my $domain = "https://$ENV{HTTP_HOST}";
-    my $script_name = MinorImpact::scriptName();
-    if ($location =~/^\?/) {
-        $location = "$domain/cgi-bin/$script_name$location";
-    } elsif ($location =~/^\//) {
-        $location = "$domain$location";
-    } elsif ($location !~/^\//) {
-        $location = "$domain/cgi-bin/$location";
-    }
-    $location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$cid";
+    #my $domain = "https://$ENV{HTTP_HOST}";
+    #my $script_name = MinorImpact::scriptName();
+    #if ($location =~/^\?/) {
+    #    $location = "$domain/cgi-bin/$script_name$location";
+    #} elsif ($location =~/^\//) {
+    #    $location = "$domain$location";
+    #} elsif ($location !~/^\//) {
+    #    $location = "$domain/cgi-bin/$location";
+    #}
+    #$location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$collection_id";
 
     #print $self->{CGI}->header(-location=>$location);
-    MinorImpact::log('info', "redirecting to $location");
-    print "Location:$location\n\n";
+    my $url = (defined($params->{url}) && $params->{url})?$params->{url}:MinorImpact::url($params);
+    MinorImpact::log('info', "redirecting to $url");
+    print "Location:$url\n\n";
     #MinorImpact::log('debug', "ending");
     exit;
 }
@@ -402,29 +408,13 @@ sub session {
     my $name = shift || return;
     my $value = shift;
 
-    my $self = new MinorImpact();
+    my $MI = new MinorImpact();
     my $CGI = MinorImpact::cgi();
 
-    my $timeout = $self->{conf}{default}{user_timeout} || 2592000;
-    my $session_id;
-    if ($ENV{REMOTE_ADDR}) {
-        $session_id = $CGI->cookie("user_id");
-    } else {
-        $session_id = $ENV{SSH_CLIENT} ."-$$" || $ENV{USER} . "-$$";
-    }
-    #MinorImpact::log('debug', "\$session_id='$session_id'\n");
-    my $session;
-    if ($session_id) {
-        $session = cache("session:$session_id");
-    } else {
-        # ... otherwise, generate a new session_id.
-        $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
-        if ($ENV{REMOTE_ADDR}) {
-            my $cookie =  $CGI->cookie(-name=>'user_id', -value=>$session_id, -expires=>"+${timeout}s");
-            print "Set-Cookie: $cookie\n";
-        }
-        $session = {};
-    }
+    my $timeout = $MI->{conf}{default}{user_timeout} || 2592000;
+    my $session_id = MinorImpact::sessionID() || die "cannot get session ID";
+
+    my $session = MinorImpact::cache("session:$session_id") || {};
 
     if ($name && !defined($value)) {
         return $session->{$name};
@@ -434,7 +424,26 @@ sub session {
         $session->{$name} = $value;
     }
     
-    return cache("session:$session_id", $session, $timeout);
+    return MinorImpact::cache("session:$session_id", $session, $timeout);
+}
+
+sub sessionID {
+    my $session_id;
+    if ($ENV{REMOTE_ADDR}) {
+        my $CGI = MinorImpact::cgi();
+        $session_id = $CGI->cookie("session_id");
+        unless ($session_id) {
+            my $MI = new MinorImpact();
+            my $timeout = $MI->{conf}{default}{user_timeout} || 2592000;
+            $session_id = int(rand(10000000)) . "_" . int(rand(1000000));
+            my $cookie =  $CGI->cookie(-name=>'session_id', -value=>$session_id, -expires=>"+${timeout}s");
+            print "Set-Cookie: $cookie\n";
+        }
+    } else {
+        $session_id = $ENV{SSH_CLIENT} . "-" . $ENV{USER};
+    }
+    
+    return $session_id;
 }
 
 sub tt {
@@ -452,12 +461,18 @@ sub tt {
         $TT = $self->{TT};
     } else {
         my $CGI = cgi();
-        my $user = MinorImpact::user();
-        my $cid = $CGI->param('cid');
+        my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
+        my $limit = $CGI->param('limit') || 30;
+        my $page = $CGI->param('page') || 1;
         my $search = $CGI->param('search');
         my $sort = $CGI->param('sort');
+        my $user = MinorImpact::user();
 
         my $template_directory = $ENV{MINORIMPACT_TEMPLATE} || $self->{conf}{default}{template_directory};
+        my @collections = ();
+        if ($user) {
+            @collections = $user->getCollections();
+        }
 
         # The default package templates are in the 'template' directory 
         # in the libary.  Find it, and use it as the secondary template location.
@@ -468,13 +483,17 @@ sub tt {
         my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
         my $variables = {
-            cid         => $cid,
-            home        => $self->{conf}{default}{home_script},
+            cid         => $collection_id,
+            collections => [ @collections ],
             ENV         => \%ENV,
+            home        => $self->{conf}{default}{home_script},
+            limit       => $limit,
+            page        => $page,
             script_name => MinorImpact::scriptName(),
             search      => $search,
             sort        => $sort,
             typeName    => sub { MinorImpact::Object::typeName(shift); },
+            url         => sub { MinorImpact::url(shift); },
             user        => $user,
         };
 
@@ -485,9 +504,73 @@ sub tt {
         }) || die $TT->error();
 
         $self->{TT} = $TT;
-        
     }
     $TT->process(@_) || die $TT->error();
+}
+
+sub url {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log('debug', "starting");
+
+
+    #MinorImpact::log('debug', "\$self='" . $self . "'");
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    } elsif (!ref($self)) {
+        $params->{redirect} = $self;
+        undef($self);
+    }
+
+    $self = new MinorImpact() unless ($self);
+
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user();
+
+    my $action = $params->{action} || ($user?'home':'index');
+    my $collection_id = $params->{collection_id} if (defined($params->{collection_id}));
+    my $limit = $params->{limit};
+    my $object_id = $params->{object_id};
+    my $object_type_id = $params->{object_type_id};
+    my $page = $params->{page};
+    my $search = $params->{search} if ($params->{search});
+    my $sort = $params->{sort} if ($params->{sort});
+    my $tab_id = $params->{tab_id} if ($params->{tab_id});
+
+    my $pretty = isTrue($self->{conf}{default}{pretty_urls});
+    my $qualified = isTrue($params->{qualified});
+
+    my $url;
+    my $domain = "https://$ENV{HTTP_HOST}";
+    $url = $domain if ($qualified);
+
+    if ($pretty) {
+        $url .= "/$action";
+        if ($object_id) {
+            $url .= "/$object_id" 
+        } elsif ($action eq 'add' && $object_type_id) {
+            $url .= "/$object_type_id";
+            undef($object_type_id);
+        }
+    } else {
+        my $script_name = MinorImpact::scriptName();
+        $url .= "/cgi-bin/$script_name?a=$action";
+        $url .= "&id=$object_id" if ($object_id); 
+    }
+    $url .= "&cid=$collection_id" if ($collection_id);
+    $url .= "&page=$page" if ($page);
+    $url .= "&limit=$limit" if ($limit);
+    $url .= "&search=$search" if ($search);
+    $url .= "&sort=$sort" if ($sort);
+    $url .= "&tab_id=$tab_id" if ($tab_id);
+    $url .= "&type_id=$object_type_id" if ($object_type_id);
+
+    #print $self->{CGI}->header(-location=>$location);
+    #MinorImpact::log('debug', "\$url='$url'");
+    #MinorImpact::log('debug', "ending");
+    return $url;
 }
 
 sub user {
@@ -534,7 +617,6 @@ sub user {
     #   permission checking per object, this will save us a shitload.
     return $self->{USER} if ($self->{USER});
 
-
     my $user_id = MinorImpact::session('user_id');
     if ($user_id) {
         #MinorImpact::log('debug', "cached user_id=$user_id");
@@ -551,8 +633,8 @@ sub user {
     #    return $user;
     #}
     #MinorImpact::log('info', "no user found");
+    MinorImpact::redirect({action => 'login' }) if ($params->{force});
     #MinorImpact::log('debug', "ending");
-    MinorImpact::redirect("?a=login") if ($params->{force});
     return;
 }
 
@@ -576,6 +658,9 @@ sub www {
     #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));
 
     MinorImpact::log('debug', "\$action='$action'");
+    #foreach my $key (keys %ENV) {
+    #    MinorImpact::log('debug', "$key='$ENV{$key}'");
+    #}
 
     if ($params->{actions}{$action}) {
         #MinorImpact::log('debug', "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
@@ -607,6 +692,8 @@ sub www {
         MinorImpact::WWW::login($self, $params);
     } elsif ( $action eq 'logout') {
         MinorImpact::WWW::logout($self, $params);
+    } elsif ( $action eq 'object') {
+        MinorImpact::WWW::object($self, $params);
     } elsif ( $action eq 'object_types') {
         MinorImpact::WWW::object_types($self);
     } elsif ( $action eq 'register') {

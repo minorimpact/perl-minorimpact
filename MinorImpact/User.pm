@@ -69,6 +69,7 @@ sub addUser {
 
     my $DB = $MinorImpact::SELF->{USERDB};
     if ($DB && $params->{username} && $params->{password}) {
+        # Only the first 8 characters matter to crypt(); disturbing and weird.
         $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
@@ -198,7 +199,9 @@ Returns the user's ID.
 
 =cut
 
-sub id { return shift->{data}->{id}; } 
+sub id { 
+    return shift->{data}->{id}; 
+} 
 
 =item isAdmin()
 
@@ -219,7 +222,9 @@ Returns the user's 'name' field.  A shortcut to get('name').
 
 =cut 
 
-sub name { return shift->get('name'); }
+sub name { 
+    return shift->get('name'); 
+}
 
 sub search {
     my $params = shift || {};
@@ -333,7 +338,6 @@ sub validateUser {
 
     return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
 }
-
 
 =head1 AUTHOR
 
