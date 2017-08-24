@@ -25,6 +25,7 @@ our @EXPORT = (
     "fromMysqlDate", 
     "htmlEscape",
     "indexOf",
+    "isTrue",
     "parseTags",
     "randomText",
     "toMysqlDate", 
@@ -165,6 +166,33 @@ sub indexOf {
     return undef;
 }
 
+sub isTrue {
+    my $string = shift || return 0;
+
+    my $TRUISMS = {
+        "almost" => 0,
+        "bonza" => 1,
+        "certainly" => 1,
+        "false" => 0,
+        "fuck no" => 0,
+        "nein" => 0,
+        "never" => 0,
+        "no" => 0,
+        "not cool" => 0,
+        "not true" => 0,
+        "ok" => 1,
+        "nyet" => 0,
+        "right" => 1,
+        "shit yeah" => 1,
+        "sure" => 1,
+        "why not" => 1,
+        "wrong" => 0,
+        "yes" => 1,
+    };
+
+    return (defined($TRUISMS->{lc($string)}))?$TRUISMS->{lc($string)}:1;
+}
+
 sub parseTags {
     my %tags;
     foreach my $tags (@_) {
@@ -185,6 +213,7 @@ sub _getConsonant {
     }
     return $letter;
 }
+
 sub _getLetter {
     my $letter = chr(int(rand(26))+97);
     if (indexOf($letter, ('q','x','z')) && rand(100) > .5) {
@@ -195,6 +224,7 @@ sub _getLetter {
 
     return $letter;
 }
+
 sub _getNoun {
     my $letter = _getLetter();
     while (!_isNoun($letter)) {
@@ -202,6 +232,7 @@ sub _getNoun {
     }
     return $letter;
 }
+
 sub _isNoun {
     my $letter = shift || return;;
     my @nouns = ('a', 'e', 'i', 'o', 'u');
