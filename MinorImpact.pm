@@ -421,9 +421,13 @@ sub session {
     }
 
     if ($name && defined($value)) {
-        $session->{$name} = $value;
+        if (ref($value) eq 'HASH' && scalar(keys %$value) == 0) {
+            delete($session->{$name});
+        } else {
+            $session->{$name} = $value;
+        }
     }
-    
+
     return MinorImpact::cache("session:$session_id", $session, $timeout);
 }
 
@@ -461,11 +465,12 @@ sub tt {
         $TT = $self->{TT};
     } else {
         my $CGI = cgi();
-        my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
+        my $collection_id = MinorImpact::session('collection_id');
         my $limit = $CGI->param('limit') || 30;
         my $page = $CGI->param('page') || 1;
-        my $search = $CGI->param('search');
-        my $sort = $CGI->param('sort');
+        my $search = MinorImpact::session('search');
+        my $sort = MinorImpact::session('sort');
+        my $tab_id = MinorImpact::session('tab_id');
         my $user = MinorImpact::user();
 
         my $template_directory = $ENV{MINORIMPACT_TEMPLATE} || $self->{conf}{default}{template_directory};
@@ -652,10 +657,28 @@ sub www {
     my $self = shift || return;
     my $params = shift || {};
 
+    #MinorImpact::log('debug', "starting");
+
     my $CGI = MinorImpact::cgi();
     my $action = $CGI->param('a') || $CGI->param('action') || 'index';
 
-    #$action = 'index' if ($object_id && ($action eq 'list' || $action eq 'view'));
+    # Update the session with any query overrides.  The rest of the
+    #  application can just get them from the session and assume
+    #  it's up to date.
+    my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
+    my $search = $CGI->param('search');
+    my $sort = $CGI->param('sort');
+    my $tab_id = $CGI->param('tab_id');
+
+    if (defined($search)) {
+        MinorImpact::session('search', $search );
+        MinorImpact::session('collection_id', {});
+    } elsif (defined($collection_id)) {
+        MinorImpact::session('collection_id', $collection_id);
+        MinorImpact::session('search', {} );
+    }
+    MinorImpact::session('sort', $sort ) if (defined($sort));
+    MinorImpact::session('tab_id', $tab_id ) if (defined($tab_id));
 
     MinorImpact::log('debug', "\$action='$action'");
     #foreach my $key (keys %ENV) {
@@ -663,7 +686,6 @@ sub www {
     #}
 
     if ($params->{actions}{$action}) {
-        #MinorImpact::log('debug', "\$params->{actions}{$action}='" . $params->{actions}{$action} . "'");
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
     } elsif ( $action eq 'add') {
@@ -711,6 +733,7 @@ sub www {
     } else {
         MinorImpact::WWW::index($self, $params);
     }
+    #MinorImpact::log('debug', "ending");
 }
 
 =head1 AUTHOR

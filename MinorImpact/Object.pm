@@ -745,7 +745,7 @@ sub toString {
                         $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
                         if ($val =~/($test_data)/mgi) {
                             my $match = $1;
-                            my $url = "$script_name?a=object&id=" . $ref->{object_id};
+                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->{object_id}});
                             $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
                         }
                     }

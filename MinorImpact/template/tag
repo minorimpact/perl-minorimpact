@@ -1,1 +1,1 @@
-<a class="w3-button w3-tiny w3-grey w3-round" href='[% INCLUDE url_index action="home" search="tag:$tag" object="" %]' style="padding-top:2px;padding-bottom:2px;margin-bottom:4px">#[% text or tag %]</a>
+<a class="w3-button w3-tiny w3-grey w3-round" href='[% url({ action=>'home', search=>"tag:$tag" }) %]' style="padding-top:2px;padding-bottom:2px;margin-bottom:4px">#[% text or tag %]</a>

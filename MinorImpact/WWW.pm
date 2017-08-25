@@ -297,47 +297,17 @@ sub home {
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
 
-    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid');
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || 30;
-    my $object_id = $CGI->param('object_id') || $CGI->param('id');
     my $page = $CGI->param('page') || 1; 
-    my $search = $CGI->param('search');
-    my $sort = $CGI->param('sort');
-    my $tab_id = $CGI->param('tab_id');
     my $script_name = MinorImpact::scriptName();
 
-    my @collections = sort { $a->cmp($b); } $user->getCollections();
-    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
-    my $object;
-    if ($params->{object}) {
-        $object = $params->{object};
-    } elsif ($object_id) {
-        eval {
-            $object = new MinorImpact::Object($object_id);
-        };
-    }
+    my $collection_id = MinorImpact::session('collection_id');
+    my $search = MinorImpact::session('search');
+    my $sort = MinorImpact::session('sort');
+    my $tab_id = MinorImpact::session('tab_id');
 
-    if (!defined($collection_id)) {
-        $collection_id = MinorImpact::session('collection_id');
-    } else {
-        MinorImpact::session('collection_id', $collection_id || {});
-    }
-    if (!defined($search)) {
-        $search = MinorImpact::session('search');
-    } else {
-        MinorImpact::session('search', $search || {});
-    }
-    if (!defined($sort)) {
-        $sort = MinorImpact::session('sort');
-    } else {
-        MinorImpact::session('sort', $sort || {});
-    }
-    if (!defined($tab_id)) {
-        $tab_id = MinorImpact::session('tab_id');
-    } else {
-        MinorImpact::session('tab_id', $tab_id || {});
-    }
+    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
 
     my $local_params = cloneHash($params);
     my @types;
@@ -345,7 +315,7 @@ sub home {
     if ($params->{objects}) {
         @objects = @{$params->{objects}};
         $search ||= $collection->searchText() if ($collection);
-    } elsif ($collection || $search || defined($params->{query}) ) {
+    } elsif ($collection || $search) {
         if ($search) {
             $local_params->{query}{search} = $search;
         } elsif ($collection) {
@@ -417,16 +387,17 @@ sub home {
         pop(@objects) if ($url_next);
     }
 
+    MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
     MinorImpact::tt('home', {
-                            cid         => $collection_id,
-                            object      => $object,
-                            objects     => [ @objects ],
-                            search      => $search,
-                            sort        => $sort,
-                            tab_number  => $tab_number,
-                            types       => [ @types ],
-                            url_last    => $url_last,
-                            url_next    => $url_next,
+                            cid                 => $collection_id,
+                            objects             => [ @objects ],
+                            search              => $search,
+                            search_placeholder  => "$local_params->{search_placeholder}",
+                            sort                => $sort,
+                            tab_number          => $tab_number,
+                            types               => [ @types ],
+                            url_last            => $url_last,
+                            url_next            => $url_next,
                             });
     # For testing.
     #if ($object && $object->typeID() == 4) {

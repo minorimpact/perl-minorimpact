@@ -9,13 +9,15 @@
         [% END %]
         [% IF object.user_id() == user.id() %]
             [% UNLESS object.isReadonly() %]
-                <a href='[% INCLUDE url_index action='edit' %]' title='Edit task'><i class='fa fa-edit fa-2x'></i></a>
+                <a href='[% url({ action=>'edit', object_id=>object.id() }) %]' title='Edit task'><i class='fa fa-edit fa-2x'></i></a>
             [% END %]
-            <a href='[% INCLUDE url_index action='delete' %]' title='Delete task'><i class='fa fa-trash fa-2x'></i></a>
+            <a href='[% url({ action=>'delete', object_id=>object.id() })  %]' title='Delete task'><i class='fa fa-trash fa-2x'></i></a>
             [% INCLUDE index_menu_site %]
         [% END %]
     </div>
-    <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
+    [% IF not object.isNoName() %]
+        <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
+    [% END %]
     [% object.toString({format=>'column'}) %]
     <div class="w3-tiny w3-right" style="padding-bottom:4px"><em>Last modified [% object.get('mod_date') %]</em></div>
     </div>
