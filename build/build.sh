@@ -50,7 +50,7 @@ tar -c -v -z --exclude='.git' --exclude='build' -f ${PACKAGE_NAME}.tar.gz $PACKA
 cp ${PACKAGE_NAME}.tar.gz $SOURCE_DIR/
 
 rm -rf $BASE_DIR
-rpmbuild -ba $DIRNAME/$NAME.spec
+rpmbuild -ba -sign  $DIRNAME/$NAME.spec 
 
 if [ "$REPO" != "norepo" ];
 then
