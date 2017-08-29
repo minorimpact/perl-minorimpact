@@ -1,5 +1,7 @@
 package MinorImpact::Object::Search;
 
+use strict;
+
 use Digest::MD5 qw(md5 md5_hex);
 use Data::Dumper;
 
@@ -17,7 +19,7 @@ sub parseSearchString {
     }
 
     $string = lc($string);
-    $string2 = $string;
+    my $string2 = $string;
     $params->{query}{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
     my @tags = extractTags(\$string);
     foreach my $tag (@tags) {
@@ -156,8 +158,16 @@ sub _search {
         push (@fields, @{$query->{where_fields}});
     }
 
+    my $user = MinorImpact::user();
+    unless ($query->{public}) {
+        if ($user) {
+            $query->{user_id} = $user->id();
+        } else {
+            $query->{public} = 1;
+        }
+    }
     foreach my $param (keys %$query) {
-        next if ($param =~/^(id_only|sort|limit|page|debug|where|where_fields|child|no_child)$/);
+        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child)$/);
         next unless (defined($query->{$param}));
         #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
@@ -224,12 +234,7 @@ sub _search {
 
     my $objects;
     my $hash = md5_hex($sql);
-    #MinorImpact::log('debug', "hash='" . $hash . "'");
-
-    if ($cache) {
-        #MinorImpact::log('debug', "ref=" . ref($cache->get_keys()));
-        #$objects = MinorImpact::cache("search_$hash");
-    }
+    #$objects = MinorImpact::cache("search_$hash");
 
     unless ($objects) {
         $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);

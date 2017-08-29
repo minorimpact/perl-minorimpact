@@ -17,7 +17,7 @@ do
 done
 
 BASENAME=$(basename $0)
-USAGE="Usage: $(basename $0) [-h?]"
+USAGE="Usage: $(basename $0) [-nh?]"
 _DIRNAME=$(dirname $0)
 if [ -d $_DIRNAME ]; then
     cd $_DIRNAME

@@ -296,7 +296,6 @@ sub dbConfig {
     }
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
-    MinorImpact::page::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::page"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     #MinorImpact::log('debug', "ending");
 }
@@ -355,14 +354,6 @@ sub redirect {
 
     #MinorImpact::log('debug', "starting");
 
-    #my $CGI = MinorImpact::cgi();
-    #my $user = MinorImpact::user();
-
-    #my $search = $CGI->param('search');
-    #my $collection_id = $CGI->param('cid');
-    #my $sort = $CGI->param('sort');
-
-    #MinorImpact::log('debug', "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
@@ -377,21 +368,6 @@ sub redirect {
         $params->{url} = $redirect;
     }
 
-    #my $location = $params->{redirect} || $CGI->param('redirect') ||  ($user?'index.cgi?a=home':'index.cgi?');
-    #MinorImpact::log('debug', "\$location='$location'");
-
-    #my $domain = "https://$ENV{HTTP_HOST}";
-    #my $script_name = MinorImpact::scriptName();
-    #if ($location =~/^\?/) {
-    #    $location = "$domain/cgi-bin/$script_name$location";
-    #} elsif ($location =~/^\//) {
-    #    $location = "$domain$location";
-    #} elsif ($location !~/^\//) {
-    #    $location = "$domain/cgi-bin/$location";
-    #}
-    #$location .= ($location=~/\?/?"":"?") . "&search=$search&sort=$sort&cid=$collection_id";
-
-    #print $self->{CGI}->header(-location=>$location);
     my $url = (defined($params->{url}) && $params->{url})?$params->{url}:MinorImpact::url($params);
     MinorImpact::log('info', "redirecting to $url");
     print "Location:$url\n\n";
@@ -722,6 +698,8 @@ sub www {
         MinorImpact::WWW::register($self, $params);
     } elsif ( $action eq 'save_search') {
         MinorImpact::WWW::save_search($self, $params);
+    } elsif ( $action eq 'search') {
+        MinorImpact::WWW::search($self, $params);
     } elsif ( $action eq 'settings') {
         MinorImpact::WWW::settings($self, $params);
     } elsif ( $action eq 'tablist') {

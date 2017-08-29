@@ -1,11 +1,10 @@
-<form id=search_form method=POST>
-<input type=hidden id=save_name name=save_name>
-    <div class="w3-row">
-        <div class="w3-col">
-            <input class="w3-input w3-bar-item w3-border" type=text id=search name=search value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }' placeholder="Search..."> 
-        </div>
-        <div class="w3-col">
-            <button class="w3-btn w3-bar-item" id=save_button name=save_button onclick='submitForm();'><i class="fa fa-save fa-2x"></i></button>
-        </div>
-    </div>
-</form>
+[% UNLESS no_search %]
+    <button onclick='showSearchForm();' class="w3-hide-medium w3-hide-large w3-bar-item w3-button" id="search_button" ><i class="fa fa-search fa-2x"></i></button>
+    <form id=search_form method=POST class=" w3-hide-small">
+        <input type=hidden id=save_name name=save_name>
+        <input type=hidden id=a name=a value='search'>
+        <input class="w3-input w3-small w3-bar-item w3-border" type="search" id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="[% search_placeholder or 'Search...' %]" style="margin-top:6px">
+        <button class="w3-btn w3-bar-item w3-hide" ><i class="fa fa-search fa-2x"></i></button>
+        [% IF search %]<button class="w3-btn w3-bar-item w3-hide-small" id=save_button name=save_button onclick='submitForm();' title="Save Search"><i class="fa fa-save fa-2x"></i></button>[% END %]
+    </form>
+[% END %]

@@ -632,6 +632,120 @@ sub save_search {
     $MINORIMPACT->redirect( { collection_id => $collection->id() });
 }
 
+sub search {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    #MinorImpact::log('debug', "starting");
+
+    my $CGI = $self->cgi();
+    my $user = MinorImpact::user();
+
+    my $format = $CGI->param('format') || 'html';
+    my $limit = $CGI->param('limit') || 30;
+    my $page = $CGI->param('page') || 1; 
+    my $script_name = MinorImpact::scriptName();
+
+    my $collection_id = MinorImpact::session('collection_id');
+    my $search = MinorImpact::session('search');
+    my $sort = MinorImpact::session('sort');
+    my $tab_id = MinorImpact::session('tab_id');
+
+    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
+
+    my $local_params = cloneHash($params);
+    my @types;
+    my @objects;
+    if ($params->{objects}) {
+        @objects = @{$params->{objects}};
+        $search ||= $collection->searchText() if ($collection);
+    } elsif ($collection || $search) {
+        if ($search) {
+            $local_params->{query}{search} = $search;
+        } elsif ($collection) {
+            #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
+            $local_params->{query} ||= {};
+            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
+            $search = $collection->searchText();
+        }
+
+        $local_params->{query}{debug} .= 'MinorImpact::www::index();';
+        $local_params->{query}{page} = $page;
+        $local_params->{query}{limit} = $limit + 1;
+
+        $local_params->{query}{type_tree} = 1;
+        $local_params->{query}{sort} = $sort;
+        # Anything coming in through here is coming from a user, they 
+        #   don't need to search system objects.
+        $local_params->{query}{system} = 0;
+
+        # TODO: INEFFICIENT AS FUCK.
+        #   We need to figure out  a search that just tells us what types we're
+        #   dealing with so we know how many tabs to create.
+        #   I feel like this is maybe where efficient caching would come in... maybe
+        #   we can... the problem is this is arbitrary searching, so we can't really
+        #   cache any numbers that make sense.  The total changes, the search string
+        #   changes... Maybe we can... have a separate search that just searches by
+        #   id, and then runs through the results... but to get the types, they still
+        #   have to create the objects.  Or hit the database for everyone to get the
+        #   type_id from object table.
+        #   Well, at least we only have to it once, since the tab list is a static
+        #   page.
+        my $result = MinorImpact::Object::Search::search($local_params);
+        if ($result) {
+            push(@types, keys %{$result});
+        }
+        if (scalar(@types) == 1) {
+            $local_params->{query}{object_type_id} = $types[0];
+            delete($local_params->{query}{type_tree});
+            @objects = MinorImpact::Object::Search::search($local_params);
+        }
+    } else {
+        push(@types, MinorImpact::Object::getType());
+        #my $all_types = MinorImpact::Object::types();
+        #foreach my $type (@$types) {
+        #    push(@types, $type->{id});
+        #}
+        if (scalar(@types) == 1) {
+            $local_params->{query}{object_type_id} = $types[0];
+            delete($local_params->{query}{type_tree});
+            @objects = MinorImpact::Object::Search::search($local_params);
+        }
+    }
+
+    my $tab_number = 0;
+    # TODO: figure out some way for these to be alphabetized
+    $tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
+    foreach my $child_type_id (@types) {
+        last if ($child_type_id == $tab_id);
+        $tab_number++;
+    }
+
+    my $url_last;
+    my $url_next;
+    if (scalar(@objects)) {
+        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):''})):'';
+        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):''}):'';
+        pop(@objects) if ($url_next);
+    }
+
+    MinorImpact::tt('search', {
+                            cid                 => $collection_id,
+                            objects             => [ @objects ],
+                            search              => $search,
+                            search_placeholder  => "$local_params->{search_placeholder}",
+                            sort                => $sort,
+                            tab_number          => $tab_number,
+                            types               => [ @types ],
+                            url_last            => $url_last,
+                            url_next            => $url_next,
+                            });
+    # For testing.
+    #if ($object && $object->typeID() == 4) {
+    #    $object->updateAllDates();
+    #}
+}
+
 =item settings()
 
 =cut

@@ -100,4 +100,3 @@ sub searchText {
 }
 
 1;
-

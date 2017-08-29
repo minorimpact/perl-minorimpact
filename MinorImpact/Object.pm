@@ -33,7 +33,6 @@ use MinorImpact;
 use MinorImpact::collection;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
-use MinorImpact::page;
 use MinorImpact::settings;
 use MinorImpact::Util;
 

@@ -17,7 +17,6 @@ The object representing application users.
 
 =head2 Getting the current user.
 
-
     use MinorImpact;
     my $MINORIMPACT = new MinorImpact();
     my $user = $MINORIMPACT->user();

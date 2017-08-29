@@ -69,7 +69,6 @@ sub get {
     return $self->{config}{$category}{$key};
 }
 
-
 sub readConfig {
     my $config_file = shift || return;
 
@@ -86,7 +85,7 @@ sub readConfig {
         my $value;
         my $line = trim($_);
         next if (/^#/ || !$_);
-        if (/^([^:]+):/ || /^\[(^\]]+)\]/) {
+        if (/^([^:]+):/ || /^\[([^\]]+)\]/) {
             $category = $1;
             undef($key);
             next;
