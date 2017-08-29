@@ -1,0 +1,8 @@
+[% INCLUDE header %]
+
+<!-- TEMPLATE:default.list -->
+[% INCLUDE list_menu %]
+
+[% INCLUDE list_object %]
+
+[% INCLUDE footer %]

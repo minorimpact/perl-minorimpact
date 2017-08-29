@@ -1,0 +1,157 @@
+<!-- TEMPLATE:default.footer_javascript -->
+<script>
+    \$(function () {
+        \$("input.datepicker").datepicker({
+            buttonText: "<i class='fa fa-calendar'></i>",
+            showOn: "both",
+            dateFormat: "yy-mm-dd",
+            showAnim: "fadeIn"
+        })
+                                     
+        \$( "#reference_add-dialog" ).dialog({
+            autoOpen: false,
+            height: 350,
+            width: 375,
+            modal: true,
+            buttons: {
+                "Create Reference": function() {
+                    var data = \$(this).data('data');
+                    var object_text_id = \$(this).data('object_text_id');
+                    var object_id = \$("#object_id").val();
+                    var url = "[% url({ action=>'add_reference' }) %]&object_text_id=" + object_text_id + "&object_id=" + object_id + "&data=" + encodeURI(data);
+                    //alert(url);
+                    \$.get(url, function(data, status){
+                        \$( "#reference_add-dialog" ).dialog("close");
+                        window.location.reload(true);
+                    });
+                },
+                Cancel: function() {
+                    \$( this ).dialog( "close" );
+                }
+        }});
+        \$("#object_type_id").html('');
+        \$("#object_type_id").change(function() {
+            reloadObjects();
+        });
+        \$.getJSON("[% url({ action=>'object_types' }) %]",function(data) {
+            for (var i=0; i<data.length; i++) {
+                var object_type = data[i];
+                var select = "<option value=" + object_type.id;
+                select = select + ">" + object_type.name + "</option>";
+                \$("#object_type_id").append(select);
+            }
+        });
+        \$("#tabs").tabs({
+            active: [% tab_number or 0 %],
+            beforeLoad: function( event, ui ) {
+                ui.panel.html("<div>Loading...</div>");
+            }
+        });
+    });
+
+    function reloadObjects() {
+        \$("#object_id").html('');
+        var parent_id = \$("#reference_add-dialog").data('parent_id', parent_id);
+        \$.getJSON("[% url({ action=>'list' }) %]&format=json&type_id=" + \$("#object_type_id").val() ,function(data) {
+            for (var i=0; i<data.length; i++) {
+                var object = data[i];
+                var select = "<option value=" + object.id;
+                select = select + ">" + object.name + "</option>";
+                \$("#object_id").append(select);
+            }
+        });
+    }
+
+    function getSelectedText(object_text_id) {
+        var parent_id = '';
+        var text = "";
+        if (window.getSelection && \$('#reference_add-dialog').dialog('isOpen') ==  false) {
+            text = window.getSelection().toString();
+            if (text.length == 0) {
+                return;
+            }
+            \$("#reference_add-dialog").data('object_text_id',object_text_id).data('parent_id', parent_id).data('data', text).dialog("open");
+            \$("#reference_add-text").html(text);
+            \$("#object_id").html('');
+            var url = "[% url({  action=>'tablist' }) %]&format=json&limit=0&type_id=" + \$("#object_type_id").val();
+            \$.getJSON(url, function(data) {
+                for (var i=0; i<data.length; i++) {
+                    var object = data[i];
+                    var select = "<option value=" + object.id;
+                    select = select + ">" + object.name + "</option>";
+                    \$("#object_id").append(select);
+                }
+            });
+        }
+    }
+
+    // Duplicates the row the control is in and marks it so it
+    // won't get duplicated again.  Used to dynamically add array fields
+    // to forms.
+    function duplicateRow(o) {
+        var \$div = \$(o).closest("div.w3-row");
+        if (\$div.data('duped') == 1 || \$(o).val() == '' || \$(o).val() == ' ') {
+            return;
+        }
+        var \$clone = \$div.clone();
+        \$div.after(\$clone);
+        \$div.data('duped', 1);
+        \$clone.find("input:text").val(' ');
+        \$clone.find("label").html('');
+    }   
+
+    function openCollectionsDD() {
+        var x = document.getElementById("collectionsDD");
+        if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = null;
+            x.className += " w3-show";
+        } else { 
+            x.className = x.className.replace(" w3-show", "");
+        }
+    }
+    function showSearchForm() {
+        var search = document.getElementById("search_button");
+        var form = document.getElementById("search_form");
+        var sort = document.getElementById("sort_button");
+        var collections = document.getElementById("collections_button");
+        form.className = form.className.replace(" w3-hide-small", "");
+        search.className += " w3-hide-small";
+        sort.className += " w3-hide-small";
+        collections.className += " w3-hide-small";
+    }
+    function openCollectionsDDRight() {
+        var x = document.getElementById("collectionsDD");
+        if (x.className.indexOf("w3-show") == -1) {
+            x.style.right = 0;
+            x.className += " w3-show";
+        } else { 
+            x.className = x.className.replace(" w3-show", "");
+        }
+    }
+    [% IF 0 and search %]
+        document.getElementById("save_button").disabled = false;
+    [% ELSIF 0 %]
+        document.getElementById("save_button").disabled = true;
+    [% END %]
+    function submitForm() {
+        var form = document.getElementById('search_form');
+        if (form.search.value.length) {
+            var save_name = prompt ("Save Name");
+            if (save_name) {
+                form.a.value = 'save_search';
+                form.save_name.value = save_name;
+                form.submit();
+            }
+        }
+    }
+    function sidebar_open() {
+        document.getElementById("sidebar").style.display = "block";
+        document.getElementById("overlay").style.display = "block";
+    }
+    function sidebar_close() {
+        document.getElementById("sidebar").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
+    }
+</script>
+
+[% INCLUDE footer_javascript_site %]

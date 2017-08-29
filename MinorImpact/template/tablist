@@ -1,0 +1,24 @@
+Content-type: text/html
+
+<!-- TEMPLATE:default.tablist -->
+[% INCLUDE list_menu %]
+
+[% INCLUDE list_object %]
+
+<script>
+    \$(function () {
+        \$("a.paginate").click(function(e) {
+            e.preventDefault();
+            var href = \$(this).attr('href');
+            var tabs = \$("#tabs");
+            if (tabs) {
+                var currentTabIndex = tabs.tabs("option", "active");
+                var tab = \$(tabs.data('uiTabs').tabs[currentTabIndex]);
+                tab.find('.ui-tabs-anchor').attr('href', href);
+                tab.data( "loaded", false);
+                tabs.tabs("load", currentTabIndex);
+            }
+        });
+    });
+</script>
+

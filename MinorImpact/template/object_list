@@ -1,0 +1,4 @@
+<div class="w3-row">
+    <a href='[% url({ action=>'object', object_id=>object.id() }) %]'>[% object.name() %]</a>
+</div>
+<hr>

@@ -1,0 +1,12 @@
+[% INCLUDE header title=user.name() %]
+
+<div class='w3-container w3-card' style='margin-top:16px;'>
+    <div class='w3-bar'>
+        <a class='w3-baritem' href='[%INCLUDE url_index action='edit_user' %]' title='Edit User'><i class='fa fa-edit fa-2x'></i></a>
+    </div>
+    [% INCLUDE row_column name='Name' value=user.name() %]
+    [% INCLUDE row_column name='Email' value=user.get('email') %]
+</div>
+
+[% INCLUDE footer %]
+

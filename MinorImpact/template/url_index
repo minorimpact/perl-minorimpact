@@ -1,0 +1,1 @@
+[% IF reset %][% object='' collection_id = ''  search='' sort='' object_type_id = '' %][% END %][% BLOCK %][% url({'object_id'=>object.id(), 'object_type_id'=> object_type_id, 'action' => action, 'collection_id' => collection_id, 'search' => search, 'sort' => sort }) %][% END -%]

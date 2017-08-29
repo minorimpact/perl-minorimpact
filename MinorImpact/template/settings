@@ -1,0 +1,12 @@
+[% INCLUDE header %]
+
+<div class='w3-card w3-margin-top'>
+    <div class='w3-row w3-margin w3-padding'>
+        <a href='[% INCLUDE url_index action='edit_settings' reset=1 %]' title='Edit Settings' class='w3-baritem'><i class='fa fa-edit fa-2x'></i></a>
+    </div>
+    [% FOREACH key IN settings.fields().keys %]
+        [% INCLUDE row_column name=key value=settings.get(key) %]
+    [% END %]
+</div>
+
+[% INCLUDE footer %]

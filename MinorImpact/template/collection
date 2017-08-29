@@ -1,0 +1,5 @@
+[% IF delete_collection %]
+    <a href="[% url({ action=>'delete_collection',  collection_id=>collection.id() }) %]"><i class="fa fa-trash fa-2x"></i></a>
+[% END %]
+<a href="[% url({ action=>'home', collection_id=collection.id() }) %]" class="w3-bar-item w3-button">[% collection.name() %]</a>
+    
