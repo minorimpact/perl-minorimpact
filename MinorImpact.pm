@@ -17,7 +17,6 @@ use Time::HiRes qw(tv_interval gettimeofday);
 use Time::Local;
 use URI::Escape;
 
-use MinorImpact::BinLib;
 use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
