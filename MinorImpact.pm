@@ -441,6 +441,11 @@ sub tt {
     } else {
         my $CGI = cgi();
         my $collection_id = MinorImpact::session('collection_id');
+        my $copyright = $self->{conf}{default}{copyright} || '';
+        if ($copyright =~/YEAR/) {
+            my $year = ((localtime(time))[5] + 1900);
+            $copyright =~s/YEAR/$year/;
+        }
         my $limit = $CGI->param('limit') || 30;
         my $page = $CGI->param('page') || 1;
         my $search = MinorImpact::session('search');
@@ -465,6 +470,7 @@ sub tt {
         my $variables = {
             cid         => $collection_id,
             collections => [ @collections ],
+            copyright   => $copyright,
             ENV         => \%ENV,
             home        => $self->{conf}{default}{home_script},
             limit       => $limit,
@@ -687,6 +693,8 @@ sub www {
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
+    } elsif ( $action eq 'about') {
+        MinorImpact::WWW::about($self, $params);
     } elsif ( $action eq 'add') {
         MinorImpact::WWW::add($self, $params);
     } elsif ( $action eq 'add_reference') {
@@ -695,6 +703,8 @@ sub www {
         MinorImpact::WWW::admin($self, $params);
     } elsif ( $action eq 'collections') {
         MinorImpact::WWW::collections($self, $params);
+    } elsif ( $action eq 'contact') {
+        MinorImpact::WWW::contact($self, $params);
     } elsif ( $action eq 'css') {
         MinorImpact::WWW::css($self, $params);
     } elsif ( $action eq 'delete') {

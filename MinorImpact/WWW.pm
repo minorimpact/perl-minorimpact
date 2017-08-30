@@ -23,6 +23,13 @@ MinorImpact::WWW
 
 =cut
 
+sub about {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::tt('about');
+}
+
 sub add {
     my $self = shift || return;
     my $params = shift || {};
@@ -127,6 +134,13 @@ sub collections {
     #my @collections = sort { $a->cmp($b); } $user->getCollections();
     my @collections = $user->getCollections();
     MinorImpact::tt('collections', { collections => [ @collections ], });
+}
+
+sub contact {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::tt('contact');
 }
 
 sub css {
@@ -766,7 +780,7 @@ sub tablist {
     my $params = shift || {};
 
     my $CGI = $self->cgi();
-    my $user = $self->user({ force => 1 });
+    my $user = $self->user();
     my $script_name = MinorImpact::scriptName();
 
     my $format = $CGI->param('format') || 'html';
