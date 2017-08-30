@@ -4,17 +4,17 @@ use Time::Local;
 use Cwd;
 use Exporter 'import';
 @EXPORT = (
-            "readConfig", 
-            "writeConfig",
-          );
+    "readConfig", 
+    "writeConfig",
+);
 
 use MinorImpact::Util;
 
 my $ENCODE_MAP = {
-                ":" => "_COLON_",
-                "\\[" => "_LBRACKET_",
-                "\\]" => "_RBRACKET_",
-            };
+    ":" => "_COLON_",
+    "\\[" => "_LBRACKET_",
+    "\\]" => "_RBRACKET_",
+};
 
 sub new {
     my $package = shift;
@@ -85,7 +85,7 @@ sub readConfig {
         my $value;
         my $line = trim($_);
         next if (/^#/ || !$_);
-        if (/^([^:]+):/ || /^\[([^\]]+)\]/) {
+        if (/^([^:=]+):/ || /^\[([^\]]+)\]/) {
             $category = $1;
             undef($key);
             next;
