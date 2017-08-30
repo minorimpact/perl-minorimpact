@@ -23,7 +23,6 @@ use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::WWW;
 
-my $VERSION = 1;
 our $SELF;
 
 =head1 NAME
@@ -172,6 +171,7 @@ sub db {
     return $SELF->{DB};
 }
 
+my $VERSION = 1;
 sub dbConfig {
     #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
@@ -568,29 +568,53 @@ sub user {
     }
 
     my $CGI = MinorImpact::cgi();
-
-    # If the username and password are provided, then validate the user.
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
     my $password = $params->{password} || $CGI->param('password');
-    if ($username && $password) {
-        MinorImpact::log('notice', "validating " . $username);
-        my $user_hash = md5_hex("$username:$password");
-        # If this is the first page, the cookie hasn't been set, so if there are a ton of items
-        #   we're gonna validate against the database over and over again... so just validate against
-        #   a stored hash and return the cached user.
-        if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
-            return $self->{USER};
+    my $user_hash = md5_hex("$username:$password");
+
+    # Check the number of login failures for this IP
+    my $IP = $ENV{HTTP_X_FORWARDED_FOR} || $ENV{SERVER_ADDR} || $ENV{SSH_CONNECTION} || 'X';
+    my $login_failures = MinorImpact::cache("login_failures_$IP") || 0;
+    # Fail silently, so an attacker doesn't know they're not actually validating against anything.
+    if ($login_failures >= 5) {
+        MinorImpact::log('notice', "Excessive login failures from '$IP'");
+        return;
+    }
+
+    if ($username) {
+        # ... or this username.
+        $login_failures = MinorImpact::cache("login_failures_$username") || 0;
+        if ($login_failures >= 5) {
+            MinorImpact::log('notice', "Excessive login failures for '$username'");
+            return;
         }
+    }
+
+    # If this is the first page, the cookie hasn't been set, so if there are a ton of items
+    #   we'd have to validate against the database over and over again... so just validate against
+    #   a stored hash and return the cached user.  Once USERHASH is set, we know we've already 
+    #   checked this username/passsword combination, and if USER is set we already know it succeeded.
+    if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
+        return $self->{USER};
+    }
+
+    # If the username and password are provided, then validate the user.
+    if ($username && $password && !$self->{USERHASH}) {
+        MinorImpact::log('notice', "validating " . $username);
+
+        $self->{USERHASH} = $user_hash;
         my $user = new MinorImpact::User($username);
         if ($user && $user->validateUser($password)) {
             #MinorImpact::log('debug', "password verified for $username");
-            my $user_id = $user->id();
-
-            MinorImpact::session('user_id', $user_id);
             $self->{USER} = $user;
-            $self->{USERHASH} = $user_hash;
+            MinorImpact::session('user_id', $user->id());
             return $user;
         }
+        # We keep the login failure count for 7 minutes, which should be long enough to make
+        #   a brute force attempt fail.
+        $login_failures++;
+        MinorImpact::cache("login_failures_$IP", $login_failures, 420);
+        MinorImpact::cache("login_failures_$username", $login_failures, 4200);
     }
 
     # We only need to check the cache and validate once per session.  Now that we're doing
