@@ -193,8 +193,6 @@ sub edit {
     my $user = $self->user({ force => 1 });
     my $script_name = MinorImpact::scriptName();
 
-    my $search = $CGI->param('search');
-
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $self->redirect();
     my $object = new MinorImpact::Object($object_id, $local_params) || $self->redirect();
     $self->redirect($object->back()) if ($object->isReadonly());
@@ -215,7 +213,8 @@ sub edit {
         };
         if ($@) {
             my $error = $@;
-            $error =~s/ at .+ line \d+.*$//;
+            #$error =~s/ at .+ line \d+.*$//;
+            MinorImpact::log('debug', $error);
             push(@errors, $error) if ($error);
         }
 
@@ -316,73 +315,19 @@ sub home {
     my $page = $CGI->param('page') || 1; 
     my $script_name = MinorImpact::scriptName();
 
-    my $collection_id = MinorImpact::session('collection_id');
-    my $search = MinorImpact::session('search');
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
-
-    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
 
     my $local_params = cloneHash($params);
     my @types;
     my @objects;
-    if ($params->{objects}) {
-        @objects = @{$params->{objects}};
-        $search ||= $collection->searchText() if ($collection);
-    } elsif ($collection || $search) {
-        if ($search) {
-            $local_params->{query}{search} = $search;
-        } elsif ($collection) {
-            #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
-            $local_params->{query} ||= {};
-            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
-            $search = $collection->searchText();
-        }
 
+    push(@types, MinorImpact::Object::getType());
+    if (scalar(@types) == 1) {
+        $local_params->{query}{object_type_id} = $types[0];
         $local_params->{query}{user_id} = $user->id();
-        $local_params->{query}{debug} .= 'MinorImpact::www::index();';
-        $local_params->{query}{page} = $page;
-        $local_params->{query}{limit} = $limit + 1;
-
-        $local_params->{query}{type_tree} = 1;
-        $local_params->{query}{sort} = $sort;
-        # Anything coming in through here is coming from a user, they 
-        #   don't need to search system objects.
-        $local_params->{query}{system} = 0;
-
-        # TODO: INEFFICIENT AS FUCK.
-        #   We need to figure out  a search that just tells us what types we're
-        #   dealing with so we know how many tabs to create.
-        #   I feel like this is maybe where efficient caching would come in... maybe
-        #   we can... the problem is this is arbitrary searching, so we can't really
-        #   cache any numbers that make sense.  The total changes, the search string
-        #   changes... Maybe we can... have a separate search that just searches by
-        #   id, and then runs through the results... but to get the types, they still
-        #   have to create the objects.  Or hit the database for everyone to get the
-        #   type_id from object table.
-        #   Well, at least we only have to it once, since the tab list is a static
-        #   page.
-        my $result = MinorImpact::Object::Search::search($local_params);
-        if ($result) {
-            push(@types, keys %{$result});
-        }
-        if (scalar(@types) == 1) {
-            $local_params->{query}{object_type_id} = $types[0];
-            delete($local_params->{query}{type_tree});
-            @objects = MinorImpact::Object::Search::search($local_params);
-        }
-    } else {
-        push(@types, MinorImpact::Object::getType());
-        #my $all_types = MinorImpact::Object::types();
-        #foreach my $type (@$types) {
-        #    push(@types, $type->{id});
-        #}
-        if (scalar(@types) == 1) {
-            $local_params->{query}{object_type_id} = $types[0];
-            $local_params->{query}{user_id} = $user->id();
-            delete($local_params->{query}{type_tree});
-            @objects = MinorImpact::Object::Search::search($local_params);
-        }
+        delete($local_params->{query}{type_tree});
+        @objects = MinorImpact::Object::Search::search($local_params);
     }
 
     my $tab_number = 0;
@@ -401,22 +346,15 @@ sub home {
         pop(@objects) if ($url_next);
     }
 
-    MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
+    #MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
     MinorImpact::tt('home', {
-                            cid                 => $collection_id,
                             objects             => [ @objects ],
-                            search              => $search,
-                            search_placeholder  => "$local_params->{search_placeholder}",
                             sort                => $sort,
                             tab_number          => $tab_number,
                             types               => [ @types ],
                             url_last            => $url_last,
                             url_next            => $url_next,
                             });
-    # For testing.
-    #if ($object && $object->typeID() == 4) {
-    #    $object->updateAllDates();
-    #}
 }
 
 sub index {
@@ -426,37 +364,25 @@ sub index {
     #MinorImpact::log('debug', "starting");
     
     my $CGI = $self->cgi();
-    my $search = $CGI->param('search');
-    my $sort = $CGI->param('sort');
-    my $tab_id = $CGI->param('tab_id');
+    my $sort = MinorImpact::session('sort');
+    my $tab_id = MinorImpact::session('tab_id');
 
-    if (!defined($search)) {
-        $search = MinorImpact::session('search');
-    } else {
-        MinorImpact::session('search', $search || {});
-    }
-    if (!defined($sort)) {
-        $sort = MinorImpact::session('sort');
-    } else {
-        MinorImpact::session('sort', $sort || {});
-    }
-    if (!defined($tab_id)) {
-        $tab_id = MinorImpact::session('tab_id');
-    } else {
-        MinorImpact::session('tab_id', $tab_id || {});
+    my $local_params = cloneHash($params);
+    my @types;
+    my @objects;
+    push(@types, MinorImpact::Object::getType());
+    if (scalar(@types) == 1) {
+        $local_params->{query}{object_type_id} = $types[0];
+        $local_params->{query}{public} = 1;
+        
+        delete($local_params->{query}{type_tree});
+        @objects = MinorImpact::Object::Search::search($local_params);
     }
 
-
-    #my $object_id = $CGI->param('object_id') || $CGI->param('id');
-    #my $object;
-
-    #if ($object_id) {
-    #    eval {
-    #        $object = new MinorImpact::Object($object_id);
-    #    };
-    #}
-
-    MinorImpact::tt('index') ; #, { object => $object });
+    MinorImpact::tt('index', {
+        objects => [ @objects ],
+        types => [ @types ],
+    });
     #MinorImpact::log('debug', 'ending');
 }
 
@@ -714,17 +640,6 @@ sub search {
             delete($local_params->{query}{type_tree});
             @objects = MinorImpact::Object::Search::search($local_params);
         }
-    } else {
-        push(@types, MinorImpact::Object::getType());
-        #my $all_types = MinorImpact::Object::types();
-        #foreach my $type (@$types) {
-        #    push(@types, $type->{id});
-        #}
-        if (scalar(@types) == 1) {
-            $local_params->{query}{object_type_id} = $types[0];
-            delete($local_params->{query}{type_tree});
-            @objects = MinorImpact::Object::Search::search($local_params);
-        }
     }
 
     my $tab_number = 0;
@@ -754,10 +669,6 @@ sub search {
                             url_last            => $url_last,
                             url_next            => $url_next,
                             });
-    # For testing.
-    #if ($object && $object->typeID() == 4) {
-    #    $object->updateAllDates();
-    #}
 }
 
 =item settings()

@@ -26,23 +26,19 @@ Content-type: text/html
     [% END %]
 </head>
 <body>
-<div class="w3-top w3-blue">
-    <div class="w3-bar" style="">
+<div class="w3-bar w3-top w3-border w3-blue">
         [% IF user %]
-            <button class="w3-bar-item w3-button w3-hide-large" onclick="sidebar_open();"><i class='fa fa-navicon fa-2x'></i></button>
-            <div class="w3-bar-item w3-hide-small w3-hide-medium"><i class='fa fa-navicon fa-2x' style="color:black"></i></div>
-            <a class="w3-bar-item w3-btn" href='[% INCLUDE url_index action="home" reset=1 %]'><i class='fa fa-home fa-2x'></i></a>
+            <a class="w3-bar-item w3-button w3-hide-large w3-border-right" style='margin-top:0px;' onclick="sidebar_open();"><i class='fa fa-navicon'></i></a>
+            <div class="w3-bar-item w3-hide-small w3-hide-medium w3-border-right" style='margin-top:0px;'><i class='fa fa-navicon' style="color:black"></i></div>
+            <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
             [% INCLUDE header_search %]
             [% INCLUDE collectionsDD %]
             [% INCLUDE sort %]
         [% ELSE %]
-            <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='login' %]'>Log In</a>
-            <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='register' %]'>Register</a>
+            <a class="w3-bar-item w3-button w3-border-right" href='[% INCLUDE url_index action='login' %]'>Log In</a>
+            <a class="w3-bar-item w3-button w3-border-right" href='[% INCLUDE url_index action='register' %]'>Register</a>
         [% END %]
-    </div>
-    <div class="w3-row">
         [% INCLUDE header_menu_site %]
-    </div>
 </div>
 <div class="w3-sidebar w3-bar-block w3-collapse w3-animate-left" id="sidebar" style="display:none;width:200px;z-index:4">
     <div class="w3-container">

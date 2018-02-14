@@ -1,4 +1,4 @@
-[% INCLUDE header %]
+[% INCLUDE header title='Home' %]
 
 <!-- TEMPLATE:default.home -->
 [% IF objects.size %]

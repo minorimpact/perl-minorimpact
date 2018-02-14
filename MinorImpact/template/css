@@ -14,6 +14,10 @@ div p { margin-top:0px; }
     background:none;
 }
 
+form {
+     margin: 0px;
+}
+
 /* search box clear icon */
 input[type=search]::-webkit-search-cancel-button {
     -webkit-appearance: searchfield-cancel-button;

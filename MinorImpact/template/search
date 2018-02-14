@@ -1,13 +1,15 @@
-[% INCLUDE header %]
+[% INCLUDE header title='Search Results' %]
 
-<!-- TEMPLATE:default.home -->
+<!-- TEMPLATE:default.search -->
 [% IF objects.size %]
-    [% INCLUDE list_object %]
+    [% FOREACH object IN objects %]
+        [% INCLUDE object_list %]
+    [% END %]
 [% ELSIF types && types.size > 1 %]
     <div id=tabs>
     <ul>
         [% FOREACH object_type_id IN types -%]
-            <li><a href='[% url({ action=>'tablist', object_type_id=>object_type_id }) %]'>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</a></li>
+            <li><a href='[% url({ action=>'tablistsearch', object_type_id=>object_type_id }) %]'>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</a></li>
         [% END -%]
     </ul>
     </div>

@@ -476,7 +476,7 @@ sub tt {
             limit       => $limit,
             page        => $page,
             script_name => MinorImpact::scriptName(),
-            search      => $search,
+            #search      => $search,
             sort        => $sort,
             typeName    => sub { MinorImpact::Object::typeName(shift); },
             url         => sub { MinorImpact::url(shift); },

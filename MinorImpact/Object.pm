@@ -140,7 +140,6 @@ sub _new {
         die "invalid user id" unless ($user_id);
         die "invalid type id" unless ($object_type_id);
 
-
         $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user_id, $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
