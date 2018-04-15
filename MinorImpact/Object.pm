@@ -656,25 +656,30 @@ sub tags {
 }
 
 sub getChildTypes {
-    my $self = shift || return;
+    my $self = shift;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
-    $params->{object_type_id} = $params->{type_id} if ($params->{type_id} && !$params->{object_type_id});
+    MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef $self;
+    }
+
+    my $local_params = cloneHash($params);
+    if (ref($self)) {
+        $local_params->{object_type_id} = $self->typeID();
+    }
+    $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
 
     my @childTypes;
-    my $sql;
-    # TODO: I'd like this not to return "readonly" object types unless there are actually some of those kinds of objects, but that's hard.
-    # $sql = "select DISTINCT(object_type.id) AS object_type_id from object_field, object_type, object where object_field.object_type_id=object_type.id and object.object_type_id=object_type.id and object.user_id=? and object_field.type like '%object[" . $self->typeID() . "]'";
-    #if ($params->{readonly}) {
-        $sql = "select DISTINCT(object_type_id) from object_field where type like '%object[" . $self->typeID() . "]'";
-    #}
-    my $data = $self->{DB}->selectall_arrayref($sql, {Slice=>{}});
+    my $sql = "select DISTINCT(object_type_id) from object_field where type like '%object[" . $local_params->{object_type_id} . "]'";
+    my $DB = MinorImpact::db();
+    my $data = $DB->selectall_arrayref($sql, {Slice=>{}});
     foreach my $row (@$data) {
-        next if ($params->{object_type_id} && ($params->{object_type_id} != $row->{object_type_id}));
         push(@childTypes, $row->{object_type_id});
     }
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return @childTypes;
 }
 
@@ -965,6 +970,19 @@ sub fieldID {
     my $DB = MinorImpact::db();
     #MinorImpact::log('debug', "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
     my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $field_name));
+    if (scalar(@{$data}) > 0) {
+        return @{$data}[0]->{id};
+    }
+}
+
+sub fieldIDs {
+    my $field_name = shift || return;
+
+    MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "field_name='$field_name'");
+    my $DB = MinorImpact::db();
+    MinorImpact::log('debug', "SELECT id FROM object_field WHERE name='$field_name'");
+    my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE name=?", {Slice=>{}}, ($field_name));
     if (scalar(@{$data}) > 0) {
         return @{$data}[0]->{id};
     }

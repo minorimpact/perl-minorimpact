@@ -1,11 +1,20 @@
 [% INCLUDE header title='Admin' %]
 
 <h2>Environment Variables</h2>
-   [% FOREACH key IN ENV.keys %]
-    <div class='w3-row'>
-       <div class='w3-col s4'>[% key %]</div>
-       <div class='w3-col s8'>='[% ENV.$key %]'</div>
-    </div>
-   [% END %]
+[% FOREACH key IN ENV.keys %]
+<div class='w3-row'>
+   <div class='w3-col s4'>[% key %]</div>
+   <div class='w3-col s8'>='[% ENV.$key %]'</div>
+</div>
+[% END %]
+
+<br />
+<h2>Session</h2>
+[% FOREACH key IN session.keys %]
+<div class='w3-row'>
+   <div class='w3-col s4'>[% key %]</div>
+   <div class='w3-col s8'>='[% session.$key %]'</div>
+</div>
+[% END %]
 
 [% INCLUDE footer %]

@@ -121,8 +121,9 @@ sub admin {
     $MINORIMPACT->redirect() unless ($user->isAdmin());
 
     my $CGI = $MINORIMPACT->cgi();
+    my $session = MinorImpact::session();
 
-    MinorImpact::tt('admin');
+    MinorImpact::tt('admin', { session => $session });
 }
 
 sub collections {
@@ -301,6 +302,8 @@ sub edit_user {
     });
 }
 
+# Display all the objects found by executing $params->{query}.  If query is not defined, 
+# pull a list of everything the user owns.
 sub home {
     my $self = shift || return;
     my $params = shift || {};
@@ -318,24 +321,21 @@ sub home {
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
 
+
     my $local_params = cloneHash($params);
-    my @types;
-    my @objects;
 
-    push(@types, MinorImpact::Object::getType());
-    if (scalar(@types) == 1) {
-        $local_params->{query}{object_type_id} = $types[0];
+    # The local home() sub should specify a query that defines list of objects that 
+    # appear on this page.  If no query is specified, grab everything that belongs to the current user.
+    if (!defined($local_params->{query})) {
+        $local_params->{query} = {};
         $local_params->{query}{user_id} = $user->id();
-        delete($local_params->{query}{type_tree});
-        @objects = MinorImpact::Object::Search::search($local_params);
     }
+    my @objects = MinorImpact::Object::Search::search($local_params);
 
-    my $tab_number = 0;
-    # TODO: figure out some way for these to be alphabetized
-    $tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
-    foreach my $child_type_id (@types) {
-        last if ($child_type_id == $tab_id);
-        $tab_number++;
+
+    my @types;
+    foreach my $object_type_id (MinorImpact::Object::getType()) {
+        push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object_type_id}));
     }
 
     my $url_last;
@@ -350,7 +350,7 @@ sub home {
     MinorImpact::tt('home', {
                             objects             => [ @objects ],
                             sort                => $sort,
-                            tab_number          => $tab_number,
+                            #tab_number          => $tab_number,
                             types               => [ @types ],
                             url_last            => $url_last,
                             url_next            => $url_next,
@@ -490,6 +490,7 @@ sub object {
 
     MinorImpact::tt('object', {
                             object      => $object,
+                            objects     => [ @objects ],
                             tab_number  => $tab_number,
                             types       => [ @types ],
                             });

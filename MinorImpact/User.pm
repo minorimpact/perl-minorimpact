@@ -192,6 +192,19 @@ sub getCollections {
     return map { new MinorImpact::Object($_); } @$collections; 
 }
 
+sub getObjects {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my @objects = $self->searchObjects({ query => { 
+                                         %{$params->{query}},
+                                         debug => 'MinorImpact::User::getObjects();', 
+                                         user => $self->id() 
+                                       } 
+                                   });
+    return @objects;
+}
+
 =item id()
 
 Returns the user's ID.

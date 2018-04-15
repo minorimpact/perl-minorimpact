@@ -380,7 +380,7 @@ sub scriptName {
 }
 
 sub session {
-    my $name = shift || return;
+    my $name = shift;
     my $value = shift;
 
     my $MI = new MinorImpact();
@@ -390,6 +390,10 @@ sub session {
     my $session_id = MinorImpact::sessionID() || die "cannot get session ID";
 
     my $session = MinorImpact::cache("session:$session_id") || {};
+
+    unless ($name) {
+        return $session;
+    }
 
     if ($name && !defined($value)) {
         return $session->{$name};

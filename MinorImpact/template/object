@@ -9,9 +9,9 @@
         [% END %]
         [% IF object.user_id() == user.id() %]
             [% UNLESS object.isReadonly() %]
-                <a href='[% url({ action=>'edit', object_id=>object.id() }) %]' title='Edit task'><i class='fa fa-edit fa-2x'></i></a>
+                <a href='[% url({ action=>'edit', object_id=>object.id() }) %]' title='Edit'><i class='fa fa-edit fa-2x'></i></a>
             [% END %]
-            <a href='[% url({ action=>'delete', object_id=>object.id() })  %]' title='Delete task'><i class='fa fa-trash fa-2x'></i></a>
+            <a href='[% url({ action=>'delete', object_id=>object.id() })  %]' title='Delete'><i class='fa fa-trash fa-2x'></i></a>
             [% INCLUDE index_menu_site %]
         [% END %]
     </div>

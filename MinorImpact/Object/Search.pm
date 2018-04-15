@@ -167,7 +167,7 @@ sub _search {
         }
     }
     foreach my $param (keys %$query) {
-        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child)$/);
+        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|type_tree)$/);
         next unless (defined($query->{$param}));
         #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
@@ -218,9 +218,20 @@ sub _search {
         } elsif ($query->{object_type_id}) {
             # If we specified a particular type of object to look for, then we can query
             # by arbitrary fields. If we didn't limit the object type, and just searched by field names, the results could be... chaotic.
-            #MinorImpact::log('debug', "trying to get a field id for '$param'");
+            MinorImpact::log('debug', "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             if ($object_field_id) {
+                $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
+                $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
+                push(@fields, $object_field_id);
+                push(@fields, $query->{$param});
+            }
+        } else {
+            # Fuck it, it's going to be slow, but just grap every object that's a type that has a field with this name
+            # and a value that's what we're looking for.  Limiting shit to a specific type of object is... limiting.
+            MinorImpact::log('debug', "trying to get all the field ids for '$param'");
+            my @object_field_ids = MinorImpact::Object::fieldIDs($param);
+            foreach my $object_field_id (@object_field_ids) {
                 $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
                 $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
                 push(@fields, $object_field_id);

@@ -40,8 +40,8 @@ sub new {
         #MinorImpact::log('info', "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
-    MinorImpact::log('debug', "$@") if ($@);
     if ($@ && $@ !~/Can't locate object method "new" via package/) {
+        MinorImpact::log('debug', "$@") if ($@);
         my $error = $@;
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
