@@ -1,0 +1,10 @@
+[% UNLESS no_search -%]
+    <form id=search_form method=POST class=" w3-hide-small">
+        <input type=hidden id=save_name name=save_name>
+        <input type=hidden id=a name=a value='search'>
+        <input class="w3-input w3-bar-item w3-right w3-border-left" type="search" id=search name=search [% IF search %]value='[% search %]' onkeyup='if (this.value.length > 0) { document.getElementById("save_button").disabled = false; } else { document.getElementById("save_button").disabled = true; }'[% END %] placeholder="[% search_placeholder or 'Search...' %]" style="">
+        <a class="w3-button w3-bar-item w3-hide"><i class="fa fa-search"></i></a>
+        [% IF search and user%]<a class="w3-button w3-bar-item w3-hide-small w3-border-left w3-right" id=save_button name=save_button onclick='submitForm();' title="Save Search"><i class="fa fa-save"></i></a>[% END -%]
+    </form>
+    <a onclick='showSearchForm();' class="w3-border-left w3-hide-medium w3-hide-large w3-bar-item w3-button w3-right" id="search_button"><i class="fa fa-search" style='margin-top:0px;'></i></a>
+[% END -%]
