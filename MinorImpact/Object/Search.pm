@@ -116,10 +116,10 @@ sub search {
         }
     }
     my $page = $params->{query}{page} || 1;
-    my $limit = $params->{query}{limit}; # || ($page?10:0);
+    my $limit = $params->{query}{limit} || ($page?10:0);
 
     if ($page && $limit) {
-        @objects = splice(@objects, (($page - 1) * $limit), $limit);
+        @objects = splice(@objects, (($page - 1) * $limit), $limit + 1);
     }
 
     unless ($params->{query}{type_tree}) {

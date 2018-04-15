@@ -312,9 +312,10 @@ sub home {
 
     my $CGI = $self->cgi();
     my $user = $self->user({ force => 1 });
+    my $settings = $user->settings();
 
     my $format = $CGI->param('format') || 'html';
-    my $limit = $CGI->param('limit') || 30;
+    my $limit = $CGI->param('limit') || $settings->get('results_per_page') || 25;
     my $page = $CGI->param('page') || 1; 
     my $script_name = MinorImpact::scriptName();
 
@@ -330,6 +331,9 @@ sub home {
         $local_params->{query} = {};
         $local_params->{query}{user_id} = $user->id();
     }
+    $local_params->{query}{limit} = $limit;
+    $local_params->{query}{page} = $page;
+
     my @objects = MinorImpact::Object::Search::search($local_params);
 
 
@@ -341,8 +345,8 @@ sub home {
     my $url_last;
     my $url_next;
     if (scalar(@objects)) {
-        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):''})):'';
-        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):''}):'';
+        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):'', limit=>$limit})):'';
+        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):'', limit=>$limit}):'';
         pop(@objects) if ($url_next);
     }
 
