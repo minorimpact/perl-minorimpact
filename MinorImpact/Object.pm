@@ -1067,7 +1067,7 @@ sub isType {
             $object_type_id = MinorImpact::Object::typeID($object_type_id);
         }
         MinorImpact::log('debug', "\$thingie='$thingie'");
-        MinorImpact::log('debug', "cachet is turned " . ($params->{no_cache}?'off':'on'));
+        MinorImpact::log('debug', "cache is turned " . ($params->{no_cache}?'off':'on'));
         my $DB = MinorImpact::db();
         my $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
         unless ($data) {

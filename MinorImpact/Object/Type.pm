@@ -80,6 +80,7 @@ sub add {
     my $readonly = ($params->{readonly}?1:0);
     my $system = ($params->{system}?1:0);
 
+    #MinorImpact::log('debug', "\$name='$name'");
     my $object_type_id = MinorImpact::Object::typeID($name);
     #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
     

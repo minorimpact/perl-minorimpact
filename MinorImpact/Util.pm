@@ -21,6 +21,7 @@ our @EXPORT = (
     "commonRoot",
     "convertCronTimeItemToList",
     "dumper",
+    "extractFields",
     "extractTags",
     "f",
     "fleshDate",
@@ -175,6 +176,23 @@ sub dumper {
     my $dumpee = shift || return;
     my $dump = Dumper($dumpee);
     print "Content-type: text/html\n\n<pre>$dump</pre>\n";
+}
+
+sub extractFields {
+    my %fields;
+    foreach my $t (@_) {
+        my $text = ref($t)?$$t:$t;
+        $text =~s/\r\n/\n/g;
+        foreach ($text =~/(\w+[:=]\w+)/g) {
+            my $match = $&;
+            my ($key, $value) = $match =~/(\w+)[:=](\w+)/;
+            MinorImpact::log('debug', "$key='$value'");
+            $fields{$key} = $value;
+            $text =~s/$match//;
+        }
+        $$t = $text if (ref($t));
+    }
+    return \%fields;
 }
 
 sub extractTags {

@@ -19,26 +19,31 @@ sub parseSearchString {
     }
 
     $string = lc($string);
-    my $string2 = $string;
     $params->{query}{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
     my @tags = extractTags(\$string);
+    trim(\$string);
     foreach my $tag (@tags) {
         $params->{query}{tag} .= ",$tag";
     }
     $params->{query}{tag} =~s/^,//;
-    trim(\$string);
+
+    #my $fields = extractFields(\$string);
+    #trim(\$string);
 
     # This is confusing because the two strings do different things at different times, but
     #   generally the "search" string is what the user sees, when they type it into the
     #   search bar, and "text" is what's left when all the special sauce has be been
-    #   extracted: tags, field=value pairs, etc.
+    #   extracted. "search" gets processed and obliterated, and "text" just becomes one of 
+    #   the many search search parameters, along with "tag", "order" and "field=value" pairs.
     delete($params->{query}{search});
     $params->{query}{text} = $string;
 
-
-    # Working on a more complicated search mechanism.
+    return $params;
+    # Working on a more complicated search mechanism, uncomment the previous return to make it
+    # active.
     my @ors;
     my @ands;
+    my $string2 = $string;
     my @parsed = parse_line('\s+', 0,  $string2);
     for (my $i = 0; $i<scalar(@parsed); $i++) {
         my $token = $parsed[$i];
@@ -70,10 +75,11 @@ sub parseSearchString {
 sub search {
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    #MinorImpact::log('debug', "starting");
 
     my $local_params = cloneHash($params);
 
+    return unless defined ($local_params->{query});
     $local_params->{query}{debug} .= "MinorImpact::Object::Search::search();";
     parseSearchString($local_params);
 
@@ -123,7 +129,7 @@ sub search {
     }
 
     unless ($params->{query}{type_tree}) {
-        #MinorImpact::log('info', "ending");
+        #MinorImpact::log('debug', "ending");
         return @objects;
     }
 
@@ -132,7 +138,7 @@ sub search {
     foreach my $object (@objects) {
         push(@{$objects->{$object->typeID()}}, $object);
     }
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "ending");
     return $objects;
 }
 
@@ -149,6 +155,7 @@ sub _search {
     my $where  = "WHERE object.id > 0";
     my @fields;
 
+    # Let the caller write their own SQL.
     $select .= $query->{select} if ($query->{select});
     $from .= $query->{from} if ($query->{from});
     if ($query->{where}) {
@@ -158,16 +165,23 @@ sub _search {
         push (@fields, @{$query->{where_fields}});
     }
 
-    my $user = MinorImpact::user();
+    # If I'm not looking for objects marked 'public', then I can only look for objects
+    # owned by the current user. "security".
     unless ($query->{public}) {
+        my $user = MinorImpact::user();
         if ($user) {
             $query->{user_id} = $user->id();
         } else {
             $query->{public} = 1;
         }
     }
+
+    # Proces all the options.  I don't like that that process settings are mixed up with field/search data
+    # but that's how I did it.
+    # TODO: Go through all the code and separate the terms that define "how" the search should be handled from
+    #  "what" we're searching for. 
     foreach my $param (keys %$query) {
-        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|type_tree)$/);
+        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|select|type_tree)$/);
         next unless (defined($query->{$param}));
         #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
@@ -184,9 +198,9 @@ sub _search {
                 $where .= " AND object_type.name=?";
             }
             push(@fields, $query->{object_type_id});
-        } elsif ($param eq "user_id") {
+        } elsif ($param eq "user_id" || $param eq "user") {
             $where .= " AND object.user_id=?";
-            push(@fields, $query->{user_id});
+            push(@fields, $query->{user_id} || $query->{user});
         } elsif ($param eq "system") {
             $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
             $where .= " AND object_type.system = ? ";
@@ -216,23 +230,17 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($query->{object_type_id}) {
-            # If we specified a particular type of object to look for, then we can query
-            # by arbitrary fields. If we didn't limit the object type, and just searched by field names, the results could be... chaotic.
-            MinorImpact::log('debug', "trying to get a field id for '$param'");
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
-            if ($object_field_id) {
-                $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
-                $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
-                push(@fields, $object_field_id);
-                push(@fields, $query->{$param});
-            }
+            $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
+            $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
+            push(@fields, $object_field_id);
+            push(@fields, $query->{$param});
         } else {
-            # Fuck it, it's going to be slow, but just grap every object that's a type that has a field with this name
-            # and a value that's what we're looking for.  Limiting shit to a specific type of object is... limiting.
-            MinorImpact::log('debug', "trying to get all the field ids for '$param'");
+            # At this point, assume the developer just specified a random field in one of his objects, and pull all the fields
+            # with this name from all the objects in the system.
             my @object_field_ids = MinorImpact::Object::fieldIDs($param);
             foreach my $object_field_id (@object_field_ids) {
-                $from .= " JOIN object_data AS object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
+                $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
                 $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
                 push(@fields, $object_field_id);
                 push(@fields, $query->{$param});
