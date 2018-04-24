@@ -3,7 +3,10 @@ Content-type: text/css
 /* TEMPLATE:default.css */
 
 /* The collection dropdown in the header was getting covered by the sidebar and the index. */
-.w3-dropdown-content { z-index:5; }
+.w3-dropdown-click { z-index:5; }
+.w3-dropdown-content { z-index:10; }
+.w3-sidebar { z-index:-1; }
+.w3-main { z-index:-1; }
 
 /* So that text/markdown fields don't sit so low. */
 div p { margin-top:0px; }

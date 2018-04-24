@@ -583,6 +583,7 @@ sub search {
 
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || 30;
+    my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id');
     my $page = $CGI->param('page') || 1; 
     my $script_name = MinorImpact::scriptName();
 
@@ -609,37 +610,47 @@ sub search {
             $search = $collection->searchText();
         }
 
-        $local_params->{query}{debug} .= 'MinorImpact::www::index();';
+        $local_params->{query}{object_type_id} = $object_type_id if ($object_type_id);
+        $local_params->{query}{debug} .= 'MinorImpact::WWW::search();';
         $local_params->{query}{page} = $page;
         $local_params->{query}{limit} = $limit + 1;
 
-        $local_params->{query}{type_tree} = 1;
         $local_params->{query}{sort} = $sort;
         # Anything coming in through here is coming from a user, they 
         #   don't need to search system objects.
         $local_params->{query}{system} = 0;
 
-        # TODO: INEFFICIENT AS FUCK.
-        #   We need to figure out  a search that just tells us what types we're
-        #   dealing with so we know how many tabs to create.
-        #   I feel like this is maybe where efficient caching would come in... maybe
-        #   we can... the problem is this is arbitrary searching, so we can't really
-        #   cache any numbers that make sense.  The total changes, the search string
-        #   changes... Maybe we can... have a separate search that just searches by
-        #   id, and then runs through the results... but to get the types, they still
-        #   have to create the objects.  Or hit the database for everyone to get the
-        #   type_id from object table.
-        #   Well, at least we only have to it once, since the tab list is a static
-        #   page.
-        my $result = MinorImpact::Object::Search::search($local_params);
-        if ($result) {
-            push(@types, keys %{$result});
-        }
-        if (scalar(@types) == 1) {
-            $local_params->{query}{object_type_id} = $types[0];
-            delete($local_params->{query}{type_tree});
-            @objects = MinorImpact::Object::Search::search($local_params);
-        }
+        # Getting rid of the whole concept of the 'type-tree', for now, it just adds
+        # complexity, and I decided that in all the current use cases, I just want to show
+        # everyhing that comes up in a search, and it's up to the developer to make sure
+        # that the 'list' output always works properly.  Besides, filtering the results by
+        # type is pretty much the same thing, and the same mechanism can be used for other
+        # criteria.
+        ## TODO: INEFFICIENT AS FUCK.
+        ##   We need to figure out  a search that just tells us what types we're
+        ##   dealing with so we know how many tabs to create.
+        ##   I feel like this is maybe where efficient caching would come in... maybe
+        ##   we can... the problem is this is arbitrary searching, so we can't really
+        ##   cache any numbers that make sense.  The total changes, the search string
+        ##   changes... Maybe we can... have a separate search that just searches by
+        ##   id, and then runs through the results... but to get the types, they still
+        ##   have to create the objects.  Or hit the database for everyone to get the
+        ##   type_id from object table.
+        ##   Well, at least we only have to it once, since the tab list is a static
+        ##   page.
+        #$local_params->{query}{type_tree} = 1;
+        #my $result = MinorImpact::Object::Search::search($local_params);
+        #if ($result) {
+        #    MinorImpact::log('debug', 'BAR');
+        #    push(@types, keys %{$result});
+        #}
+        #if (scalar(@types) == 1) {
+        #    $local_params->{query}{object_type_id} = $types[0];
+        #    delete($local_params->{query}{type_tree});
+        #    MinorImpact::log('debug', 'FOO');
+        #    @objects = MinorImpact::Object::Search::search($local_params);
+        #}
+        @objects = MinorImpact::Object::Search::search($local_params);
     }
 
     my $tab_number = 0;
@@ -661,11 +672,10 @@ sub search {
     MinorImpact::tt('search', {
                             cid                 => $collection_id,
                             objects             => [ @objects ],
+                            query               => $local_params->{query},
                             search              => $search,
                             search_placeholder  => "$local_params->{search_placeholder}",
-                            sort                => $sort,
-                            tab_number          => $tab_number,
-                            types               => [ @types ],
+                            types               => sub { MinorImpact::Object::types(shift); },
                             url_last            => $url_last,
                             url_next            => $url_next,
                             });

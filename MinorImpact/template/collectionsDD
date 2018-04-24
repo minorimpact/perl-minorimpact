@@ -2,7 +2,7 @@
 <div class="w3-dropdown-click">
     <button class="w3-btn w3-hide-small" onclick="openCollectionsDD();">Collections <i class="fa fa-caret-down"></i></button>
     <button id="collections_button" class="w3-btn w3-hide-large w3-hide-medium w3-border-left" style='margin-top:4px;' onclick="openCollectionsDDRight();"><i class="fa fa-bookmark"></i><i class="fa fa-caret-down"></i></button>
-    <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4">
+    <div id="collectionsDD" class="w3-dropdown-content w3-bar-block w3-card-4 w3-show" style="z-index:1000;">
         [% FOREACH collection IN collections.slice(0,11) %]
             [% INCLUDE collection %]
         [% END %]

@@ -1,0 +1,11 @@
+<form id=search_filter method=POST class=" w3-hide-small">
+    <input type=hidden id=a name=a value='search'>
+    <input class="w3-input w3-bar-item w3-right w3-border-left" type="search" id=search name=search value='[% search %]' placeholder="[% search_placeholder or 'Search...' %]" style="">
+    <select name='object_type_id'>
+        <option value=''>All</option>
+        [% FOREACH object_type IN types() -%]
+            <option value='[% object_type.id %]'[% IF query.object_type_id == object_type.id %] selected[% END -%]>[% typeName({object_type_id=>object_type.id, plural=>1}) %]</option>
+        [% END -%]
+    </select>
+    <input type=submit value='search'>
+</form>

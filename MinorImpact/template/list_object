@@ -1,4 +1,6 @@
 
+<!-- TEMPLATE: default.list_object -->
+
 [% INCLUDE list_object_site %]
 
 [% INCLUDE pagination %]
