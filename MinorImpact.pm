@@ -299,6 +299,19 @@ sub dbConfig {
     #MinorImpact::log('debug', "ending");
 }
 
+sub debug {
+    my $toggle = shift || 0;
+
+    # I'm not sure if I'm ever going to use this, but it might come in handy.
+    my $sub = (caller(1))[3];
+    if ($sub =~/log$/) {
+         $sub = (caller(2))[3];
+    }
+    $sub .= "()";
+
+    $MinorImpact::debug = isTrue($toggle)?$sub:0;
+}
+
 =item log( $log_level, $message )
 
 =cut
@@ -315,6 +328,8 @@ sub log {
         $sub = (caller(2))[3];
     }
     $sub .= "()";
+
+    return if ($level eq 'debug' && !$MinorImpact::debug);
     chomp($message);
     my $log = "$level $sub $message";
 
