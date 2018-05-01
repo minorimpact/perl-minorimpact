@@ -338,6 +338,7 @@ sub validateFields {
     foreach my $field_name (keys %$params) {  
         my $field = $fields->{$field_name};
         next unless ($field);
+        MinorImpact::log('debug', "validating $field_name='$field'");
         $field->validate($params->{$field_name});
     }
     #MinorImpact::log('debug', "ending");
@@ -434,14 +435,15 @@ sub type_id {
 sub typeID {
     my $self = shift || return;
 
-    #MinorImpact::log('debug', "starting");
+    #MinorImpact::debug(1);
+    MinorImpact::log('debug', "starting");
     my $object_type_id;
     if (ref($self)) {
         #MinorImpact::log('debug', "ref(\$self)='" . ref($self) . "'");
         $object_type_id = $self->{data}->{object_type_id};
     } else {
         my $DB = MinorImpact::db();
-        #MinorImpact::log('debug', "\$self='$self'");
+        MinorImpact::log('debug', "\$self='$self'");
         if ($self =~/^[0-9]+$/) {
             # This seems stupid, but sometimes on the client I don't know whether or not
             #   I have a name or an ID, so I just throw whatever I have into here.  If it
@@ -457,7 +459,8 @@ sub typeID {
             }
         }
     }
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
+    MinorImpact::log('debug', "ending");
     return $object_type_id;
 }
 
@@ -965,11 +968,14 @@ sub fieldID {
     my $object_type = shift || return;
     my $field_name = shift || return;
 
+    MinorImpact::log('debug', "starting()");
     my $object_type_id = MinorImpact::Object::type_id($object_type);
     #MinorImpact::log('debug', "object_type_id='$object_type_id',field_name='$field_name'");
     my $DB = MinorImpact::db();
-    #MinorImpact::log('debug', "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
+    MinorImpact::log('debug', "SELECT id FROM object_field WHERE object_type_id='$object_type_id' AND name='$field_name'");
     my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $field_name));
+
+    MinorImpact::log('debug', "ending()");
     if (scalar(@{$data}) > 0) {
         return @{$data}[0]->{id};
     }

@@ -7,5 +7,6 @@
             <option value='[% object_type.id %]'[% IF query.object_type_id == object_type.id %] selected[% END -%]>[% typeName({object_type_id=>object_type.id, plural=>1}) %]</option>
         [% END -%]
     </select>
+    [% INCLUDE search_filter_site %]
     <input type=submit value='search'>
 </form>

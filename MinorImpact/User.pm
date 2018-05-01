@@ -197,7 +197,8 @@ sub getObjects {
     my $params = shift || {};
 
     my @objects = $self->searchObjects({ query => { 
-                                         %{$params->{query}},
+                                            %{$params->{query}
+                                         },
                                          debug => 'MinorImpact::User::getObjects();', 
                                          user => $self->id() 
                                        } 

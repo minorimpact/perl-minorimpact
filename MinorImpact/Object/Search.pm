@@ -183,7 +183,7 @@ sub _search {
     foreach my $param (keys %$query) {
         next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|select|type_tree)$/);
         next unless (defined($query->{$param}));
-        #MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
+        MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $query->{name});
@@ -230,7 +230,10 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($query->{object_type_id}) {
+            MinorImpact::log('debug', "Find fieldID for '$param', '" . $query->{object_type_id} . "'");
+
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
+            #MinorImpact::log('debug', "\$object_field_id='$object_field_id'");
             $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
             $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
             push(@fields, $object_field_id);
@@ -238,6 +241,7 @@ sub _search {
         } else {
             # At this point, assume the developer just specified a random field in one of his objects, and pull all the fields
             # with this name from all the objects in the system.
+            MinorImpact::log('debug', "Find fieldIDs for '$param'");
             my @object_field_ids = MinorImpact::Object::fieldIDs($param);
             foreach my $object_field_id (@object_field_ids) {
                 $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";

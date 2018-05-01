@@ -669,16 +669,24 @@ sub search {
         pop(@objects) if ($url_next);
     }
 
-    MinorImpact::tt('search', {
-                            cid                 => $collection_id,
-                            objects             => [ @objects ],
-                            query               => $local_params->{query},
-                            search              => $search,
-                            search_placeholder  => "$local_params->{search_placeholder}",
-                            types               => sub { MinorImpact::Object::types(shift); },
-                            url_last            => $url_last,
-                            url_next            => $url_next,
-                            });
+    my $tt_variables = {
+                        cid                 => $collection_id,
+                        objects             => [ @objects ],
+                        query               => $local_params->{query},
+                        search              => $search,
+                        search_placeholder  => "$local_params->{search_placeholder}",
+                        types               => sub { MinorImpact::Object::types(shift); },
+                        url_last            => $url_last,
+                        url_next            => $url_next,
+                    };
+
+    if (defined($params->{tt_variables})) {
+        foreach my $key (keys %{$params->{tt_variables}}) {
+            MinorImpact::log('debug', "'$key' = '$params->{tt_variables}{$key}'");
+            $tt_variables->{$key} = $params->{tt_variables}{$key};
+        }
+    }
+    MinorImpact::tt('search', $tt_variables);
 }
 
 =item settings()
