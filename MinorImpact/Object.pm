@@ -977,21 +977,27 @@ sub fieldID {
 
     MinorImpact::log('debug', "ending()");
     if (scalar(@{$data}) > 0) {
+        MinorImpact::log('debug', "end()");
         return @{$data}[0]->{id};
     }
+    MinorImpact::log('debug', "end()");
 }
 
 sub fieldIDs {
     my $field_name = shift || return;
 
+    # TODO: Cache results
     MinorImpact::log('debug', "starting");
     MinorImpact::log('debug', "field_name='$field_name'");
     my $DB = MinorImpact::db();
     MinorImpact::log('debug', "SELECT id FROM object_field WHERE name='$field_name'");
     my $data = $DB->selectall_arrayref("SELECT id FROM object_field WHERE name=?", {Slice=>{}}, ($field_name));
-    if (scalar(@{$data}) > 0) {
-        return @{$data}[0]->{id};
+    my @fieldIDs;
+    foreach my $row (@$data) {
+        push(@fieldIDs, $row->{id});
     }
+    MinorImpact::log('debug', "ending");
+    return @fieldIDs;
 }
 
 # This is stupid, it's always going to be '1' per tag for a given object. But I'm leaving it for the selectall_hashref example.

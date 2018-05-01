@@ -242,13 +242,16 @@ sub _search {
             # At this point, assume the developer just specified a random field in one of his objects, and pull all the fields
             # with this name from all the objects in the system.
             MinorImpact::log('debug', "Find fieldIDs for '$param'");
+            my $field_where;
             my @object_field_ids = MinorImpact::Object::fieldIDs($param);
             foreach my $object_field_id (@object_field_ids) {
-                $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
-                $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
+                $from .= " LEFT JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
+                $field_where .= "(object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?) OR ";
                 push(@fields, $object_field_id);
                 push(@fields, $query->{$param});
             }
+            $field_where =~s/ OR $//;
+            $where .=  "AND ($field_where)";
         }
     }
 

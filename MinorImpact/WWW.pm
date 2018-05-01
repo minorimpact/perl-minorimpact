@@ -336,6 +336,8 @@ sub home {
 
     my @objects = MinorImpact::Object::Search::search($local_params);
 
+    # Making a list of all possible types to so we can build a list of 'add new <type>'
+    #   buttons on the template.
     my @types;
     foreach my $object_type_id (MinorImpact::Object::getType()) {
         push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object_type_id}));
