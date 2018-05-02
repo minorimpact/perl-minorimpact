@@ -23,13 +23,6 @@ MinorImpact::WWW
 
 =cut
 
-sub about {
-    my $MINORIMPACT = shift || return;
-    my $params = shift || {};
-
-    MinorImpact::tt('about');
-}
-
 sub add {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
@@ -137,20 +130,6 @@ sub collections {
     MinorImpact::tt('collections', { collections => [ @collections ], });
 }
 
-sub contact {
-    my $MINORIMPACT = shift || return;
-    my $params = shift || {};
-
-    MinorImpact::tt('contact');
-}
-
-sub css {
-    my $MINORIMPACT = shift || return;
-    my $params = shift || {};
-
-    MinorImpact::tt('css');
-}
-
 sub del {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
@@ -173,7 +152,7 @@ sub delete_collection {
     my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user({ force => 1 });
 
-    my $collection_id = $CGI->param('cid') || $MINORIMPACT->redirect();
+    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid') || $CGI->param('id') || $MINORIMPACT->redirect();
 
     my $collection = new MinorImpact::Object($collection_id);
     if ($collection && $collection->user_id() eq $user->id()) {
@@ -558,20 +537,22 @@ sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', 'starting');
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
 
     my $name = $CGI->param('save_name') || $MINORIMPACT->redirect();
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
-    #MinorImpact::log('debug', "\$search='$search'");
+    MinorImpact::log('debug', "\$search='$search'");
 
+    my $search_filter = $params->{search_filter};
+    $search_filter->{object_type_id} = $CGI->param('object_type_id') if ($CGI->param('object_type_id'));
     MinorImpact::cache("user_collections_" . $user->id(), {});
-    my $collection_data = {name => $name, search => $search, user_id => $user->id()};
+    my $collection_data = { name => $name, search => $search, search_filter => $search_filter, user_id => $user->id() };
     my $collection = new MinorImpact::collection($collection_data);
 
-    #MinorImpact::log('debug', "ending");
-    $MINORIMPACT->redirect( { collection_id => $collection->id() });
+    MinorImpact::log('debug', 'ending');
+    $MINORIMPACT->redirect( { action=>'search', collection_id => $collection->id() });
 }
 
 sub search {

@@ -551,6 +551,9 @@ sub url {
     my $domain = "https://$ENV{HTTP_HOST}";
     $url = $domain if ($qualified);
 
+    # This is unintuitive, but in the cases where the action sub has a particular "main"
+    #   parameter, it will accept it as "id", and it will work with the default pretty
+    #   url format /<action>/<id>.
     if ($pretty) {
         $url .= "/$action";
         if ($object_id) {
@@ -558,6 +561,9 @@ sub url {
         } elsif ($action eq 'add' && $object_type_id) {
             $url .= "/$object_type_id";
             undef($object_type_id);
+        } elsif ($action eq 'delete_collection' && $collection_id) {
+            $url .= "/$collection_id";
+            undef($collection_id);
         }
     } else {
         my $script_name = MinorImpact::scriptName();
@@ -712,8 +718,6 @@ sub www {
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
         $sub->($self, $params);
-    } elsif ( $action eq 'about') {
-        MinorImpact::WWW::about($self, $params);
     } elsif ( $action eq 'add') {
         MinorImpact::WWW::add($self, $params);
     } elsif ( $action eq 'add_reference') {
@@ -722,10 +726,6 @@ sub www {
         MinorImpact::WWW::admin($self, $params);
     } elsif ( $action eq 'collections') {
         MinorImpact::WWW::collections($self, $params);
-    } elsif ( $action eq 'contact') {
-        MinorImpact::WWW::contact($self, $params);
-    } elsif ( $action eq 'css') {
-        MinorImpact::WWW::css($self, $params);
     } elsif ( $action eq 'delete') {
         MinorImpact::WWW::del($self, $params);
     } elsif ( $action eq 'delete_collection') {
@@ -761,9 +761,10 @@ sub www {
     } elsif ( $action eq 'user') {
         MinorImpact::WWW::user($self);
     } else {
-        MinorImpact::WWW::index($self, $params);
+        eval { MinorImpact::tt($action, $params); };
+        MinorImpact::WWW::index($self, $params) if ($@);
     }
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
 }
 
 =head1 AUTHOR
