@@ -473,10 +473,10 @@ sub tt {
         my $user = MinorImpact::user();
 
         my $template_directory = $ENV{MINORIMPACT_TEMPLATE} || $self->{conf}{default}{template_directory};
-        my @collections = ();
-        if ($user) {
-            @collections = $user->getCollections();
-        }
+        #my @collections = ();
+        #if ($user) {
+        #    @collections = $user->getCollections();
+        #}
 
         # The default package templates are in the 'template' directory 
         # in the libary.  Find it, and use it as the secondary template location.
@@ -488,7 +488,7 @@ sub tt {
 
         my $variables = {
             cid         => $collection_id,
-            collections => [ @collections ],
+            #collections => [ @collections ],
             copyright   => $copyright,
             ENV         => \%ENV,
             home        => $self->{conf}{default}{home_script},
@@ -561,7 +561,7 @@ sub url {
         } elsif ($action eq 'add' && $object_type_id) {
             $url .= "/$object_type_id";
             undef($object_type_id);
-        } elsif ($action eq 'delete_collection' && $collection_id) {
+        } elsif (($action eq 'delete_search' || $action eq 'search') && $collection_id) {
             $url .= "/$collection_id";
             undef($collection_id);
         }
@@ -695,25 +695,25 @@ sub www {
     # Update the session with any query overrides.  The rest of the
     #  application can just get them from the session and assume
     #  it's up to date.
-    my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
-    my $search = $CGI->param('search');
+    #my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
+    #my $search = $CGI->param('search');
     my $sort = $CGI->param('sort');
     my $tab_id = $CGI->param('tab_id');
 
-    if (defined($search)) {
-        MinorImpact::session('search', $search );
-        MinorImpact::session('collection_id', {});
-    } elsif (defined($collection_id)) {
-        MinorImpact::session('collection_id', $collection_id);
-        MinorImpact::session('search', {} );
-    }
+    #if (defined($search)) {
+    #    MinorImpact::session('search', $search );
+    #    MinorImpact::session('collection_id', {});
+    #} elsif (defined($collection_id)) {
+    #    MinorImpact::session('collection_id', $collection_id);
+    #    MinorImpact::session('search', {} );
+    #}
     MinorImpact::session('sort', $sort ) if (defined($sort));
     MinorImpact::session('tab_id', $tab_id ) if (defined($tab_id));
 
     MinorImpact::log('debug', "\$action='$action'");
-    #foreach my $key (keys %ENV) {
-    #    MinorImpact::log('debug', "$key='$ENV{$key}'");
-    #}
+    foreach my $key (keys %ENV) {
+        MinorImpact::log('debug', "$key='$ENV{$key}'");
+    }
 
     if ($params->{actions}{$action}) {
         my $sub = $params->{actions}{$action};
@@ -728,8 +728,8 @@ sub www {
         MinorImpact::WWW::collections($self, $params);
     } elsif ( $action eq 'delete') {
         MinorImpact::WWW::del($self, $params);
-    } elsif ( $action eq 'delete_collection') {
-        MinorImpact::WWW::delete_collection($self, $params);
+    } elsif ( $action eq 'delete_search') {
+        MinorImpact::WWW::delete_search($self, $params);
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $params);
     } elsif ( $action eq 'edit_settings') {

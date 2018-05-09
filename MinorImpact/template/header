@@ -89,14 +89,6 @@ Content-type: text/html
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();"><i class="fa fa-save fa-2x"></i></a>[% END %]
-                </div>
-                <div class="w3-col s9">
-                    [% IF search %]<a class="w3-bar-item w3-button" href="javascript:submitForm();">Save Search</a>[% END %]
-                </div>
-            </div>
-            <div class="w3-row">
-                <div class="w3-col s3">
                     <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' reset=1 %]'><i class="fa fa-sign-out fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">

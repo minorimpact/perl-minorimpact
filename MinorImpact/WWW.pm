@@ -145,7 +145,7 @@ sub del {
     $MINORIMPACT->redirect($back);
 }
 
-sub delete_collection {
+sub delete_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
@@ -154,9 +154,13 @@ sub delete_collection {
 
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid') || $CGI->param('id') || $MINORIMPACT->redirect();
 
+    #MinorImpact::debug(1);
     my $collection = new MinorImpact::Object($collection_id);
-    if ($collection && $collection->user_id() eq $user->id()) {
+    MinorImpact::log('debug', "\$collection->user_id()='" . $collection->user_id() . "', \$user->id()='" . $user->id() . "'");
+    if ($collection && $collection->user_id() == $user->id()) {
+        MinorImpact::log('debug', "deleting collection '" . $collection->id() . "'");
         $collection->delete();
+        MinorImpact::cache("user_collections_" . $user->id(), {});
     }
 
     $MINORIMPACT->redirect({ action => 'collections' });
@@ -537,6 +541,7 @@ sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', 'starting');
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
@@ -545,14 +550,21 @@ sub save_search {
     my $search = $CGI->param('search') || $MINORIMPACT->redirect();
     MinorImpact::log('debug', "\$search='$search'");
 
-    my $search_filter = $params->{search_filter};
+    my $search_filter = $params->{search_filter} || {};
     $search_filter->{object_type_id} = $CGI->param('object_type_id') if ($CGI->param('object_type_id'));
     MinorImpact::cache("user_collections_" . $user->id(), {});
+    foreach my $key (keys %$search_filter) {
+        MinorImpact::log('debug', "\$search_filter->{$key}='" . $search_filter->{$key} . "'");
+    }
     my $collection_data = { name => $name, search => $search, search_filter => $search_filter, user_id => $user->id() };
     my $collection = new MinorImpact::collection($collection_data);
 
     MinorImpact::log('debug', 'ending');
-    $MINORIMPACT->redirect( { action=>'search', collection_id => $collection->id() });
+    if ($collection) {
+        $MINORIMPACT->redirect( { action=>'search', collection_id => $collection->id() });
+    } else {
+        $MINORIMPACT->redirect( { action=>'home', });
+    }
 }
 
 sub search {
@@ -570,8 +582,9 @@ sub search {
     my $page = $CGI->param('page') || 1; 
     my $script_name = MinorImpact::scriptName();
 
-    my $collection_id = MinorImpact::session('collection_id');
-    my $search = MinorImpact::session('search');
+    #my $collection_id = MinorImpact::session('collection_id');
+    my $collection_id = $CGI->param('collection_id') || $CGI->param('cid') || $CGI->param('id');
+    my $search = $CGI->param('search');
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
 

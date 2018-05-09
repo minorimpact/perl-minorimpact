@@ -134,7 +134,7 @@
         document.getElementById("save_button").disabled = true;
     [% END %]
     function submitForm() {
-        var form = document.getElementById('search_form');
+        var form = document.getElementById('search_filter');
         if (form.search.value.length) {
             var save_name = prompt ("Save Name");
             if (save_name) {

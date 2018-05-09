@@ -116,11 +116,13 @@ sub search {
         MinorImpact::log('notice', $@) if ($@);
     }
     if (defined($params->{query}{sort}) && $params->{query}{sort} != 0) {
+        MinorImpact::log('debug', 'sorting');
         @objects = sort {$a->cmp($b); } @objects;
         if ($params->{query}{sort} < 0) {
             @objects = reverse @objects;
         }
     }
+    MinorImpact::log('debug', 'Paging');
     my $page = $params->{query}{page} || 1;
     my $limit = $params->{query}{limit} || ($page?10:0);
 
@@ -180,7 +182,9 @@ sub _search {
     # but that's how I did it.
     # TODO: Go through all the code and separate the terms that define "how" the search should be handled from
     #  "what" we're searching for. 
+    #MinorImpact::debug(1);
     foreach my $param (keys %$query) {
+        MinorImpact::log('debug', "\$param='$param', \$query->{$param}='" . $query->{$param} . "'");
         next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|select|type_tree)$/);
         next unless (defined($query->{$param}));
         MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
@@ -254,9 +258,10 @@ sub _search {
             $where .=  "AND ($field_where)";
         }
     }
-
+    #MinorImpact::debug(0);
     my $sql = "$select $from $where";
     MinorImpact::log('info', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
+
 
     my $objects;
     my $hash = md5_hex($sql);

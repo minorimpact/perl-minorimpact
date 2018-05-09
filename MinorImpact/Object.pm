@@ -603,27 +603,36 @@ sub delete {
     my $self = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $object_id = $self->id();
-    my $DB = $self->{DB};
-    #MinorImpact::log('debug', "starting(" . $object_id . ")");
+    my $DB = MinorImpact::db();
 
-    my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}});
+    # TODO: I just realized what this is doing: when an object is deleted, anything that references it
+    #   is just having the reference value cleared, and not even doing anything to try and come up with
+    #   a new value for the affected dependencies.  That's insane.  At the very least, if anything references
+    #   an object I'm trying to delete, I shouldn't be able to delete it.
+    my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}}) || die $DB->errstr;
+    die "Object has references." if (scalar(@$data));
+    #foreach my $row (@$data) {
+    #    $DB->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $object_id)) || die $DB->errstr;
+    #}
+
+    MinorImpact::log('debug', "deleting object text fields");
+    $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id)) || die $DB->errstr;
     foreach my $row (@$data) {
-        $DB->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $object_id));
+        MinorImpact::log('debug', "deleting object text field '" . $row->{id} . "'");
+        $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id})) || die $DB->errstr;
     }
 
-    $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id));
-    foreach my $row (@$data) {
-        $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id}));
-    }
+    MinorImpact::log('debug', "deleting object data fields");
+    $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_reference WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id)) || die $DB->errstr;
 
-    $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id));
-    $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id));
-    $DB->do("DELETE FROM object_reference WHERE object_id=?", undef, ($object_id));
-    $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id));
-    $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id));
-
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::cache("object_data_$object_id", {});
+    MinorImpact::log('debug', "ending");
 }
 
 sub log {
