@@ -711,6 +711,25 @@ sub getChildren {
     return MinorImpact::Object::Search::search($local_params);
 }
 
+# Returns true if the object supports a particular output type.
+sub stringType {
+    my $self = shift || return;
+    my $params = shift  || return;
+
+    my $string_type = 'string';
+
+    if (ref($params) eq 'HASH') {
+        $string_type = $params->{string_type} || 'string';
+    } else {
+        $string_type = $params;
+    }
+
+    if ($string_type eq 'string') {
+        return 1;
+    }
+    return;
+}
+
 # Renders an object to a string in a specified format.
 #
 # Parameters

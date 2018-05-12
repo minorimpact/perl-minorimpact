@@ -577,6 +577,7 @@ sub search {
     my $user = MinorImpact::user();
 
     my $format = $CGI->param('format') || 'html';
+    my $list_type = $CGI->param('list_type') || '';
     my $limit = $CGI->param('limit') || 30;
     my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id');
     my $page = $CGI->param('page') || 1; 
@@ -668,6 +669,7 @@ sub search {
     my $tt_variables = {
                         cid                 => $collection_id,
                         objects             => [ @objects ],
+                        list_type           => $list_type,
                         query               => $local_params->{query},
                         search              => $search,
                         search_placeholder  => "$local_params->{search_placeholder}",
