@@ -1,6 +1,7 @@
 package MinorImpact::Object::Field::url;
 
 use MinorImpact;
+use MinorImpact::Util;
 use MinorImpact::Object::Field;
 
 our @ISA = qw(MinorImpact::Object::Field);
