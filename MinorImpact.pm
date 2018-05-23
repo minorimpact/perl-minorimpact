@@ -271,7 +271,7 @@ sub dbConfig {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `object_id` int(11) NOT NULL,
             `object_field_id` int(11) NOT NULL,
-            `value` text,
+            `value` mediumtext,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),

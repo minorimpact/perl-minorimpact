@@ -15,7 +15,7 @@ sub new {
     #MinorImpact::log('info', "starting");
 
     my $local_data = cloneHash($data);
-    $local_data->{attributes}{maxlength} = 65535;
+    $local_data->{attributes}{maxlength} = 16777215;
     $local_data->{attributes}{markdown} = 1;
     $local_data->{attributes}{is_text} = 1;
 
