@@ -1,0 +1,3 @@
+[% FOR object_type_id IN types %]
+    <a href="[% url({ action=>'add', object_type_id=>object_type_id })  %]" class="w3-bar-item w3-button">Add [% typeName(object_type_id) %]</a>
+[% END %]

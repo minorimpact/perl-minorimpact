@@ -23,9 +23,13 @@
     </div>
 [% END %]
 
+[% INCLUDE add_types %]
+
+[% INCLUDE object_site %]
+
 [% IF objects.size %]
     [% INCLUDE list_object %]
-[% ELSIF types && types.size > 1 %]
+[% ELSIF types && types.size > 1 && 0 > 1 %]
     <div id=tabs>
     <ul>
     [% FOREACH object_type_id IN types %]

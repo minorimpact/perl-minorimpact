@@ -440,7 +440,13 @@ sub object {
 
     $MINORIMPACT->redirect() unless ($object);
     my $local_params = cloneHash($params);
-    #my @types;
+    # Making a list of all possible types to so we can build a list of 'add new <type>'
+    #   buttons on the template.
+    my @types;
+    foreach my $object_type_id (MinorImpact::Object::getType()) {
+        push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object_type_id}));
+    }
+
     my @objects;
         if ($format eq 'json') {
             # Handle the json stuff and get out of here early.
@@ -474,7 +480,7 @@ sub object {
                             object      => $object,
                             objects     => [ @objects ],
                             #tab_number  => $tab_number,
-                            #types       => [ @types ],
+                            types       => [ @types ],
                             url_last    => $url_last,
                             url_next    => $url_next,
                             });

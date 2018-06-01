@@ -2,6 +2,8 @@
 
 <!-- TEMPLATE:default.home -->
 
+[% INCLUDE add_types %]
+
 [% INCLUDE list_object %]
 
 [% INCLUDE footer %]
