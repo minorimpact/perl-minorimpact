@@ -443,19 +443,17 @@ sub object {
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
     my @types;
-    foreach my $object_type_id (MinorImpact::Object::getType()) {
-        push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object_type_id}));
-    }
+    push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object->typeID()}));
 
     my @objects;
-        if ($format eq 'json') {
-            # Handle the json stuff and get out of here early.
-            my $data = $object->toData();
-            print "Content-type: text/plain\n\n";
-            print to_json($data);
-            return;
-        }
-        viewHistory($object->typeName() . "_id", $object->id());
+    if ($format eq 'json') {
+        # Handle the json stuff and get out of here early.
+        my $data = $object->toData();
+        print "Content-type: text/plain\n\n";
+        print to_json($data);
+        return;
+    }
+    viewHistory($object->typeName() . "_id", $object->id());
 
 
     #my $tab_number = 0;
