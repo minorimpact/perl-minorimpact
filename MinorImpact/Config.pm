@@ -1,14 +1,15 @@
 package MinorImpact::Config;
 
-use Time::Local;
 use Cwd;
 use Exporter 'import';
+use MinorImpact::Util;
+use Time::Local;
+
 @EXPORT = (
     "readConfig", 
     "writeConfig",
 );
 
-use MinorImpact::Util;
 
 my $ENCODE_MAP = {
     ":" => "_COLON_",
@@ -82,7 +83,7 @@ sub readConfig {
     return $config unless (-f $config_file);
     open(CONFIG, $config_file);
     while(<CONFIG>) {
-        my $value;
+        my $value = '';
         my $line = trim($_);
         next if (/^#/ || !$_);
         if (/^([^:=]+):/ || /^\[([^\]]+)\]/) {

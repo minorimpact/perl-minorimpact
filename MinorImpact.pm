@@ -3,8 +3,8 @@ package MinorImpact;
 use strict;
 
 use Cache::Memcached;
-use CHI;
 use CGI;
+use CHI;
 use Cwd;
 use Data::Dumper;
 use DBI;
@@ -48,7 +48,7 @@ sub new {
             $config = $options->{config};
         } elsif ($options->{config_file}) {
             $config = readConfig($options->{config_file});
-        } elsif ($ENV{MINORIMPACT_CONFIG} && -f $ENV{MINORIMPACT_CONFIG}) {
+        } elsif (defined($ENV{MINORIMPACT_CONFIG}) && -f $ENV{MINORIMPACT_CONFIG}) {
             $config = readConfig($ENV{MINORIMPACT_CONFIG});
         } elsif (-f "../conf/minorimpact.conf") {
             $config = readConfig("../conf/minorimpact.conf");
@@ -63,7 +63,10 @@ sub new {
         bless($self, $package);
         $SELF = $self;
 
-        my $dsn = "DBI:mysql:database=$config->{db}->{database};host=$config->{db}->{db_host};port=$config->{db}->{port}";
+        my $config_db_database = $config->{db}->{database} || '';
+        my $config_db_db_host = $config->{db}->{db_host} || '';
+        my $config_db_port = $config->{db}->{port} || '';
+        my $dsn = "DBI:mysql:database=$config_db_database;host=$config_db_db_host;port=$config_db_port}";
         $self->{DB} = DBI->connect($dsn, $config->{db}->{db_user}, $config->{db}->{db_password}, {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
 
         if ($config->{user_db}) {
@@ -304,7 +307,7 @@ sub debug {
 
     # I'm not sure if I'm ever going to use this, but it might come in handy.
     my $sub = (caller(1))[3];
-    if ($sub =~/log$/) {
+    if (!$sub || $sub =~/log$/) {
          $sub = (caller(2))[3];
     }
     $sub .= "()";
@@ -537,7 +540,7 @@ sub url {
     my $action = $params->{action} || ($user?'home':'index');
     my $collection_id = $params->{collection_id} if (defined($params->{collection_id}));
     my $limit = $params->{limit};
-    my $object_id = $params->{object_id};
+    my $object_id = $params->{object_id} || $params->{id};
     my $object_type_id = $params->{object_type_id};
     my $page = $params->{page};
     my $search = $params->{search} if ($params->{search});
@@ -554,17 +557,19 @@ sub url {
     # This is unintuitive, but in the cases where the action sub has a particular "main"
     #   parameter, it will accept it as "id", and it will work with the default pretty
     #   url format /<action>/<id>.
+    if ($action eq 'add' && $object_type_id) {
+        $object_id = $object_type_id;
+        undef($object_type_id);
+    } elsif (($action eq 'delete_search' || $action eq 'search') && $collection_id) {
+        $object_id = $collection_id;
+        undef($collection_id);
+    }
     if ($pretty) {
         $url .= "/$action";
         if ($object_id) {
             $url .= "/$object_id" 
-        } elsif ($action eq 'add' && $object_type_id) {
-            $url .= "/$object_type_id";
-            undef($object_type_id);
-        } elsif (($action eq 'delete_search' || $action eq 'search') && $collection_id) {
-            $url .= "/$collection_id";
-            undef($collection_id);
-        }
+        } 
+        $url .= "?";
     } else {
         my $script_name = MinorImpact::scriptName();
         $url .= "/cgi-bin/$script_name?a=$action";
@@ -577,6 +582,10 @@ sub url {
     $url .= "&sort=$sort" if ($sort);
     $url .= "&tab_id=$tab_id" if ($tab_id);
     $url .= "&type_id=$object_type_id" if ($object_type_id);
+
+    foreach my $key (keys %{$params->{params}}) {
+        $url .= "&$key=" . $params->{params}{$key};
+    }
 
     #print $self->{CGI}->header(-location=>$location);
     #MinorImpact::log('debug', "\$url='$url'");
@@ -599,8 +608,8 @@ sub user {
     }
 
     my $CGI = MinorImpact::cgi();
-    my $username = $params->{username} || $CGI->param('username') || $ENV{USER};
-    my $password = $params->{password} || $CGI->param('password');
+    my $username = $params->{username} || $CGI->param('username') || $ENV{USER} || '';
+    my $password = $params->{password} || $CGI->param('password') || '';
     my $user_hash = md5_hex("$username:$password");
 
     # Check the number of login failures for this IP

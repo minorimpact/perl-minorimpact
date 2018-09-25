@@ -660,7 +660,7 @@ sub tags {
         $self->update({ tags => join(",", @_) });
     }
 
-    my @tags = ();
+    @tags = ();
     foreach my $data (@{$self->{tags}}) {
         push @tags, $data->{name};
     }

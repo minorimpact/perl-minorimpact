@@ -253,7 +253,6 @@ sub edit_settings {
 =item edit_user()
 
 =cut
-
 sub edit_user {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};

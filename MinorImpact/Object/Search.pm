@@ -15,11 +15,12 @@ sub parseSearchString {
     my $params = {};
     if (ref($string) eq "HASH") {
         $params = $string;
-        $string = $params->{query}{search} || $params->{query}{text};
+        $string = $params->{query}{search} || $params->{query}{text} || '';
     }
 
-    $string = lc($string);
+    $string = lc($string) || '';
     $params->{query}{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
+    $params->{query}{tag} = '';
     my @tags = extractTags(\$string);
     trim(\$string);
     foreach my $tag (@tags) {
