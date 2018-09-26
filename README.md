@@ -1,5 +1,13 @@
 # perl-minorimpact
 
+## Usage
+
+```
+use MinorImpact;
+
+$MINORIMPACT = new MinorImpact();
+```
+
 ## Installation
 
 ### RedHat/CentOS
@@ -27,3 +35,26 @@ Install the package:
 ```
 $ yum -y install epel-release perl-MinorImpact
 ```
+
+## Configuration
+
+Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
+```
+# yum install mariadb-server
+# systemctl mariadb start
+# mysql -e 'create database minorimpact;'
+# mysql -e "CREATE USER 'minorimpact'@'localhost' IDENTIFIED BY 'minorimpact';"
+# mysql -e "CREATE USER 'minorimpact'@'%' IDENTIFIED BY 'minorimpact';"
+# mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'localhost';"
+# mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
+```
+
+Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
+```
+db:
+    database = minorimpact
+    db_host = localhost
+    db_port = 3306
+    db_user = minorimpact
+    db_password = minorimpact
+```	
