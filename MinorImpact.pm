@@ -212,6 +212,7 @@ sub dbConfig {
             `readonly` tinyint(1) DEFAULT 0,
             `no_name` tinyint(1) DEFAULT 0,
             `public` tinyint(1) DEFAULT 0,
+            `no_tags` tinyint(1) DEFAULT 0,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),
