@@ -216,13 +216,13 @@ sub dbConfig {
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`),
             UNIQUE KEY `object_type_idx` (`name`)
-        )");
-        $DB->do("create index idx_object_type_id on object_field(object_type_id)");
-        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)");
+        )") || die $DB->errstr;
+        $DB->do("create index idx_object_type_id on object_field(object_type_id)") || die $DB->errstr;
+        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)") || die $DB->errstr;
     }
 
     eval {
-        $DB->do("DESC `object_field`");
+        $DB->do("DESC `object_field`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_field` (
@@ -239,10 +239,10 @@ sub dbConfig {
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`)
-        )");
+        )") || die $DB->errstr;
     }
     eval {
-        $DB->do("DESC `object_data`");
+        $DB->do("DESC `object_data`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_data` (
@@ -255,19 +255,19 @@ sub dbConfig {
             PRIMARY KEY (`id`),
             KEY `idx_object_field` (`object_id`,`object_field_id`),
             KEY `idx_object_data` (`object_id`)
-        )");
+        )") || die $DB->errstr;
     }
 
     eval {
-        $DB->do("DESC `object_tag`");
+        $DB->do("DESC `object_tag`") || die $DB->errstr;
     };
     if ($@) {
-        $DB->do("CREATE TABLE `object_tag` ( `object_id` int(11) NOT NULL, `name` varchar(50) DEFAULT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1");
-        $DB->do("create unique index idx_id_name on object_tag (object_id, name)");
+        $DB->do("CREATE TABLE `object_tag` ( `object_id` int(11) NOT NULL, `name` varchar(50) DEFAULT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1") || die $DB->errstr;
+        $DB->do("create unique index idx_id_name on object_tag (object_id, name)") || die $DB->errstr;
     }
 
     eval {
-        $DB->do("DESC `object_text`");
+        $DB->do("DESC `object_text`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_text` (
@@ -280,10 +280,10 @@ sub dbConfig {
             PRIMARY KEY (`id`),
             KEY `idx_object_text` (`object_id`),
             KEY `idx_object_field` (`object_id`,`object_field_id`)
-        )");
+        )") || die $DB->errstr;
     }
     eval {
-        $DB->do("DESC `object_reference`");
+        $DB->do("DESC `object_reference`") || die $DB->errstr;
     };
     if ($@) {
         $DB->do("CREATE TABLE `object_reference` (
@@ -294,7 +294,7 @@ sub dbConfig {
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`)
-            )");
+            )") || die $DB->errstr;
     }
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
