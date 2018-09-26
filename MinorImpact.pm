@@ -187,7 +187,7 @@ sub dbConfig {
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `user_id` int(11) NOT NULL,
             `name` varchar(50) NOT NULL,
-            `public tinyint(1) default 0,
+            `public` tinyint(1) default 0,
             `object_type_id` int(11) NOT NULL,
             `create_date` datetime NOT NULL,
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
