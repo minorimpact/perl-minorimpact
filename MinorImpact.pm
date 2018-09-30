@@ -342,7 +342,7 @@ sub log {
 
     if ($self->{conf}{default}{log_method} eq 'file') {
         my $date = toMysqlDate();
-        my $file = $self->{conf}{default}{log_file} || return;;
+        my $file = $self->{conf}{default}{log_file} || return;
         open(LOG, ">>$file") || die "Can't open $file";
         print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
         #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
@@ -352,6 +352,9 @@ sub log {
         #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
         #}
         close(LOG);
+    } elsif ($self->{conf}{default}{log_method} eq 'stderr') {
+        my $date = toMysqlDate();
+        print STDERR  "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
     } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
         syslog($level, $log);
     }
