@@ -51,7 +51,7 @@ sub new {
     my $id = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $id . ")");
+    MinorImpact::log('debug', "starting(" . $id . ")");
     my $DB = MinorImpact::db();
     my $object;
 
@@ -63,6 +63,7 @@ sub new {
         my $data;
         if (ref($id) eq "HASH") {
             die "Can't create a new object without an object type id." unless ($id->{object_type_id});
+            MinorImpact::log('debug', "getting type_id for $id->{object_type_id}");
             my $object_type_id = typeID($id->{object_type_id});
             $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
             unless ($data) {
@@ -103,8 +104,7 @@ sub new {
         $object = MinorImpact::Object::_new($package, $id, $params);
     }
     #
-    #MinorImpact::log('debug', "\$object doesn't exist") unless ($object);
-    #MinorImpact::log('debug', "ending($id)");
+    MinorImpact::log('debug', "ending($id)");
 
     die "permission denied" unless ($object->validateUser() || $params->{admin});
 
@@ -121,7 +121,7 @@ sub _new {
     my $self = {};
     bless($self, $package);
 
-    #MinorImpact::log('debug', "starting(" . $id . ")");
+    MinorImpact::log('debug', "starting(" . $id . ")");
     #MinorImpact::log('debug', "package='$package'");
     #MinorImpact::log('debug', "caching=" . ($params->{no_cache}?'off':'on'));
     $self->{DB} = MinorImpact::db() || die;
@@ -132,8 +132,10 @@ sub _new {
     if (ref($id) eq 'HASH') {
         #MinorImpact::log('debug', "ref(\$id)='" . ref($id) . "'");
 
-        $object_type_id = $id->{type_id} if ($id->{type_id} && !$id->{object_type_id});
-        $object_type_id = typeID($object_type_id || lc($package));
+        $object_type_id = $id->{object_type_id} || $id->{type_id} || lc($package) || die "No object_type_id specified\n";
+        MinorImpact::log('debug', "getting type_id for '$object_type_id'");
+        $object_type_id = typeID($object_type_id);
+        MinorImpact::log('debug', "got object_type_id='$object_type_id'");
 
         my $user_id = $id->{'user_id'} || MinorImpact::userID();
         die "invalid name" unless ($id->{name});
@@ -435,7 +437,6 @@ sub type_id {
 sub typeID {
     my $self = shift || return;
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
     my $object_type_id;
     if (ref($self)) {
