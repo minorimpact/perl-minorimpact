@@ -48,10 +48,11 @@ sub new {
     my $data = MinorImpact::cache("user_data_$user_id");
     unless ($data) {
         if ($user_id =~/^\d+$/) {
-            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id));
         } else {
-            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id)) || die $self->{DB}->errstr;
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id));
         }
+        return unless $data;
         MinorImpact::cache("user_data_$user_id", $data);
     }
     $self->{data} = $data;
@@ -67,9 +68,9 @@ sub addUser {
     #MinorImpact::log('info', "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
-    if ($DB && $params->{username} && $params->{password}) {
+    if ($DB && $params->{username}) {
         # Only the first 8 characters matter to crypt(); disturbing and weird.
-        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}, $$))) || die $DB->errstr;
+        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);

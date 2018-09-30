@@ -658,13 +658,15 @@ sub user {
         #   a brute force attempt fail.
         $login_failures++;
         MinorImpact::cache("login_failures_$IP", $login_failures, 420);
-        MinorImpact::cache("login_failures_$username", $login_failures, 4200);
+        MinorImpact::cache("login_failures_$username", $login_failures, 420);
     }
 
     # We only need to check the cache and validate once per session.  Now that we're doing
     #   permission checking per object, this will save us a shitload.
     return $self->{USER} if ($self->{USER});
 
+    # If the username and password are not provided, check the current session to see if the user_id has
+    #   already been set.
     my $user_id = MinorImpact::session('user_id');
     if ($user_id) {
         #MinorImpact::log('debug', "cached user_id=$user_id");
@@ -675,11 +677,25 @@ sub user {
         }
     }
 
-    # Not sure what this is supposed to do.  Maybe it auto validates from the command line
-    #if ($ENV{'USER'}) {
-    #   my $user = new MinorImpact::User($ENV{'user'});
-    #    return $user;
-    #}
+    # If ENV{USER} is set, it means we're being called from the command line.  For now,
+    #   let's just trust that the system has taken care of validation.  Unfortunately,
+    #   it opens up a HUGE security hole by allowing someone to change this variable to
+    #   some other user and have access to all of their data - but only if the application
+    #   is written without properly setting up users and logins in the first place, so...
+    #   <shrug>. I don't know.  I'm just going to leave it for now and hope for the best.
+    #
+    if ($ENV{'USER'}) {
+        my $user = new MinorImpact::User($ENV{'USER'});
+        if (!$user) {
+            # TODO: Make this a configuration option, so the developer can prevent
+            #   new users from getting created randomly.
+            # TODO: Add a 'shell' or 'local' parameter so we can queury all the accounts
+            #   created using this method (I'm holding off on adding it because I still
+            #   dan't have a mechanism for automating database updates).
+            $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '' });
+        }
+        return $user;
+    }
     #MinorImpact::log('info', "no user found");
     MinorImpact::redirect({action => 'login' }) if ($params->{force});
     #MinorImpact::log('debug', "ending");
