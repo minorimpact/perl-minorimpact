@@ -348,7 +348,7 @@ Returns TRUE if $password is valid.
 sub validateUser {
     my $self = shift || return;
 
-    my $password = shift || return;
+    my $password = shift || '';
 
     return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
 }

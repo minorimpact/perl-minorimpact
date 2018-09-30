@@ -698,7 +698,10 @@ sub user {
             #   dan't have a mechanism for automating database updates).
             $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '' });
         }
-        return $user;
+        if ($user && $user->validateUser('')) {
+            $self->{USER} = $user;
+            return $user;
+        }
     }
     #MinorImpact::log('info', "no user found");
     MinorImpact::redirect({action => 'login' }) if ($params->{force});
