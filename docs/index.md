@@ -25,7 +25,7 @@
 
 ### Logging
 
-Application-wide logging is configured in [/etc/minorimpact.conf](configuration.md).
+Application-wide logging is configured in [/etc/minorimpact.conf](configuration).
 
     log_method = file
     log_file = \<filename\>
