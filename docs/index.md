@@ -1,5 +1,13 @@
 # Introduction
 
+## Documentation
+
+[Installation](installation)  
+[Configuration](configuration)
+[Objects](objects)  
+[WWW](www)
+[Templates](templates)  
+
 ## MinorImpact.pm
 
     use MinorImpact;
@@ -51,7 +59,7 @@ or:
 
 ### Examples
 
-####index.cgi
+#### index.cgi
 
 Code:
 
