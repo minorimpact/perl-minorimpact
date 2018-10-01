@@ -10,7 +10,12 @@ valid configuration is discovered.
 You can embedd configuration options directly in your application by passing a hash pointer to the "config" parameter when
 you create the MinorImpact object:
 
-    $MINORIMPACT = new MinorImpact({config => { log_method => "file, log_file => "/var/log/minorimpact.conf" }});
+    $MINORIMPACT = new MinorImpact({
+                        config => { 
+                            log_method => "file, 
+                            log_file => "/var/log/minorimpact.conf" 
+                        }
+                    });
     
 ### ... from a File
 
@@ -36,12 +41,42 @@ for running applications where the main script is in a "bin" directory, parallel
 
 If none of the other methods result in a configuration, MinorImpact will look for a file called "/etc/minorimpact.conf."
 
-## Format
+## Options
+
+### Sections
+
+#### Default
+
+    application_id  String used to differentiate log entries in multiple applications
+                    that might be writing to the same file or using syslog. 
+                    DEFAULT: minorimpact
+    log_file        Name of the file to save log entries to.  Only valid when "log_method" is 
+                    set to *file*.  Logging is disabled if "log_method" is set to *file*
+                    and this value not set. DEFAULT: None.
+    log_method      Method of logging output from MinorImpact::log().  Valid options are *file*, 
+                    *syslog* and *stderr*.  DEFAULT: *file*
+    pretty_urls     Set to *true* if MinorImpact should generate links as http://example.com/action 
+                    rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
+
+#### DB
+
+    database        Name of the database to use for storing MinorImpact application data.
+    db_host         Name of the database server.
+    db_password     Databse user password.
+    db_port         Database connection port.
+    db_user         Database user name.
+    
+## Example
+
 ```
+application_id = minorimpact
+log_method = file
+log_file = /var/log/minorimpact.log
+
 db:
-    database = \<database name\>
-    db_host = \<database server\>
-    db_port = \<database port\>
-    db_user = \<database user\>
-    db_password = \<database user password\>
+    database = minorimpact
+    db_host = localhost
+    db_port = 3306
+    db_user = minorimpact
+    db_password = minorimpactpw
 ```	
