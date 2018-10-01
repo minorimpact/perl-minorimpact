@@ -1,5 +1,13 @@
 # Introduction
 
+## Documentation
+
+[Installation](installation)  
+[Configuration](configuration)  
+[Objects](objects)  
+[WWW](www)  
+[Templates](templates)  
+
 ## MinorImpact.pm
 
     use MinorImpact;
@@ -23,13 +31,37 @@
 
     print $test->get('field_1') . "\n";
 
+### Logging
+
+Application-wide logging is configured in [/etc/minorimpact.conf](configuration).
+
+    log_method = file
+    log_file = \<filename\>
+
+Valid log methods are "file" (which requires the additional log_file entry), "stderr", or "syslog".
+
+Usage:
+
+    MinorImpact::log("err", "There was an error, here, for some reason.");
+
+[Severity levels](https://en.wikipedia.org/wiki/Syslog#Severity_level)
+
 ### Passing Parameters
+
+Most functions take parameters as a hash pointer. For example:
+
+    $params = { parameter1 => 'one', parameter2 => 'two'};
+    sub($params);
+    
+or:  
 
     sub({ parameter1 => 'one', parameter2 => 'two' });
 
 ### Examples
 
-index.cgi:
+#### index.cgi
+
+Code:
 
     use MinorImpact;
 
@@ -40,6 +72,7 @@ index.cgi:
         print "Hello world\n";
     }
 
+URL:  
 http://\<server\>/cgi-bin/index.cgi?a=hello  
 http://\<server\>/cgi-bin/hello
 

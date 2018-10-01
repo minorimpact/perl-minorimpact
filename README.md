@@ -1,5 +1,7 @@
 # perl-minorimpact
 
+The MinorImpact library is a collection of personal scripts, utilities and frameworks that has grown out of hand.
+
 ## Usage
 
 ```
@@ -75,3 +77,8 @@ db:
     db_user = minorimpact
     db_password = minorimpact
 ```	
+
+## Author
+
+Patrick Gillan <pgillan@minorimpact.com>
+
