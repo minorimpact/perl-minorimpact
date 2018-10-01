@@ -3,9 +3,9 @@
 ## Documentation
 
 [Installation](installation)  
-[Configuration](configuration)
+[Configuration](configuration)  
 [Objects](objects)  
-[WWW](www)
+[WWW](www)  
 [Templates](templates)  
 
 ## MinorImpact.pm
