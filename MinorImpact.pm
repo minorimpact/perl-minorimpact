@@ -27,9 +27,56 @@ our $SELF;
 
 =head1 NAME
 
+MinorImpact - Application/object framework and utilitys library.
+
+=head1 SYNOPSIS
+
+  use MinorImpact;
+
+  $MINORIMPACT = new MinorImpact();
+
+  # define a new object type
+  MinorImpact::Object::Type::add({name => 'test'});
+
+  # create a new object 
+  $test = new MinorImpact::Object({ object_type_id => 'test', name => "test-$$" });
+  print $test->id() . ": " . $test->get('name') . "\n";
+
+  # retrieve a second copy of the same object using just the id
+  $test2 = new MinorImpact::Object($test->id());
+  print $test2->id() . ": " . $test2->get('name') . "\n";
+
+  # add a field to the object definition
+  MinorImpact::Object::Type::addField({ object_type_id => $test->typeID(), name => 'field_1', type => 'string' });
+  $test->update({field_1 => 'one'});
+
+  print $test->get('field_1') . "\n";
+
+=head1 DESCRIPTION
+
+The main interface to the MinorImpact library.
+
 =head1 METHODS
 
-=over 4
+=head2 new(\%options)
+
+Create a new MinorImpact object.
+
+  $MINORIMPACT = new MinorImpact({ option1 => "value1", option2 => "value2" });
+
+=head3 Options
+
+=over
+
+=item config
+
+A hash containing configuration items.
+
+=item config_file
+
+The name of a file containing configuration options.
+
+=back
 
 =cut
 
@@ -117,6 +164,33 @@ sub new {
     return $self;
 }
 
+=head2 ->cache($name, [$value], [$timeout])
+
+Store, retrieve or delete name/value pairs from the global cache.  If value is not specified,
+the previous value for $name is returned.  $timeout is in seconds, and the default value is
+3600.  Pass an empty hash pointer to clear the previous value.
+
+  # remember the color value for five minutes
+  $color = "red";
+  $MINORIMPACT->cache("color", $color, 300);
+
+  # retrieve the previous $color value
+  $old_color = $MINORIMPACT->cache("color");
+
+  # delete the previous color value
+  $MINORIMPACT->cache("color", {});
+
+$value can be a hash or an array pointer and a deep copy will be stored.
+
+  $hash = { one => 1, two => 2 };
+  $MINORIMPACT->cache("hash", $hash);
+
+  $old_hash = $MINORIMPACT->cache("hash");
+  print $old_hash->{one};
+  # OUTPUT: 1
+
+=cut
+
 sub cache {
     my $self = shift || return;
 
@@ -159,206 +233,6 @@ sub cache {
 
     #MinorImpact::log('debug', "ending");
     return $cache;
-}
-
-sub cgi { 
-    return $SELF->{CGI}; 
-}
-
-sub clearSession {
-    my $session_id = MinorImpact::sessionID() || die "cannot get session ID";
-    return MinorImpact::cache("session:$session_id", {});
-}
-
-sub db {
-    return $SELF->{DB};
-}
-
-my $VERSION = 1;
-sub dbConfig {
-    #MinorImpact::log('debug', "starting");
-    my $DB = shift || return;
-
-    eval {
-        $DB->do("DESC `object`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `user_id` int(11) NOT NULL,
-            `name` varchar(50) NOT NULL,
-            `description` text,
-            `public` tinyint(1) default 0,
-            `object_type_id` int(11) NOT NULL,
-            `create_date` datetime NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`)
-        )") || die $DB->errstr;
-        $DB->do("create index idx_object_user_id on object(user_id)") || die $DB->errstr;
-        $DB->do("create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_type`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_type` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `name` varchar(50) DEFAULT NULL,
-            `description` text,
-            `default_value` varchar(255) NOT NULL,
-            `plural` varchar(50) DEFAULT NULL,
-            `url` varchar(255) DEFAULT NULL,
-            `system` tinyint(1) DEFAULT 0,
-            `version` int(11) DEFAULT 0,
-            `readonly` tinyint(1) DEFAULT 0,
-            `no_name` tinyint(1) DEFAULT 0,
-            `public` tinyint(1) DEFAULT 0,
-            `no_tags` tinyint(1) DEFAULT 0,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `idx_object_type` (`name`)
-        )") || die $DB->errstr;
-    }
-
-    eval {
-        $DB->do("DESC `object_field`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_field` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_type_id` int(11) NOT NULL,
-            `name` varchar(50) NOT NULL,
-            `description` varchar(255),
-            `default_value` varchar(255),
-            `type` varchar(15) DEFAULT NULL,
-            `hidden` tinyint(1) DEFAULT '0',
-            `readonly` tinyint(1) DEFAULT '0',
-            `required` tinyint(1) DEFAULT '0',
-            `sortby` tinyint(1) DEFAULT '0',
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`)
-        )") || die $DB->errstr;
-        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)") || die $DB->errstr;
-        $DB->do("create index idx_object_field_type_id on object_field(object_type_id)") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_data`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_data` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_id` int(11) NOT NULL,
-            `object_field_id` int(11) NOT NULL,
-            `value` varchar(50) NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_object_field` (`object_id`,`object_field_id`),
-            KEY `idx_object_data` (`object_id`)
-        )") || die $DB->errstr;
-    }
-
-    eval {
-        $DB->do("DESC `object_tag`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_tag` ( 
-            `object_id` int(11) NOT NULL, 
-            `name` varchar(50) DEFAULT NULL
-          ) ENGINE=MyISAM DEFAULT CHARSET=latin1") || die $DB->errstr;
-        $DB->do("create unique index idx_id_name on object_tag (object_id, name)") || die $DB->errstr;
-    }
-
-    eval {
-        $DB->do("DESC `object_text`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_text` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_id` int(11) NOT NULL,
-            `object_field_id` int(11) NOT NULL,
-            `value` mediumtext,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_object_text` (`object_id`),
-            KEY `idx_object_field` (`object_id`,`object_field_id`)
-        )") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_reference`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_reference` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_text_id` int(11) NOT NULL,
-            `data` varchar(255) NOT NULL,
-            `object_id` int(11) NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`)
-            )") || die $DB->errstr;
-    }
-
-    MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
-    MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
-    #MinorImpact::log('debug', "ending");
-}
-
-sub debug {
-    my $toggle = shift || 0;
-
-    # I'm not sure if I'm ever going to use this, but it might come in handy.
-    my $sub = (caller(1))[3];
-    if (!$sub || $sub =~/log$/) {
-         $sub = (caller(2))[3];
-    }
-    $sub .= "()";
-
-    $MinorImpact::debug = isTrue($toggle)?$sub:0;
-}
-
-=item log( $log_level, $message )
-
-=cut
-
-sub log {
-    my $level = shift || return;
-    my $message = shift || return;
-
-    my $self = $MinorImpact::SELF;
-    return unless ($self && !$self->{conf}{default}{no_log});
-
-    my $sub = (caller(1))[3];
-    if ($sub =~/log$/) {
-        $sub = (caller(2))[3];
-    }
-    $sub .= "()";
-
-    return if ($level eq 'debug' && !$MinorImpact::debug);
-    chomp($message);
-    my $log = "$level $sub $message";
-
-    if ($self->{conf}{default}{log_method} eq 'file') {
-        my $date = toMysqlDate();
-        my $file = $self->{conf}{default}{log_file} || return;
-        open(LOG, ">>$file") || die "Can't open $file";
-        print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
-        #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
-        #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-        #foreach $i (0, 1, 2, 3) {
-        #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
-        #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
-        #}
-        close(LOG);
-    } elsif ($self->{conf}{default}{log_method} eq 'stderr') {
-        my $date = toMysqlDate();
-        print STDERR  "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
-    } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
-        syslog($level, $log);
-    }
 }
 
 sub param {
@@ -713,7 +587,27 @@ sub userID {
     return user()->id();
 }
 
-=item www()
+=head2 ->www(\%params)
+
+Sets up the WWW/CGI framework.
+
+  $MINORIMPACT->www({ param1 => "one" });
+
+=head3 Parameters
+
+=over
+
+=item actions
+
+A hash defining which subs get called for a particular 'a=' parameter.
+
+  # use test() when http://example.com/cgi-bin/index.cgi?a=test
+  $MINORIMPACT->www({ actions => { test => \&test } });
+
+  sub test() {
+    print "Content-type: text/html\n\n";
+    print "Test\n";
+  }
 
 =back
 
@@ -803,9 +697,255 @@ sub www {
     MinorImpact::log('debug', "ending");
 }
 
+=head1 SUBROUTINES
+
+=head2 ::cgi()
+
+Returns the globak cgi object.
+
+  my $CGI = MinorImpact::cgi();
+
+=cut
+
+sub cgi { 
+    return $SELF->{CGI}; 
+}
+
+=head2 ::clearSession()
+
+Clears the current session.
+
+  MinorImpact::clearSession();
+
+=cut 
+
+sub clearSession {
+    my $session_id = MinorImpact::sessionID() || die "cannot get session ID";
+    return MinorImpact::cache("session:$session_id", {});
+}
+
+=head2 ::db()
+
+Returns the global database object.
+
+  $DB = MinorImpact::db();
+
+=cut
+
+sub db {
+    return $SELF->{DB};
+}
+
+my $VERSION = 1;
+sub dbConfig {
+    #MinorImpact::log('debug', "starting");
+    my $DB = shift || return;
+
+    eval {
+        $DB->do("DESC `object`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `user_id` int(11) NOT NULL,
+            `name` varchar(50) NOT NULL,
+            `description` text,
+            `public` tinyint(1) default 0,
+            `object_type_id` int(11) NOT NULL,
+            `create_date` datetime NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`)
+        )") || die $DB->errstr;
+        $DB->do("create index idx_object_user_id on object(user_id)") || die $DB->errstr;
+        $DB->do("create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
+    }
+    eval {
+        $DB->do("DESC `object_type`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_type` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `name` varchar(50) DEFAULT NULL,
+            `description` text,
+            `default_value` varchar(255) NOT NULL,
+            `plural` varchar(50) DEFAULT NULL,
+            `url` varchar(255) DEFAULT NULL,
+            `system` tinyint(1) DEFAULT 0,
+            `version` int(11) DEFAULT 0,
+            `readonly` tinyint(1) DEFAULT 0,
+            `no_name` tinyint(1) DEFAULT 0,
+            `public` tinyint(1) DEFAULT 0,
+            `no_tags` tinyint(1) DEFAULT 0,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `idx_object_type` (`name`)
+        )") || die $DB->errstr;
+    }
+
+    eval {
+        $DB->do("DESC `object_field`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_field` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_type_id` int(11) NOT NULL,
+            `name` varchar(50) NOT NULL,
+            `description` varchar(255),
+            `default_value` varchar(255),
+            `type` varchar(15) DEFAULT NULL,
+            `hidden` tinyint(1) DEFAULT '0',
+            `readonly` tinyint(1) DEFAULT '0',
+            `required` tinyint(1) DEFAULT '0',
+            `sortby` tinyint(1) DEFAULT '0',
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`)
+        )") || die $DB->errstr;
+        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)") || die $DB->errstr;
+        $DB->do("create index idx_object_field_type_id on object_field(object_type_id)") || die $DB->errstr;
+    }
+    eval {
+        $DB->do("DESC `object_data`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_data` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_id` int(11) NOT NULL,
+            `object_field_id` int(11) NOT NULL,
+            `value` varchar(50) NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_object_field` (`object_id`,`object_field_id`),
+            KEY `idx_object_data` (`object_id`)
+        )") || die $DB->errstr;
+    }
+
+    eval {
+        $DB->do("DESC `object_tag`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_tag` ( 
+            `object_id` int(11) NOT NULL, 
+            `name` varchar(50) DEFAULT NULL
+          ) ENGINE=MyISAM DEFAULT CHARSET=latin1") || die $DB->errstr;
+        $DB->do("create unique index idx_id_name on object_tag (object_id, name)") || die $DB->errstr;
+    }
+
+    eval {
+        $DB->do("DESC `object_text`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_text` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_id` int(11) NOT NULL,
+            `object_field_id` int(11) NOT NULL,
+            `value` mediumtext,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_object_text` (`object_id`),
+            KEY `idx_object_field` (`object_id`,`object_field_id`)
+        )") || die $DB->errstr;
+    }
+    eval {
+        $DB->do("DESC `object_reference`") || die $DB->errstr;
+    };
+    if ($@) {
+        $DB->do("CREATE TABLE `object_reference` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `object_text_id` int(11) NOT NULL,
+            `data` varchar(255) NOT NULL,
+            `object_id` int(11) NOT NULL,
+            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `create_date` datetime NOT NULL,
+            PRIMARY KEY (`id`)
+            )") || die $DB->errstr;
+    }
+
+    MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
+    MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
+    #MinorImpact::log('debug', "ending");
+}
+
+=head2 ::debug($switch)
+
+Turn debugging on or off by setting C<$switch> to true or false.
+
+  MinorImpact::debug(1);
+  MinorImpact::log("debug", "This message will get logged.");
+  MinorImpact::debug(0);
+  MinorImpact::log("debug", "This message will not get logged.");
+
+=cut
+
+sub debug {
+    my $toggle = shift || 0;
+
+    # I'm not sure if I'm ever going to use this, but it might come in handy.
+    my $sub = (caller(1))[3];
+    if (!$sub || $sub =~/log$/) {
+         $sub = (caller(2))[3];
+    }
+    $sub .= "()";
+
+    $MinorImpact::debug = isTrue($toggle)?$sub:0;
+}
+
+=head2 ::log($severity_level, $message)
+
+Adds a message to the application log output.  Severity levels are, in order:
+"debug", "info", "notice", "warning", "err", "crit", "alert" and "emerg".
+
+  MinorImpact::log("crit", "There has been a critical error.");
+
+Messages with the "debug" severity are only logged if the global C<debug>
+switch is enabled.  See L<debug()>.
+
+=cut
+
+sub log {
+    my $level = shift || return;
+    my $message = shift || return;
+
+    my $self = $MinorImpact::SELF;
+    return unless ($self && !$self->{conf}{default}{no_log});
+
+    my $sub = (caller(1))[3];
+    if ($sub =~/log$/) {
+        $sub = (caller(2))[3];
+    }
+    $sub .= "()";
+
+    return if ($level eq 'debug' && !$MinorImpact::debug);
+    chomp($message);
+    my $log = "$level $sub $message";
+
+    if ($self->{conf}{default}{log_method} eq 'file') {
+        my $date = toMysqlDate();
+        my $file = $self->{conf}{default}{log_file} || return;
+        open(LOG, ">>$file") || die "Can't open $file";
+        print LOG "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
+        #my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller;
+        #print LOG "   caller: $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #foreach $i (0, 1, 2, 3) {
+        #    my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i);
+        #    print LOG "   caller($i): $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash\n";
+        #}
+        close(LOG);
+    } elsif ($self->{conf}{default}{log_method} eq 'stderr') {
+        my $date = toMysqlDate();
+        print STDERR  "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
+    } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
+        syslog($level, $log);
+    }
+}
+
+
 =head1 AUTHOR
 
-Patrick Gillan (pgillan@minorimpact.com)
+Patrick Gillan <pgillan@minorimpact.com>
 
 =cut
 
