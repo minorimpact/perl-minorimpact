@@ -496,7 +496,7 @@ user with a blank password will be created if no user already exists.  This is t
 writing scripts easier, since most command-line applications simply assume the user
 has already been validated.  It will be up to the developer implement individual logins
 if they need to, by testing to see if the current used has a blank password and then 
-forcing the user to add a password. (see L<MinorImpact::User::validateUser()>)
+forcing the user to add a password. (see L<MinorImpact::User::validateUser($password)>)
 
 =head3 Parameters
 
