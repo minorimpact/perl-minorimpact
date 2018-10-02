@@ -4,54 +4,57 @@ MinorImpact::User
 
 # SYNOPSIS
 
-# DESCRIPTION
-
-The object representing application users.
-
-## Getting the current user.
-
     use MinorImpact;
+    
     my $MINORIMPACT = new MinorImpact();
+    
+    # Get the current user.
     my $user = $MINORIMPACT->user();
     if (!$user) {
         die "No currently logged in user.";
     }
 
-# OBJECT METHODS
+# DESCRIPTION
 
-- get( $field )
+The object representing application users.
 
-    Returns the value of $field.
+# METHODS
 
-- id()
+## ->get( $field )
 
-    Returns the user's ID.
+Returns the value of $field.
 
-- isAdmin()
+## ->id()
 
-    Returns TRUE if the user has administrative priviledges for this application.
+Returns the user's ID.
 
-- name() 
+## ->isAdmin()
 
-    Returns the user's 'name' field.  A shortcut to get('name').
+Returns TRUE if the user has administrative priviledges for this application.
 
-- search( \\%params )
+## ->name() 
 
-    A passthru function that appends the user\_id of the user object to to the query 
-    hash of %params.
+Returns the user's 'name' field.  A shortcut to get('name').
 
-- settings()
+## ->search( \\%params )
 
-    Returns the user's MinorImpact::settings object.
+A passthru function that appends the user\_id of the user object to to the query 
+hash of %params.
 
-- update( \\%fields )
+## ->settings()
 
-    Update one or more user fields.
+Returns the user's MinorImpact::settings object.
 
-- validateUser( $password )
+    $settings = $user->settings();
 
-    Returns TRUE if $password is valid.
+## ->update( \\%fields )
+
+Update one or more user fields.
+
+## ->validateUser( $password )
+
+Returns TRUE if $password is valid.
 
 # AUTHOR
 
-Patrick Gillan (pgillan@minorimpact.com)
+Patrick Gillan <pgillan@minorimpact.com>

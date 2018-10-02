@@ -11,22 +11,21 @@ MinorImpact::User
 
 =head1 SYNOPSIS
 
+  use MinorImpact;
+  
+  my $MINORIMPACT = new MinorImpact();
+  
+  # Get the current user.
+  my $user = $MINORIMPACT->user();
+  if (!$user) {
+      die "No currently logged in user.";
+  }
+
 =head1 DESCRIPTION
 
 The object representing application users.
 
-=head2 Getting the current user.
-
-    use MinorImpact;
-    my $MINORIMPACT = new MinorImpact();
-    my $user = $MINORIMPACT->user();
-    if (!$user) {
-        die "No currently logged in user.";
-    }
-
-=head1 OBJECT METHODS
-
-=over 4
+=head1 METHODS
 
 =cut
 
@@ -158,7 +157,7 @@ sub form {
     return $form;
 }
 
-=item get( $field )
+=head2 ->get( $field )
 
 Returns the value of $field.
 
@@ -207,7 +206,7 @@ sub getObjects {
     return @objects;
 }
 
-=item id()
+=head2 ->id()
 
 Returns the user's ID.
 
@@ -217,7 +216,7 @@ sub id {
     return shift->{data}->{id}; 
 } 
 
-=item isAdmin()
+=head2 ->isAdmin()
 
 Returns TRUE if the user has administrative priviledges for this application.
 
@@ -230,7 +229,7 @@ sub isAdmin {
     return $self->get('admin');
 }
 
-=item name() 
+=head2 ->name() 
 
 Returns the user's 'name' field.  A shortcut to get('name').
 
@@ -239,6 +238,13 @@ Returns the user's 'name' field.  A shortcut to get('name').
 sub name { 
     return shift->get('name'); 
 }
+
+=head2 ->search( \%params )
+
+A passthru function that appends the user_id of the user object to to the query 
+hash of %params.
+
+=cut
 
 sub search {
     my $params = shift || {};
@@ -267,13 +273,6 @@ sub search {
     return map { new MinorImpact::User($_->{id}); } @$users;
 }
 
-=item search( \%params )
-
-A passthru function that appends the user_id of the user object to to the query 
-hash of %params.
-
-=cut
-
 sub searchObjects { 
     my $self = shift || return;
     my $params = shift || {};
@@ -292,9 +291,11 @@ sub searchObjects {
     return @results;
 }
 
-=item settings()
+=head2 ->settings()
 
 Returns the user's MinorImpact::settings object.
+
+  $settings = $user->settings();
 
 =cut
 
@@ -321,7 +322,7 @@ sub settings {
     return $settings;
 }
 
-=item update( \%fields )
+=head2 ->update( \%fields )
 
 Update one or more user fields.
 
@@ -337,11 +338,9 @@ sub update {
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
 }
 
-=item validateUser( $password )
+=head2 ->validateUser( $password )
 
 Returns TRUE if $password is valid.
-
-=back
 
 =cut
 
@@ -355,7 +354,7 @@ sub validateUser {
 
 =head1 AUTHOR
 
-Patrick Gillan (pgillan@minorimpact.com)
+Patrick Gillan <pgillan@minorimpact.com>
 
 =cut
 

@@ -72,6 +72,39 @@ $value can be a hash or an array pointer and a deep copy will be stored.
     print $old_hash->{one};
     # OUTPUT: 1
 
+## ->user(\[\\%parameters\])
+
+Returns the currently logged in user, or attempts to validate a user based on various
+criteria.
+
+    my $user = $MINORIMPACT->user();
+
+If username and password aren't passed explicitly (and they usually aren't), this method
+will first check the CGI object to see if there is a username and password included
+in the URL parameters.  If not, it will check $ENV{USER} on a linux server to get the
+currently logged in user.
+
+Locking for multiple login attempts is built into this function, and more than 5 login
+attempts in a 7 minute span from the same IP or for the same username will result in a 
+silent, automatic failure.
+
+If user() is called from a command line script (ie, if $ENV{USER} is set), then a new
+user with a blank password will be created if no user already exists.  This is to make
+writing scripts easier, since most command-line applications simply assume the user
+has already been validated.  It will be up to the developer implement individual logins
+if they need to, by testing to see if the current used has a blank password and then 
+forcing the user to add a password. (see [MinorImpact::User::validateUser()](./MinorImpact_User.md#validateuserpassword))
+
+### Parameters
+
+- username
+
+    The username of the user to validate.
+
+- password
+
+    The password of the user to validate.
+
 ## ->www(\\%params)
 
 Sets up the WWW/CGI framework.
@@ -96,9 +129,13 @@ Sets up the WWW/CGI framework.
 
 ## ::cgi()
 
-Returns the globak cgi object.
+Returns the global cgi object.
 
     my $CGI = MinorImpact::cgi();
+
+Can also be called as a method.
+
+    my $CGI = $MINORIMPACT->cgi();
 
 ## ::clearSession()
 
@@ -131,7 +168,17 @@ Adds a message to the application log output.  Severity levels are, in order:
 Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See ["::debug()"](#debug).
 
-Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact_Config.md).
+Application-wide logging is configured in ["/etc/minorimpact.conf"](./index.md#logging).
+
+## ::userID()
+
+Return the id of the current logged in user.
+
+    my $user_id = MinorImpact::userID();
+
+... or
+
+    my $user_id = $MINORIMPACT->userID();
 
 # AUTHOR
 
