@@ -136,11 +136,3 @@ Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpac
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 906:
-
-    alternative text '"/etc/minorimpact.conf"' contains non-escaped | or /

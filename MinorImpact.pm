@@ -903,7 +903,7 @@ Adds a message to the application log output.  Severity levels are, in order:
 Messages with the "debug" severity are only logged if the global C<debug>
 switch is enabled.  See L</"::debug()">.
 
-Application-wide logging is configured in L<"/etc/minorimpact.conf"|MinorImpact_Config.md>.
+Application-wide logging is configured in L<"E<sol>etcE<sol>minorimpact.conf"|MinorImpact_Config.md>.
 
 =cut
 
