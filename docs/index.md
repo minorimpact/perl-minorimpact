@@ -24,6 +24,7 @@ $ yum -y install epel-release
 ### ...from prebuilt packages
 
 Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo:
+
 ```
 [minorimpact]
   name=Minor Impact Tools/Libraries
@@ -40,6 +41,7 @@ $ yum -y install epel-release perl-MinorImpact
 ## Database Configuration
 
 Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
+
 ```
 # yum install mariadb-server
 # systemctl mariadb start
@@ -50,9 +52,10 @@ Set up a database to use, if you don't already have one.  Included are basic ins
 # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
 ```
 
-## Condiguration File
+## Configuration File
 
 Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
+
 ```
 db:
     database = minorimpact
@@ -61,6 +64,7 @@ db:
     db_user = minorimpact
     db_password = minorimpact
 ```	
+
 See [Configuration](#configuration) for more information.
 
 # Configuration
@@ -148,24 +152,24 @@ db:
 
 # Logging
 
-Application-wide logging is configured in [/etc/minorimpact.conf](configuration).
+Application-wide logging is configured in [/etc/minorimpact.conf](#configuration).
 
     log_method = file
     log_file = \<filename\>
 
 Valid log methods are "file" (which requires the additional log_file entry), "stderr", or "syslog".
 
-Usage:
+All logging is done via [MinorImpact::log()](./MinorImpact.md#log):
 
     MinorImpact::log("err", "There was an error, here, for some reason.");
 
 [Severity levels](https://en.wikipedia.org/wiki/Syslog#Severity_level)
 
+
 # Objects
 
 # WWW
 
-```
     use MinorImpact;
 
     MinorImpact::www({ actions => { index => \&hello, hello=> \&hello } });
@@ -174,8 +178,6 @@ Usage:
         print "Content-type: text/html\n\n";
         print "Hello world\n";
     }
-
-```
 
 
 URL:  
