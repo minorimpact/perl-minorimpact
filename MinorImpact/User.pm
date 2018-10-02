@@ -157,7 +157,7 @@ sub form {
     return $form;
 }
 
-=head2 ->get($field)
+=head2 get($field)
 
 Returns the value of $field.
 
@@ -206,7 +206,7 @@ sub getObjects {
     return @objects;
 }
 
-=head2 ->id()
+=head2 id()
 
 Returns the user's ID.
 
@@ -216,7 +216,7 @@ sub id {
     return shift->{data}->{id}; 
 } 
 
-=head2 ->isAdmin()
+=head2 isAdmin()
 
 Returns TRUE if the user has administrative priviledges for this application.
 
@@ -229,7 +229,7 @@ sub isAdmin {
     return $self->get('admin');
 }
 
-=head2 ->name() 
+=head2 name() 
 
 Returns the user's 'name' field.  A shortcut to get('name').
 
@@ -239,7 +239,7 @@ sub name {
     return shift->get('name'); 
 }
 
-=head2 ->search(\%params)
+=head2 search(\%params)
 
 A passthru function that appends the user_id of the user object to to the query 
 hash of %params.
@@ -291,7 +291,7 @@ sub searchObjects {
     return @results;
 }
 
-=head2 ->settings()
+=head2 settings()
 
 Returns the user's MinorImpact::settings object.
 
@@ -322,7 +322,7 @@ sub settings {
     return $settings;
 }
 
-=head2 ->update(\%fields)
+=head2 update(\%fields)
 
 Update one or more user fields.
 
@@ -338,9 +338,14 @@ sub update {
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
 }
 
-=head2 ->validateUser($password)
+=head2 validateUser($password)
 
 Returns TRUE if $password is valid.
+
+  # Check if the user's password is "password".
+  if ($user->validateUser("password")) {
+      print "This is a bad password\n";
+  }
 
 =cut
 
