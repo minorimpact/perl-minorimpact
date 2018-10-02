@@ -159,7 +159,7 @@ Application-wide logging is configured in [/etc/minorimpact.conf](#configuration
 
 Valid log methods are "file" (which requires the additional log_file entry), "stderr", or "syslog".
 
-All logging is done via [MinorImpact::log()](./MinorImpact.md#log):
+All logging is done via [MinorImpact::log()](./MinorImpact.md#logseverity_level-message):
 
     MinorImpact::log("err", "There was an error, here, for some reason.");
 
