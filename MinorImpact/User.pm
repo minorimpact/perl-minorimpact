@@ -157,7 +157,7 @@ sub form {
     return $form;
 }
 
-=head2 ->get( $field )
+=head2 ->get($field)
 
 Returns the value of $field.
 
@@ -239,7 +239,7 @@ sub name {
     return shift->get('name'); 
 }
 
-=head2 ->search( \%params )
+=head2 ->search(\%params)
 
 A passthru function that appends the user_id of the user object to to the query 
 hash of %params.
@@ -322,7 +322,7 @@ sub settings {
     return $settings;
 }
 
-=head2 ->update( \%fields )
+=head2 ->update(\%fields)
 
 Update one or more user fields.
 
@@ -338,7 +338,7 @@ sub update {
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
 }
 
-=head2 ->validateUser( $password )
+=head2 ->validateUser($password)
 
 Returns TRUE if $password is valid.
 

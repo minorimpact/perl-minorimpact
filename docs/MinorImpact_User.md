@@ -20,7 +20,7 @@ The object representing application users.
 
 # METHODS
 
-## ->get( $field )
+## ->get($field)
 
 Returns the value of $field.
 
@@ -36,7 +36,7 @@ Returns TRUE if the user has administrative priviledges for this application.
 
 Returns the user's 'name' field.  A shortcut to get('name').
 
-## ->search( \\%params )
+## ->search(\\%params)
 
 A passthru function that appends the user\_id of the user object to to the query 
 hash of %params.
@@ -47,11 +47,11 @@ Returns the user's MinorImpact::settings object.
 
     $settings = $user->settings();
 
-## ->update( \\%fields )
+## ->update(\\%fields)
 
 Update one or more user fields.
 
-## ->validateUser( $password )
+## ->validateUser($password)
 
 Returns TRUE if $password is valid.
 
