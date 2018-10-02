@@ -22,9 +22,9 @@ version 2.12
 
 HTML::FormatMarkdown is a formatter that outputs Markdown.
 
-HTML::FormatMarkdown is built on [HTML::Formatter](https://metacpan.org/pod/HTML::Formatter) and documentation for that
-module applies to this - especially ["new" in HTML::Formatter](https://metacpan.org/pod/HTML::Formatter#new),
-["format\_file" in HTML::Formatter](https://metacpan.org/pod/HTML::Formatter#format_file) and ["format\_string" in HTML::Formatter](https://metacpan.org/pod/HTML::Formatter#format_string).
+HTML::FormatMarkdown is built on [HTML::Formatter](./HTML::Formatter) and documentation for that
+module applies to this - especially ["new" in HTML::Formatter](./HTML::Formatter#new),
+["format\_file" in HTML::Formatter](./HTML::Formatter#format_file) and ["format\_string" in HTML::Formatter](./HTML::Formatter#format_string).
 
 # INSTALLATION
 

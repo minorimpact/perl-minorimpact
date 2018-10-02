@@ -129,8 +129,18 @@ Adds a message to the application log output.  Severity levels are, in order:
     MinorImpact::log("crit", "There has been a critical error.");
 
 Messages with the "debug" severity are only logged if the global `debug`
-switch is enabled.  See [debug()](https://metacpan.org/pod/debug\(\)).
+switch is enabled.  See ["::debug()"](#debug).
+
+Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact_Config.md).
 
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 906:
+
+    alternative text '"/etc/minorimpact.conf"' contains non-escaped | or /

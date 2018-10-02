@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 use Cwd;
-use File::Basename;
 use Pod::Markdown;
 
 $dir = getcwd;
@@ -15,7 +14,7 @@ foreach $m (findModules("$dir")) {
 
     print "Writing output to $markdown_file\n";
     open(FILE, ">$markdown_file");
-    my $parser = Pod::Markdown->new();
+    my $parser = Pod::Markdown->new(perldoc_url_prefix => './');
     $parser->output_fh(*FILE);
     $parser->parse_file($m);
     close(FILE);
