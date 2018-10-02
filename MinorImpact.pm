@@ -27,7 +27,7 @@ our $SELF;
 
 =head1 NAME
 
-MinorImpact - Application/object framework and utilitys library.
+MinorImpact - Application/object framework and utility library.
 
 =head1 SYNOPSIS
 
