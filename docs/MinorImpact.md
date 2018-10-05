@@ -29,6 +29,92 @@ MinorImpact - Application/object framework and utility library.
 
 The main interface to the MinorImpact library.
 
+# CONFIGURATION
+
+By default, MinorImpact will look for a configration file at /etc/minorimpact.conf.  There are multiple ways to define 
+the configuration file for a given application, however.  Each one of the following will be checked, in order, until a 
+valid configuration is discovered.
+
+## Methods
+
+### ... from a Hash
+
+You can embedd configuration options directly in your application by passing a hash pointer to the "config" parameter when
+you create the MinorImpact object:
+
+    $MINORIMPACT = new MinorImpact({
+                        config => { 
+                            log_method => "file, 
+                            log_file => "/var/log/minorimpact.conf" 
+                        }
+                    });
+    
+
+### ... from a File
+
+Similarly, you can pass a the name of a file that contains the configuration settings to the using the "config\_file"
+when you create the MinorImpact object.
+
+    $MINORIMPACT = new MinorImpact({config_file => "/etc/minorimpact.conf"});
+    
+
+### ... from an Environment Variable
+
+You can also set the $MINORIMPACT\_CONFIG environment variable to the filename that contains the configuration options for
+application.
+
+    export MINORIMPACT_CONFIG="/etc/minorimpact.conf"
+    
+
+### ... from a Local Configuration File
+
+If a file called "../conf/minorimpact.conf" exists, MinorImpact will read that for configuration information.  Specifically
+for running applications where the main script is in a "bin" directory, parallel to "lib" and "conf".
+
+### ... from a Global Configuration File
+
+If none of the other methods result in a configuration, MinorImpact will look for a file called "/etc/minorimpact.conf."
+
+## Options
+
+### Sections
+
+#### Default
+
+    application_id  String used to differentiate log entries in multiple applications
+                    that might be writing to the same file or using syslog. 
+                    DEFAULT: minorimpact
+    log_file        Name of the file to save log entries to.  Only valid when "log_method" is 
+                    set to *file*.  Logging is disabled if "log_method" is set to *file*
+                    and this value not set. DEFAULT: None.
+    log_method      Method of logging output from MinorImpact::log().  Valid options are *file*, 
+                    *syslog* and *stderr*.  DEFAULT: *file*
+    pretty_urls     Set to *true* if MinorImpact should generate links as http://example.com/action 
+                    rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
+
+#### DB
+
+    database        Name of the database to use for storing MinorImpact application data.
+    db_host         Name of the database server.
+    db_password     Databse user password.
+    db_port         Database connection port.
+    db_user         Database user name.
+    
+
+## Example
+
+     application_id = minorimpact
+    
+     log_method = file
+     log_file = /var/log/minorimpact.log
+
+     db:
+       database = minorimpact
+       db_host = localhost
+       db_port = 3306
+       db_user = minorimpact
+       db_password = minorimpactpw
+
 # METHODS
 
 ## new
@@ -80,7 +166,8 @@ $value can be a hash or an array pointer and a deep copy will be stored.
 
 ## user
 
-- user(\[\\%parameters\])
+- user()
+- user(\\%parameters)
 
 Returns the currently logged in user, or attempts to validate a user based on various
 criteria.
@@ -101,7 +188,7 @@ user with a blank password will be created if no user already exists.  This is t
 writing scripts easier, since most command-line applications simply assume the user
 has already been validated.  It will be up to the developer implement individual logins
 if they need to, by testing to see if the current used has a blank password and then 
-forcing the user to add a password. (see [MinorImpact::User::validateUser()](./MinorImpact_User.md#validateUser))
+forcing the user to add a password. (see [MinorImpact::User::validateUser()](./MinorImpact_User.md#validateuser))
 
 ### Parameters
 
@@ -179,7 +266,7 @@ Adds a message to the application log output.  Severity levels are, in order:
 Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See [debug()](#debug).
 
-Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#CONFIGURATION).
+Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#configuration).
 
 ## userID
 

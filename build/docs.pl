@@ -34,7 +34,10 @@ foreach $m (findModules("$dir")) {
         my $new_url = $old_url;
         $new_url =~s/::/_/g;
         if ($new_url =~/.+#/ && $url !~/\.md#/) {
-            $new_url =~s/^([^#]+)#(.*)$/$1\.md#$2/;
+            $new_url =~/^([^#]+)#(.*)$/;
+            my $f = $1;
+            my $a = lc($2);
+            $new_url = "$f.md#$a";
         } elsif ($new_url !~/^#/ && $url !~/\.md$/) {
             $new_url .= ".md";
         }

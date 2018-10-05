@@ -248,12 +248,33 @@ sub isAdmin {
 Returns the user's 'name' field.  A shortcut to get('name').
 
   $name = $USER->name();
+  # ... is equivalent to:
+  $name = $USER->get('name');
 
 =cut 
 
 sub name { 
     return shift->get('name'); 
 }
+
+=head2 searchObjects
+
+=over
+
+=item searchObjects()
+
+=item searchObjects(\%params)
+
+=back
+
+A shortcut to L<MinorImpact::Object::Search::search()/MinorImpact::Object::Search/search> that
+adds the current user_id to the parameter list.
+
+  @objects = $USER->searchObjects({name => '%panda% });
+  # ... is equivalent to:
+  @objects = MinorImpact::Object::Search::search({ name => '%panda%', user_id=>$USER->id() });
+
+=cut
 
 sub searchObjects { 
     my $self = shift || return;

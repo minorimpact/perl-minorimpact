@@ -47,6 +47,20 @@ Returns TRUE if the user has administrative priviledges for this application.
 Returns the user's 'name' field.  A shortcut to get('name').
 
     $name = $USER->name();
+    # ... is equivalent to:
+    $name = $USER->get('name');
+
+## searchObjects
+
+- searchObjects()
+- searchObjects(\\%params)
+
+A shortcut to ["MinorImpact::Object::Search/search" in MinorImpact::Object::Search::search()](./MinorImpact_Object_Search_search\(\.md)#MinorImpact::Object::Search-search) that
+adds the current user\_id to the parameter list.
+
+    @objects = $USER->searchObjects({name => '%panda% });
+    # ... is equivalent to:
+    @objects = MinorImpact::Object::Search::search({ name => '%panda%', user_id=>$USER->id() });
 
 ## settings
 
