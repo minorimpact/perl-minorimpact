@@ -87,9 +87,9 @@ By default, MinorImpact will look for a configration file at /etc/minorimpact.co
 the configuration file for a given application, however.  Each one of the following will be checked, in order, until a 
 valid configuration is discovered.
 
-## Methods
+## Setting Configuration Options...
 
-### ... from a Hash
+### ...from a Hash
 
 You can embedd configuration options directly in your application by passing a hash pointer to the "config" parameter when
 you create the MinorImpact object:
@@ -102,7 +102,7 @@ you create the MinorImpact object:
                     });
     
 
-### ... from a File
+### ...from a File
 
 Similarly, you can pass a the name of a file that contains the configuration settings to the using the "config\_file"
 when you create the MinorImpact object.
@@ -110,7 +110,7 @@ when you create the MinorImpact object.
     $MINORIMPACT = new MinorImpact({config_file => "/etc/minorimpact.conf"});
     
 
-### ... from an Environment Variable
+### ...from an Environment Variable
 
 You can also set the $MINORIMPACT\_CONFIG environment variable to the filename that contains the configuration options for
 application.
@@ -118,20 +118,26 @@ application.
     export MINORIMPACT_CONFIG="/etc/minorimpact.conf"
     
 
-### ... from a Local Configuration File
+### ...from a Local Configuration File
 
 If a file called "../conf/minorimpact.conf" exists, MinorImpact will read that for configuration information.  Specifically
 for running applications where the main script is in a "bin" directory, parallel to "lib" and "conf".
 
-### ... from a Global Configuration File
+### ...from a Global Configuration File
 
 If none of the other methods result in a configuration, MinorImpact will look for a file called "/etc/minorimpact.conf."
 
-## Options
+## Settings
 
 ### Sections
 
-#### Default
+Configuration options are grouped into multiple sections, the global, or "Default" section, the
+"DB" section, which contains database configuration parameters, and "USER\_DB", which is
+identical to the "DB", but defines the connection properties for connecting to a separate
+database for user authentication.  This is only useful for having multiple MinorImpact applications
+that need to share a common userbase.
+
+#### default
 
 - application\_id
 
@@ -141,7 +147,7 @@ If none of the other methods result in a configuration, MinorImpact will look fo
 
 - log\_file
 
-    OName of the file to save log entries to.  Only valid when "log\_method" is 
+    Name of the file to save log entries to.  Only valid when "log\_method" is 
     set to \*file\*.  Logging is disabled if "log\_method" is set to \*file\*
     and this value not set. DEFAULT: None.
 
@@ -155,7 +161,12 @@ If none of the other methods result in a configuration, MinorImpact will look fo
     Set to \*true\* if MinorImpact should generate links as http://example.com/action 
     rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
 
-#### DB
+- template\_directory
+
+    Directory that contains template files for this application.  Can be also be set (or
+    overridden) by the value of $MINORIMPACT\_TEMPLATE environment variable.
+
+#### db/user\_db
 
 - database
 
@@ -179,17 +190,23 @@ If none of the other methods result in a configuration, MinorImpact will look fo
 
 ## Example
 
-     application_id = minorimpact
-    
-     log_method = file
-     log_file = /var/log/minorimpact.log
+    application_id = minorimpact
+    log_method = file
+    log_file = /var/log/minorimpact.log
 
-     db:
-       database = minorimpact
-       db_host = localhost
-       db_port = 3306
-       db_user = minorimpact
-       db_password = minorimpactpw
+    [db]
+      database = minorimpact
+      db_host = localhost
+      db_port = 3306
+      db_user = minorimpact
+      db_password = minorimpactpw
+
+    [user_db]
+      database = minorimpact_user
+      db_host = remote
+      db_port = 3306
+      db_user = minorimpact
+      db_password = minorimpactpw
 
 # METHODS
 
@@ -343,7 +360,6 @@ Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See [debug()](#debug).
 
 Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#configuration).
-See [log\_method](#log_method).
 
 ## userID
 
