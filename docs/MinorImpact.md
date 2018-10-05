@@ -29,6 +29,58 @@ MinorImpact - Application/object framework and utility library.
 
 The main interface to the MinorImpact library.
 
+# INSTALLATION
+
+## Examples
+
+### RedHat/CentOS
+
+#### ...from git
+
+$ git clone https://github.com/minorimpact/perl-minorimpact.git
+$ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
+$ yum -y install epel-release
+
+#### ...from prebuilt packages
+
+Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo:
+
+    [minorimpact]
+      name=Minor Impact Tools/Libraries
+      baseurl=https://minorimpact.com/repo
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://minorimpact.com/RPM-GPG-KEY-minorimpact
+
+Install the package:
+
+    $ yum -y install epel-release perl-MinorImpact
+
+### Database Configuration
+
+Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
+
+    # yum install mariadb-server
+    # systemctl mariadb start
+    # mysql -e 'create database minorimpact;'
+    # mysql -e "CREATE USER 'minorimpact'@'localhost' IDENTIFIED BY 'minorimpact';"
+    # mysql -e "CREATE USER 'minorimpact'@'%' IDENTIFIED BY 'minorimpact';"
+    # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'localhost';"
+    # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
+
+### Configuration File
+
+Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
+
+    db:
+      database = minorimpact
+      db_host = localhost
+      db_port = 3306
+      db_user = minorimpact
+      db_password = minorimpact
+
+See \[Configuration\](#configuration) for more information.
+
 # CONFIGURATION
 
 By default, MinorImpact will look for a configration file at /etc/minorimpact.conf.  There are multiple ways to define 
@@ -81,25 +133,49 @@ If none of the other methods result in a configuration, MinorImpact will look fo
 
 #### Default
 
-    application_id  String used to differentiate log entries in multiple applications
-                    that might be writing to the same file or using syslog. 
-                    DEFAULT: minorimpact
-    log_file        Name of the file to save log entries to.  Only valid when "log_method" is 
-                    set to *file*.  Logging is disabled if "log_method" is set to *file*
-                    and this value not set. DEFAULT: None.
-    log_method      Method of logging output from MinorImpact::log().  Valid options are *file*, 
-                    *syslog* and *stderr*.  DEFAULT: *file*
-    pretty_urls     Set to *true* if MinorImpact should generate links as http://example.com/action 
-                    rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
+- application\_id
+
+    String used to differentiate log entries in multiple applications
+    that might be writing to the same file or using syslog. 
+    DEFAULT: minorimpact
+
+- log\_file
+
+    OName of the file to save log entries to.  Only valid when "log\_method" is 
+    set to \*file\*.  Logging is disabled if "log\_method" is set to \*file\*
+    and this value not set. DEFAULT: None.
+
+- log\_method
+
+    Method of logging output from [MinorImpact::log()](#log).  Valid options are \*file\*, 
+    \*syslog\* and \*stderr\*.  DEFAULT: \*file\*
+
+- pretty\_urls
+
+    Set to \*true\* if MinorImpact should generate links as http://example.com/action 
+    rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
 
 #### DB
 
-    database        Name of the database to use for storing MinorImpact application data.
-    db_host         Name of the database server.
-    db_password     Databse user password.
-    db_port         Database connection port.
-    db_user         Database user name.
-    
+- database
+
+    Name of the database to use for storing MinorImpact application data.
+
+- db\_host
+
+    Name of the database server.
+
+- db\_password
+
+    Databse user password.
+
+- db\_port
+
+    Database connection port.
+
+- db\_user
+
+    Database user name.
 
 ## Example
 
@@ -267,6 +343,7 @@ Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See [debug()](#debug).
 
 Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#configuration).
+See [log\_method](#log_method).
 
 ## userID
 

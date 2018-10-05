@@ -167,6 +167,8 @@ sub form {
 
 Returns the value of $field.
 
+  $address = $USER->get('address');
+
 =cut
 
 sub get {
@@ -267,7 +269,7 @@ sub name {
 
 =back
 
-A shortcut to L<MinorImpact::Object::Search::search()/MinorImpact::Object::Search/search> that
+A shortcut to L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search> that
 adds the current user_id to the parameter list.
 
   @objects = $USER->searchObjects({name => '%panda% });

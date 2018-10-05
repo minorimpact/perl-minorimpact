@@ -26,6 +26,8 @@ The object representing application users.
 
 Returns the value of $field.
 
+    $address = $USER->get('address');
+
 ## id
 
 Returns the user's ID.
@@ -55,7 +57,7 @@ Returns the user's 'name' field.  A shortcut to get('name').
 - searchObjects()
 - searchObjects(\\%params)
 
-A shortcut to ["MinorImpact::Object::Search/search" in MinorImpact::Object::Search::search()](./MinorImpact_Object_Search_search\(\.md)#MinorImpact::Object::Search-search) that
+A shortcut to [MinorImpact::Object::Search::search()](./MinorImpact_Object_Search.md#search) that
 adds the current user\_id to the parameter list.
 
     @objects = $USER->searchObjects({name => '%panda% });
