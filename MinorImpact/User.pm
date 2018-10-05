@@ -16,8 +16,8 @@ MinorImpact::User
   my $MINORIMPACT = new MinorImpact();
   
   # Get the current user.
-  my $user = $MINORIMPACT->user();
-  if (!$user) {
+  my $USER = $MINORIMPACT->user();
+  if (!$USER) {
       die "No currently logged in user.";
   }
 
@@ -157,7 +157,13 @@ sub form {
     return $form;
 }
 
-=head2 get($field)
+=head2 get
+
+=over
+
+=item get($field)
+
+=back
 
 Returns the value of $field.
 
@@ -206,9 +212,11 @@ sub getObjects {
     return @objects;
 }
 
-=head2 id()
+=head2 id
 
 Returns the user's ID.
+
+  $id = $USER->id();
 
 =cut
 
@@ -216,9 +224,15 @@ sub id {
     return shift->{data}->{id}; 
 } 
 
-=head2 isAdmin()
+=head2 isAdmin
 
 Returns TRUE if the user has administrative priviledges for this application.
+
+  if ($USER->isAdmin()) {
+      # Go nuts
+  } else {
+      # Go away
+  }
 
 =cut
 
@@ -229,48 +243,16 @@ sub isAdmin {
     return $self->get('admin');
 }
 
-=head2 name() 
+=head2 name
 
 Returns the user's 'name' field.  A shortcut to get('name').
+
+  $name = $USER->name();
 
 =cut 
 
 sub name { 
     return shift->get('name'); 
-}
-
-=head2 search(\%params)
-
-A passthru function that appends the user_id of the user object to to the query 
-hash of %params.
-
-=cut
-
-sub search {
-    my $params = shift || {};
-
-    my $DB = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
-
-    my $sql = "SELECT id FROM user WHERE id > 0";
-    my @fields = ();
-    if ($params->{name}) {
-        $sql .= " AND name LIKE ?";
-        push(@fields, $params->{name});
-    }
-
-    if ($params->{order_by}) {
-        $sql .= " ORDER BY " . $params->{order_by};
-    }
-    if ($params->{limit}) {
-        $sql .= " LIMIT ?";
-        push(@fields, $params->{limit});
-    }
-        
-    MinorImpact::log('info', "$sql, (" . join(',', @fields) . ")");
-    my $users = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields) || die $DB->errstr;
-    return map { $_->{id}; } @$users if ($params->{id_only});
-
-    return map { new MinorImpact::User($_->{id}); } @$users;
 }
 
 sub searchObjects { 
@@ -291,7 +273,7 @@ sub searchObjects {
     return @results;
 }
 
-=head2 settings()
+=head2 settings
 
 Returns the user's MinorImpact::settings object.
 
@@ -322,9 +304,17 @@ sub settings {
     return $settings;
 }
 
-=head2 update(\%fields)
+=head2 update
+
+=over
+
+=item update(\%fields)
+
+=back
 
 Update one or more user fields.
+
+  $USER->update({name => "Sting", address => "6699 Tantic Ave." });
 
 =cut
 
@@ -338,7 +328,13 @@ sub update {
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
 }
 
-=head2 validateUser($password)
+=head2 validateUser
+
+=over
+
+=item validateUser($password)
+
+=back
 
 Returns TRUE if $password is valid.
 
@@ -355,6 +351,61 @@ sub validateUser {
     my $password = shift || '';
 
     return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
+}
+
+=head1 SUBROUTINES
+
+=cut
+
+=head2 search
+
+=over
+
+=item search(\%params)
+
+=back
+
+Search the database for users that match.
+
+=head3 Parameters
+
+=over
+
+=item name
+
+Search for users by name.  Supports MySQL wildcards.
+
+  @users = MinorImpact::User::search({name => "% Smith" });
+
+=back
+
+=cut
+
+sub search {
+    my $params = shift || {};
+
+    my $DB = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
+
+    my $sql = "SELECT id FROM user WHERE id > 0";
+    my @fields = ();
+    if ($params->{name}) {
+        $sql .= " AND name LIKE ?";
+        push(@fields, $params->{name});
+    }
+
+    if ($params->{order_by}) {
+        $sql .= " ORDER BY " . $params->{order_by};
+    }
+    if ($params->{limit}) {
+        $sql .= " LIMIT ?";
+        push(@fields, $params->{limit});
+    }
+        
+    MinorImpact::log('info', "$sql, (" . join(',', @fields) . ")");
+    my $users = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields) || die $DB->errstr;
+    return map { $_->{id}; } @$users if ($params->{id_only});
+
+    return map { new MinorImpact::User($_->{id}); } @$users;
 }
 
 =head1 AUTHOR

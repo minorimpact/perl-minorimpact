@@ -31,7 +31,9 @@ The main interface to the MinorImpact library.
 
 # METHODS
 
-## new(\\%options)
+## new
+
+- new(\\%options)
 
 Create a new MinorImpact object.
 
@@ -47,7 +49,11 @@ Create a new MinorImpact object.
 
     The name of a file containing configuration options.
 
-## cache($name, \[$value\], \[$timeout\])
+## cache
+
+- cache($name)
+- cache($name, $value)
+- cache($name, $value, $timeout)
 
 Store, retrieve or delete name/value pairs from the global cache.  If value is not specified,
 the previous value for $name is returned.  $timeout is in seconds, and the default value is
@@ -72,7 +78,9 @@ $value can be a hash or an array pointer and a deep copy will be stored.
     print $old_hash->{one};
     # OUTPUT: 1
 
-## user(\[\\%parameters\])
+## user
+
+- user(\[\\%parameters\])
 
 Returns the currently logged in user, or attempts to validate a user based on various
 criteria.
@@ -93,7 +101,7 @@ user with a blank password will be created if no user already exists.  This is t
 writing scripts easier, since most command-line applications simply assume the user
 has already been validated.  It will be up to the developer implement individual logins
 if they need to, by testing to see if the current used has a blank password and then 
-forcing the user to add a password. (see [MinorImpact::User::validateUser()](./MinorImpact_User.md#validateuserpassword))
+forcing the user to add a password. (see [MinorImpact::User::validateUser()](./MinorImpact_User.md#validateUser))
 
 ### Parameters
 
@@ -105,7 +113,10 @@ forcing the user to add a password. (see [MinorImpact::User::validateUser()](./M
 
     The password of the user to validate.
 
-## www(\\%params)
+## www
+
+- www()
+- www(\\%params)
 
 Sets up the WWW/CGI framework.
 
@@ -127,25 +138,27 @@ Sets up the WWW/CGI framework.
 
 # SUBROUTINES
 
-## cgi()
+## cgi
 
 Returns the global cgi object.
 
     my $CGI = MinorImpact::cgi();
 
-## clearSession()
+## clearSession
 
 Clears the current session.
 
     MinorImpact::clearSession();
 
-## db()
+## db
 
 Returns the global database object.
 
     $DB = MinorImpact::db();
 
-## debug($switch)
+## debug
+
+- debug($switch)
 
 Turn debugging on or off by setting `$switch` to true or false.
 
@@ -154,7 +167,9 @@ Turn debugging on or off by setting `$switch` to true or false.
     MinorImpact::debug(0);
     MinorImpact::log("debug", "This message will not get logged.");
 
-## log($severity\_level, $message)
+## log
+
+- log($severity\_level, $message)
 
 Adds a message to the application log output.  Severity levels are, in order:
 "debug", "info", "notice", "warning", "err", "crit", "alert" and "emerg".
@@ -162,11 +177,11 @@ Adds a message to the application log output.  Severity levels are, in order:
     MinorImpact::log("crit", "There has been a critical error.");
 
 Messages with the "debug" severity are only logged if the global `debug`
-switch is enabled.  See ["::debug()"](#debug).
+switch is enabled.  See [debug()](#debug).
 
-Application-wide logging is configured in ["/etc/minorimpact.conf"](./index.md#logging).
+Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#CONFIGURATION).
 
-## userID()
+## userID
 
 Return the id of the current logged in user.
 

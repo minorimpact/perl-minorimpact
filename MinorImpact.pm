@@ -58,7 +58,13 @@ The main interface to the MinorImpact library.
 
 =head1 METHODS
 
-=head2 new(\%options)
+=head2 new
+
+=over
+
+=item new(\%options)
+
+=back
 
 Create a new MinorImpact object.
 
@@ -164,7 +170,17 @@ sub new {
     return $self;
 }
 
-=head2 cache($name, [$value], [$timeout])
+=head2 cache
+
+=over
+
+=item cache($name)
+
+=item cache($name, $value)
+
+=item cache($name, $value, $timeout)
+
+=back
 
 Store, retrieve or delete name/value pairs from the global cache.  If value is not specified,
 the previous value for $name is returned.  $timeout is in seconds, and the default value is
@@ -475,7 +491,13 @@ sub url {
     return $url;
 }
 
-=head2 user([\%parameters])
+=head2 user
+
+=over
+
+=item user([\%parameters])
+
+=back
 
 Returns the currently logged in user, or attempts to validate a user based on various
 criteria.
@@ -496,7 +518,7 @@ user with a blank password will be created if no user already exists.  This is t
 writing scripts easier, since most command-line applications simply assume the user
 has already been validated.  It will be up to the developer implement individual logins
 if they need to, by testing to see if the current used has a blank password and then 
-forcing the user to add a password. (see L<MinorImpact::User::validateUser()|MinorImpact_User.md/validateuserpassword>)
+forcing the user to add a password. (see L<MinorImpact::User::validateUser()|MinorImpact::User/validateUser>)
 
 =head3 Parameters
 
@@ -622,7 +644,15 @@ sub user {
     return;
 }
 
-=head2 www(\%params)
+=head2 www
+
+=over
+
+=item www()
+
+=item www(\%params)
+
+=back
 
 Sets up the WWW/CGI framework.
 
@@ -734,7 +764,7 @@ sub www {
 
 =head1 SUBROUTINES
 
-=head2 cgi()
+=head2 cgi
 
 Returns the global cgi object.
 
@@ -746,7 +776,7 @@ sub cgi {
     return $SELF->{CGI}; 
 }
 
-=head2 clearSession()
+=head2 clearSession
 
 Clears the current session.
 
@@ -759,7 +789,7 @@ sub clearSession {
     return MinorImpact::cache("session:$session_id", {});
 }
 
-=head2 db()
+=head2 db
 
 Returns the global database object.
 
@@ -904,7 +934,13 @@ sub dbConfig {
     #MinorImpact::log('debug', "ending");
 }
 
-=head2 debug($switch)
+=head2 debug
+
+=over
+
+=item debug($switch)
+
+=back
 
 Turn debugging on or off by setting C<$switch> to true or false.
 
@@ -928,7 +964,13 @@ sub debug {
     $MinorImpact::debug = isTrue($toggle)?$sub:0;
 }
 
-=head2 log($severity_level, $message)
+=head2 log
+
+=over
+
+=item log($severity_level, $message)
+
+=back
 
 Adds a message to the application log output.  Severity levels are, in order:
 "debug", "info", "notice", "warning", "err", "crit", "alert" and "emerg".
@@ -936,9 +978,9 @@ Adds a message to the application log output.  Severity levels are, in order:
   MinorImpact::log("crit", "There has been a critical error.");
 
 Messages with the "debug" severity are only logged if the global C<debug>
-switch is enabled.  See L</"::debug()">.
+switch is enabled.  See L<debug()|/debug>.
 
-Application-wide logging is configured in L<"E<sol>etcE<sol>minorimpact.conf"|index.md/logging>.
+Application-wide logging is configured in L<"E<sol>etcE<sol>minorimpact.conf"|MinorImpact/CONFIGURATION>.
 
 =cut
 
@@ -979,7 +1021,7 @@ sub log {
     }
 }
 
-=head2 userID()
+=head2 userID
 
 Return the id of the current logged in user.
 

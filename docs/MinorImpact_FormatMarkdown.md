@@ -22,9 +22,9 @@ version 2.12
 
 HTML::FormatMarkdown is a formatter that outputs Markdown.
 
-HTML::FormatMarkdown is built on [HTML::Formatter](./HTML::Formatter) and documentation for that
-module applies to this - especially ["new" in HTML::Formatter](./HTML::Formatter#new),
-["format\_file" in HTML::Formatter](./HTML::Formatter#format_file) and ["format\_string" in HTML::Formatter](./HTML::Formatter#format_string).
+HTML::FormatMarkdown is built on [HTML::Formatter](./HTML_Formatter.md) and documentation for that
+module applies to this - especially ["new" in HTML::Formatter](./HTML_Formatter.md#new),
+["format\_file" in HTML::Formatter](./HTML_Formatter.md#format_file) and ["format\_string" in HTML::Formatter](./HTML_Formatter.md#format_string).
 
 # INSTALLATION
 
@@ -33,15 +33,15 @@ See perlmodinstall for information and options on installing Perl modules.
 # BUGS AND LIMITATIONS
 
 You can make new bug reports, and view existing ones, through the
-web interface at [http://rt.cpan.org/Public/Dist/Display.html?Name=HTML-Format](http://rt.cpan.org/Public/Dist/Display.html?Name=HTML-Format).
+web interface at [http://rt.cpan.org/Public/Dist/Display.html?Name=HTML-Format](http://rt.cpan.org/Public/Dist/Display.html?Name=HTML-Format.md).
 
 # AVAILABILITY
 
-The project homepage is [https://metacpan.org/release/HTML-Format](https://metacpan.org/release/HTML-Format).
+The project homepage is [https://metacpan.org/release/HTML-Format](https://metacpan.org/release/HTML-Format.md).
 
 The latest version of this module is available from the Comprehensive Perl
-Archive Network (CPAN). Visit [http://www.perl.com/CPAN/](http://www.perl.com/CPAN/) to find a CPAN
-site near you, or see [https://metacpan.org/module/HTML::Format/](https://metacpan.org/module/HTML::Format/).
+Archive Network (CPAN). Visit [http://www.perl.com/CPAN/](http://www.perl.com/CPAN/.md) to find a CPAN
+site near you, or see [https://metacpan.org/module/HTML::Format/](https://metacpan.org/module/HTML_Format/.md).
 
 # AUTHORS
 

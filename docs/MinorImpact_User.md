@@ -9,8 +9,8 @@ MinorImpact::User
     my $MINORIMPACT = new MinorImpact();
     
     # Get the current user.
-    my $user = $MINORIMPACT->user();
-    if (!$user) {
+    my $USER = $MINORIMPACT->user();
+    if (!$USER) {
         die "No currently logged in user.";
     }
 
@@ -20,38 +20,51 @@ The object representing application users.
 
 # METHODS
 
-## get($field)
+## get
+
+- get($field)
 
 Returns the value of $field.
 
-## id()
+## id
 
 Returns the user's ID.
 
-## isAdmin()
+    $id = $USER->id();
+
+## isAdmin
 
 Returns TRUE if the user has administrative priviledges for this application.
 
-## name() 
+    if ($USER->isAdmin()) {
+        # Go nuts
+    } else {
+        # Go away
+    }
+
+## name
 
 Returns the user's 'name' field.  A shortcut to get('name').
 
-## search(\\%params)
+    $name = $USER->name();
 
-A passthru function that appends the user\_id of the user object to to the query 
-hash of %params.
-
-## settings()
+## settings
 
 Returns the user's MinorImpact::settings object.
 
     $settings = $user->settings();
 
-## update(\\%fields)
+## update
+
+- update(\\%fields)
 
 Update one or more user fields.
 
-## validateUser($password)
+    $USER->update({name => "Sting", address => "6699 Tantic Ave." });
+
+## validateUser
+
+- validateUser($password)
 
 Returns TRUE if $password is valid.
 
@@ -59,6 +72,22 @@ Returns TRUE if $password is valid.
     if ($user->validateUser("password")) {
         print "This is a bad password\n";
     }
+
+# SUBROUTINES
+
+## search
+
+- search(\\%params)
+
+Search the database for users that match.
+
+### Parameters
+
+- name
+
+    Search for users by name.  Supports MySQL wildcards.
+
+        @users = MinorImpact::User::search({name => "% Smith" });
 
 # AUTHOR
 
