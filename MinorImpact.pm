@@ -894,7 +894,7 @@ See L<MinorImpact::WWW|MinorImpact::WWW> for a list of default actions.
 =cut
 
 sub www {
-    my $self = shift || return;
+    my $self = shift || {};
     my $params = shift || {};
 
     MinorImpact::log('debug', "starting");
