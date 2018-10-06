@@ -257,6 +257,15 @@ $value can be a hash or an array pointer and a deep copy will be stored.
     print $old_hash->{one};
     # OUTPUT: 1
 
+## tt
+
+- tt($page)
+- tt($page, \\%vars)
+
+A wrapper/shortcut function to the [Template Toolkit](./Template.md) library.
+
+    MinorImpact::tt('template_name');
+
 ## user
 
 - user()
@@ -300,7 +309,16 @@ forcing the user to add a password. (see [MinorImpact::User::validateUser()](./M
 
 Sets up the WWW/CGI framework.
 
-    $MINORIMPACT->www({ param1 => "one" });
+    use MinorImpact;
+
+    $MINORIMPACT = new MinorImpact;
+
+    $MINORIMPACT->www({ actions => { index => \&index } });
+
+    sub index {
+      print "Content-type: text/html\n\n";
+      print "Hello world!\n";
+    }
 
 ### Parameters
 
@@ -308,13 +326,15 @@ Sets up the WWW/CGI framework.
 
     A hash defining which subs get called for a particular 'a=' parameter.
 
-        # use test() when http://example.com/cgi-bin/index.cgi?a=test
+        # use test() when calling http://example.com/cgi-bin/index.cgi?a=test
         $MINORIMPACT->www({ actions => { test => \&test } });
 
         sub test() {
           print "Content-type: text/html\n\n";
           print "Test\n";
         }
+
+    See [MinorImpact::WWW](./MinorImpact_WWW.md) for a list of default actions.
 
 # SUBROUTINES
 

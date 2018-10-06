@@ -529,10 +529,26 @@ sub sessionID {
     return $session_id;
 }
 
+=head2 tt
+
+=over
+
+=item tt($page)
+
+=item tt($page, \%vars)
+
+=back
+
+A wrapper/shortcut function to the L<Template Toolkit|Template> library.
+
+  MinorImpact::tt('template_name');
+
+=cut
+
 sub tt {
     my $self = shift || return; 
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);
@@ -587,6 +603,7 @@ sub tt {
             user        => $user,
         };
 
+        MinorImpact::log("debug", "INCLUDE_PATH: [ $template_directory, $global_template_directory ]");
         $TT = Template->new({
             INCLUDE_PATH => [ $template_directory, $global_template_directory ],
             INTERPOLATE => 1,
@@ -596,6 +613,7 @@ sub tt {
         $self->{TT} = $TT;
     }
     $TT->process(@_) || die $TT->error();
+    MinorImpact::log('debug', "Ending");
 }
 
 sub url {
@@ -842,7 +860,16 @@ sub user {
 
 Sets up the WWW/CGI framework.
 
-  $MINORIMPACT->www({ param1 => "one" });
+  use MinorImpact;
+
+  $MINORIMPACT = new MinorImpact;
+
+  $MINORIMPACT->www({ actions => { index => \&index } });
+
+  sub index {
+    print "Content-type: text/html\n\n";
+    print "Hello world!\n";
+  }
 
 =head3 Parameters
 
@@ -852,13 +879,15 @@ Sets up the WWW/CGI framework.
 
 A hash defining which subs get called for a particular 'a=' parameter.
 
-  # use test() when http://example.com/cgi-bin/index.cgi?a=test
+  # use test() when calling http://example.com/cgi-bin/index.cgi?a=test
   $MINORIMPACT->www({ actions => { test => \&test } });
 
   sub test() {
     print "Content-type: text/html\n\n";
     print "Test\n";
   }
+
+See L<MinorImpact::WWW|MinorImpact::WWW> for a list of default actions.
 
 =back
 
@@ -868,7 +897,14 @@ sub www {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    $self = new MinorImpact() unless ($self);
 
     my $CGI = MinorImpact::cgi();
     my $action = $CGI->param('a') || $CGI->param('action') || 'index';
