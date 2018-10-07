@@ -7,19 +7,37 @@ use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 
-=item1 NAME
+=head1 NAME
 
 MinorImpact::WWW
 
-=item1 SYNOPSIS
+=head1 SYNOPSIS
 
-=item1 METHODS
+  use MinorImpact;
 
-=over 4
+  MinorImpact::www({ actions => { index => \&index } });
+
+  sub index {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    # Do some custom stuff.
+    MinorImpact::WWW::index($MINORIMPACT, $params);
+  }
+
+=head1 METHODS
 
 =cut
 
-=item add()
+=head2 add
+
+=over
+
+=item add(\%params)
+
+=back
+
+
 
 =cut
 
@@ -250,7 +268,7 @@ sub edit_settings {
     });
 }
 
-=item edit_user()
+=head2 edit_user
 
 =cut
 sub edit_user {
@@ -690,7 +708,7 @@ sub search {
     MinorImpact::tt('search', $tt_variables);
 }
 
-=item settings()
+=head2 settings
 
 =cut
 
@@ -823,11 +841,19 @@ sub user {
     MinorImpact::tt('user');
 }
 
+=head2 viewHistory
+
+=over
+
 =item viewHistory()
+
 
 =item viewHistory( $field )
 
+
 =item viewHistory( $field, $value )
+
+=back
 
 =cut
 
@@ -847,13 +873,9 @@ sub viewHistory {
     MinorImpact::session('view_history', $history);
 }
 
-=back
+=head1 AUTHOR
 
-=cut
-
-=item1 AUTHOR
-
-Patrick Gillan (pgillan@minorimpact.com)
+Patrick Gillan <pgillan@minorimpact.com>
 
 =cut
 
