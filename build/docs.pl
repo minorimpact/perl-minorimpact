@@ -5,7 +5,7 @@ use Pod::Markdown;
 
 $dir = getcwd;
 foreach $m (findModules("$dir")) {
-    my ($markdown_file) = $m =~/^$dir\/(.*).pm$/;
+    my ($markdown_file) = $m =~/^$dir\/(.*).(pm|pod)$/;
     $markdown_file =~s/\//_/g;
     $markdown_file = "$markdown_file.md";
     $markdown_file = "$dir/docs/$markdown_file";
@@ -61,7 +61,7 @@ sub findModules {
             push (@modules, findModules("$dir/$f"));
             next;
         } else {
-            next unless ($f =~/\.pm$/);
+            next unless ($f =~/\.(pm|pod)$/);
         }
         push(@modules, "$dir/$f");
     }

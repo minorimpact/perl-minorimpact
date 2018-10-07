@@ -1,0 +1,41 @@
+=head1 NAME
+
+MinorImpact::Manual::Templates
+
+=head1 DESCRIPTION
+
+See L<Template>.
+
+=head1 VARIABLES
+
+=head2 
+
+=head1 METHODS
+
+=head2 url
+
+=over
+
+=item url(\%params)
+
+Generates an application URL. See L<MinorImpact::url()|MinorImpact/url>.
+
+=back
+
+  <a href='[% url({ action=>'add', object_type_id=>4 }) %]' title='Add Entry'>Add Entry</a>
+
+=head3 Parameters
+
+=over
+
+=item action
+
+=item object_type_id
+
+=back
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com.>
+
+=cut

@@ -543,6 +543,8 @@ A wrapper/shortcut function to the L<Template Toolkit|Template> library.
 
   MinorImpact::tt('template_name');
 
+See L<MinorImpact::Manual::Templates|MinorImpact::Manual::Templates>.
+
 =cut
 
 sub tt {
@@ -616,14 +618,86 @@ sub tt {
     MinorImpact::log('debug', "Ending");
 }
 
+=head2 url
+
+=over
+
+=item url(\%params)
+
+=back
+
+Generates a link to another part of the application.
+
+  $url = $MINORIMPACT->url({ action => 'login'});
+  # $url = "/cgi-bin/index.cgi?a=login";
+
+If the pretty_urls config option is set, will generate "pretty" urls.
+
+  $url = $MINORIMPACT->url({ action => 'login'});
+  # $url = "/login";
+
+=head3 Parameters
+
+url() supports most of the standard application parameters, along with a few
+switches that dictate the URL's format.
+
+=head4 Query Parameters
+
+=over
+
+=item action
+
+The page you want to link to.
+
+=item collection_id
+
+=item limit
+
+=item object_id
+
+You can also use 'id'.
+
+=item object_type_id
+
+=item page
+
+=item search
+
+=item sort
+
+=back
+
+=head4 Switches
+
+=over
+
+=item params
+
+Adds arbitrary parameters to the generated URL.
+
+  $url = MinorImpact::url({ action => 'add', object_type_id => 4, params => { foo => 'bar' }});
+  # returns /cgi-bin/index.cgi?a=add&object_type_id=4&foo=bar
+
+=item qualified
+
+If true, will include a fully qualified domain name.
+
+  $url = $MINORIMPACT->url({ action => 'login', qualified => 0 });
+  # returns "/login"
+
+  $url = $MINORIMPACT->url({ action => 'login', qualified => 1 });
+  # return "https://<server>/login
+ 
+=back
+
+=cut
+
 sub url {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
-
-    #MinorImpact::log('debug', "\$self='" . $self . "'");
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
@@ -688,8 +762,8 @@ sub url {
     }
 
     #print $self->{CGI}->header(-location=>$location);
-    #MinorImpact::log('debug', "\$url='$url'");
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "\$url='$url'");
+    MinorImpact::log('debug', "ending");
     return $url;
 }
 

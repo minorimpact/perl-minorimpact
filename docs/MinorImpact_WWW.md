@@ -1,30 +1,37 @@
+# NAME
+
 MinorImpact::WWW
 
-- add()
-- edit\_user()
-- settings()
+# SYNOPSIS
+
+    use MinorImpact;
+
+    MinorImpact::www({ actions => { index => \&index } });
+
+    sub index {
+      my $MINORIMPACT = shift || return;
+      my $params = shift || {};
+
+      # Do some custom stuff.
+      MinorImpact::WWW::index($MINORIMPACT, $params);
+    }
+
+# METHODS
+
+## add
+
+- add(\\%params)
+
+## edit\_user
+
+## settings
+
+## viewHistory
+
 - viewHistory()
 - viewHistory( $field )
 - viewHistory( $field, $value )
 
-Patrick Gillan (pgillan@minorimpact.com)
+# AUTHOR
 
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 10:
-
-    Unknown directive: =item1
-
-- Around line 14:
-
-    Unknown directive: =item1
-
-- Around line 16:
-
-    Unknown directive: =item1
-
-- Around line 854:
-
-    Unknown directive: =item1
+Patrick Gillan <pgillan@minorimpact.com>

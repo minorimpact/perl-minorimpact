@@ -266,6 +266,62 @@ A wrapper/shortcut function to the [Template Toolkit](./Template.md) library.
 
     MinorImpact::tt('template_name');
 
+## url
+
+- url(\\%params)
+
+Generates a link to another part of the application.
+
+    $url = $MINORIMPACT->url({ action => 'login'});
+    # $url = "/cgi-bin/index.cgi?a=login";
+
+If the pretty\_urls config option is set, will generate "pretty" urls.
+
+    $url = $MINORIMPACT->url({ action => 'login'});
+    # $url = "/login";
+
+### Parameters
+
+url() supports most of the standard application parameters, along with a few
+switches that dictate the URL's format.
+
+#### Query Parameters
+
+- action
+
+    The page you want to link to.
+
+- collection\_id
+- limit
+- object\_id
+
+    You can also use 'id'.
+
+- object\_type\_id
+- page
+- search
+- sort
+
+#### Switches
+
+- params
+
+    Adds arbitrary parameters to the generated URL.
+
+        $url = MinorImpact::url({ action => 'add', object_type_id => 4, params => { foo => 'bar' }});
+        # returns /cgi-bin/index.cgi?a=add&object_type_id=4&foo=bar
+
+- qualified
+
+    If true, will include a fully qualified domain name.
+
+         $url = $MINORIMPACT->url({ action => 'login', qualified => 0 });
+         # returns "/login"
+
+         $url = $MINORIMPACT->url({ action => 'login', qualified => 1 });
+         # return "https://<server>/login
+        
+
 ## user
 
 - user()
