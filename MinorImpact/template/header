@@ -35,8 +35,8 @@ Content-type: text/html
             [%# INCLUDE collectionsDD %]
             [% INCLUDE sort %]
         [% ELSE %]
-            <a class="w3-bar-item w3-button w3-border-right" href='[% INCLUDE url_index action='login' %]'>Log In</a>
-            <a class="w3-bar-item w3-button w3-border-right" href='[% INCLUDE url_index action='register' %]'>Register</a>
+            <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'login' }) %]'>Log In</a>
+            <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' %]'>Register</a>
         [% END %]
         [% INCLUDE header_menu_site %]
 </div>
@@ -51,24 +51,24 @@ Content-type: text/html
                     &nbsp;
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='admin' reset=1 %]'>Admin</a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'admin' }) %]'>Admin</a>
                 </div>
             </div>
             [% END %]
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' reset=1 %]'><i class="fa fa-user fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) }) %]'><i class="fa fa-user fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='user' reset=1 %]'>[% user.get('name') %]</a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) %]'>[% user.get('name') %]</a>
                 </div>
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='settings' reset=1 %]' title='Site settings'><i class="fa fa-gear fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'settings' }) %]' title='Site settings'><i class="fa fa-gear fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='settings' reset=1 %]' title='Site settings'>Settings</a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'settings' }) %]' title='Site settings'>Settings</a>
                 </div>
             </div>
             <div class="w3-row">
@@ -81,18 +81,18 @@ Content-type: text/html
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' reset=1 %]'><i class="fa fa-bookmark fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'><i class="fa fa-bookmark fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='collections' reset=1 %]'>Collections</a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'>Collections</a>
                 </div>
             </div>
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' reset=1 %]'><i class="fa fa-sign-out fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'><i class="fa fa-sign-out fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% INCLUDE url_index action='logout' reset=1 %]'>Logout</a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'>Logout</a>
                 </div>
             </div>
         [% ELSE %]

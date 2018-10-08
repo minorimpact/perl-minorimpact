@@ -171,6 +171,13 @@ String used to differentiate log entries in multiple applications
 that might be writing to the same file or using syslog. 
 DEFAULT: minorimpact
 
+=item copyright
+
+Text to include at the bottom of every page.  YEAR is automatically translated to the current
+year.  For example:
+
+  copyright = "&copy;YEAR Minor Impact"
+
 =item log_file
 
 Name of the file to save log entries to.  Only valid when "log_method" is 
@@ -223,6 +230,7 @@ Database user name.
 =head2 Example
 
   application_id = minorimpact
+  copyright = "&copy;YEAR Minor Impact"
   log_method = file
   log_file = /var/log/minorimpact.log
 

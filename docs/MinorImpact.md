@@ -145,6 +145,13 @@ that need to share a common userbase.
     that might be writing to the same file or using syslog. 
     DEFAULT: minorimpact
 
+- copyright
+
+    Text to include at the bottom of every page.  YEAR is automatically translated to the current
+    year.  For example:
+
+        copyright = "&copy;YEAR Minor Impact"
+
 - log\_file
 
     Name of the file to save log entries to.  Only valid when "log\_method" is 
@@ -191,6 +198,7 @@ that need to share a common userbase.
 ## Example
 
     application_id = minorimpact
+    copyright = "&copy;YEAR Minor Impact"
     log_method = file
     log_file = /var/log/minorimpact.log
 
@@ -265,6 +273,8 @@ $value can be a hash or an array pointer and a deep copy will be stored.
 A wrapper/shortcut function to the [Template Toolkit](./Template.md) library.
 
     MinorImpact::tt('template_name');
+
+See [MinorImpact::Manual::Templates](./MinorImpact_Manual_Templates.md).
 
 ## url
 
