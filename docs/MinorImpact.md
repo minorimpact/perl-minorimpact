@@ -276,6 +276,30 @@ A wrapper/shortcut function to the [Template Toolkit](https://metacpan.org/pod/T
 
 See [MinorImpact::Manual::Templates](./MinorImpact_Manual_Templates.md).
 
+### Variables
+
+The following variables should work when calling most of the default templates.
+
+- errors
+
+    A list of strings to include as error messages to the user.
+    See [error](#error).
+
+        push(@errors, "Invalid login.");
+        MinorImpact::tt('login', { errors => [ @errors ] });
+
+- objects
+
+    A list of [MinorImpact objects](./MinorImpact_Object.md) to display on a page.
+
+        MinorImpact::tt("index", { objects => [ @objects ] });
+
+- title
+
+    A page title.
+
+        MinorImpact::tt($template_name, {title => "Page Name"});
+
 ## url
 
 - url(\\%params)

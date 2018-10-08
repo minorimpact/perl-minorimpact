@@ -553,6 +553,34 @@ A wrapper/shortcut function to the L<Template Toolkit|https://metacpan.org/pod/T
 
 See L<MinorImpact::Manual::Templates|MinorImpact::Manual::Templates>.
 
+=head3 Variables
+
+The following variables should work when calling most of the default templates.
+
+=over
+
+=item errors
+
+A list of strings to include as error messages to the user.
+See L<error|/error>.
+
+  push(@errors, "Invalid login.");
+  MinorImpact::tt('login', { errors => [ @errors ] });
+
+=item objects
+
+A list of L<MinorImpact objects|MinorImpact::Object> to display on a page.
+
+  MinorImpact::tt("index", { objects => [ @objects ] });
+
+=item title
+
+A page title.
+
+  MinorImpact::tt($template_name, {title => "Page Name"});
+
+=back
+
 =cut
 
 sub tt {

@@ -4,7 +4,8 @@ MinorImpact::Manual::Templates
 
 =head1 DESCRIPTION
 
-See L<Template|https://metacpan.org/pod/Template>.
+A collection of prebuilt application templates based on the L<Template Toolkit|https://metacpan.org/pod/Template>
+library and generated via the L<MinorImpact::tt()|MinorImpact/tt> subroutine.
 
 =head1 VARIABLES
 
@@ -138,6 +139,7 @@ served up as a top level page.
 =head1 INCLUDED TEMPLATES
 
 =head2 copyright
+
 Dumps the value defined in the 'copyright' option in the 
 L<E<sol>etcE<sol>minorimpact.conf|MinorImpact/CONFIGURATION> file.
 
@@ -168,6 +170,28 @@ Default site javascript that goes in E<lt>footerE<gt>.
 Add custom javascript here.  You must include the surrounding E<lt>scriptE<gt> tags.
 
 =head2 header
+
+Included at the top of most pages, includes DOCTYPE and meta tags, and CGI headers. If you override
+this template with your own, remember to account for  the "Content-type: text/html\n\n" header, which is
+included in the default.  The stock version of this template also includes generic top and side navigation
+bars, a search box, and links to various site functions, including user login and settings.  Subject to change
+and may not be suitable for some (or any) applications.
+
+=head3 Variables
+
+=over
+
+=item title
+
+Use this as the page E<lt>titleE<gt>.  Can be set when the main page is called:
+
+  MinorImpact::tt($template_name, { title => "Page Name" });
+
+...or set from the calling template:
+
+  [% INCLUDE header title='Page Name' %]
+
+=back
 
 =head2 header_css
 
