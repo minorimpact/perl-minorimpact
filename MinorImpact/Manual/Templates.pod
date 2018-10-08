@@ -105,7 +105,8 @@ L<MinorImpact::tt()|MinorImpact/tt> sub.
 
 =item copyright
 
-Dumps the value defined in the 'copyright' option in the L</etc/minorimpact.conf|MinorImpact/CONFIG> file.
+Dumps the value defined in the 'copyright' option in the 
+L<"E<sol>etcE<sol>minorimpact.conf"|MinorImpact/CONFIGURATION> file.
 
 =item footer_javascript
 
