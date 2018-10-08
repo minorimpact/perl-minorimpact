@@ -12,6 +12,8 @@ See L<Template>.
 
 =head1 METHODS
 
+A handful of MinorImpact methods are automatically  available to use from within templates.
+
 =head2 url
 
 =over
@@ -31,6 +33,91 @@ Generates an application URL. See L<MinorImpact::url()|MinorImpact/url>.
 =item action
 
 =item object_type_id
+
+=back
+
+=head1 DEFAULT LAYOUT
+
+=head2 index
+
+=over
+
+=item header
+
+=over
+
+=item header_css
+
+=over
+
+=item css
+
+Note that header_css creates an html stylesheet link to this resource; it's not technically an INCLUDE, it's actually
+served up as a top level page.
+
+=over
+
+=item css_site
+
+Create a css_site template in your application's template directory to add custom style sheet entries if you choose not
+to override the css template completely.
+
+=back
+
+=back
+
+=item header_javascript
+
+=item header_search
+
+=item header_sort
+
+=item header_site
+
+Add custom html to the header here.
+
+=item sidebar_site
+
+Add custom sidebare entries here.  Items should follow the format:
+
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    &nbsp;
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'ACTION' }) %]'>TEXT</a>
+                </div>
+            </div>
+
+=item error
+
+The template for outputing error messages.  Displays errors passed as an array pointer to the 
+L<MinorImpact::tt()|MinorImpact/tt> sub.
+
+  push(@errors, "Invalid login.");
+  MinorImpact::tt('login', { errors => [ @errors ] });
+  
+=back
+
+=item footer
+
+=over
+
+=item copyright
+
+Dumps the value defined in the 'copyright' option in the L</etc/minorimpact.conf|MinorImpact/CONFIG> file.
+
+=item footer_javascript
+
+=over
+
+=item footer_javascript_site
+
+Add custom javascript here.  You must include the surrounding E<lt>scriptE<gt> tags.
+
+=back
+
+=back
 
 =back
 
