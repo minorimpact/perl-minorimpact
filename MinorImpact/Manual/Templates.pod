@@ -4,15 +4,29 @@ MinorImpact::Manual::Templates
 
 =head1 DESCRIPTION
 
-See L<Template>.
+See L<Template|https://metacpan.org/pod/Template>.
 
 =head1 VARIABLES
 
-=head2 
+Common variables that are supported by many MinorImpact L<action|/"action-templates"> or L<included|/"included-templates"> templates.
+
+=head2 errors
+
+A list of strings to include as error messages to the user.
+See L<error|/error>.
+
+  push(@errors, "Invalid login.");
+  MinorImpact::tt('login', { errors => [ @errors ] });
+
+=head2 objects
+
+A list of L<MinorImpact objects|MinorImpact::Object> to display on a page.
+
+  MinorImpact::tt("index", { objects => [ @objects ] });
 
 =head1 METHODS
 
-A handful of MinorImpact methods are automatically  available to use from within templates.
+A handful of MinorImpact methods are available to use from within templates.
 
 =head2 url
 
@@ -36,47 +50,159 @@ Generates an application URL. See L<MinorImpact::url()|MinorImpact/url>.
 
 =back
 
-=head1 DEFAULT LAYOUT
+=head1 ACTION TEMPLATES
 
 =head2 index
 
+Intended to be a generic landing page, this will generate a list of objects from the "objects"
+variable.
+
+  MinorImpact::tt("index", { objects => [ @objects ] });
+
+
+=head3 Includes
+
 =over
 
-=item header
+=item L<header|/header>
 
 =over
 
-=item header_css
+=item L<header_css|/header_css>
 
 =over
 
-=item css
+=item L<css|/css>
 
 Note that header_css creates an html stylesheet link to this resource; it's not technically an INCLUDE, it's actually
 served up as a top level page.
 
 =over
 
-=item css_site
-
-Create a css_site template in your application's template directory to add custom style sheet entries if you choose not
-to override the css template completely.
+=item L<css_site|/css_site>
 
 =back
 
 =back
 
-=item header_javascript
+=item L<header_javascript|/header_javascript>
 
-=item header_search
+=item L<header_search|/header_search>
 
-=item header_sort
+=item L<header_sort|/header_sort>
 
-=item header_site
+=item L<header_site|/header_site>
+
+=item L<sidebar_site|/sidebar_site>
+
+=item L<error|/error>
+  
+=back
+
+=back
+
+=over
+
+=item L<list_object|/list_object>
+
+=over
+
+=item L<list_object_site|/list_object_site>
+
+=item L<object|/object>
+
+=back
+
+=back
+
+=over
+
+=item L<footer|/footer>
+
+=over
+
+=item L<copyright|/copyright>
+
+=item L<footer_javascript|/footer_javascript>
+
+=over
+
+=item L<footer_javascript_site|/footer_javascript_site>
+
+=back
+
+=back
+
+=back
+
+=head1 INCLUDED TEMPLATES
+
+=head2 copyright
+Dumps the value defined in the 'copyright' option in the 
+L<E<sol>etcE<sol>minorimpact.conf|MinorImpact/CONFIGURATION> file.
+
+=head2 css
+
+Site wide style sheet.
+
+=head2 css_site
+
+Add custom style sheet entries here.
+
+=head2 error
+
+The template for outputing error messages.  Displays errors passed as an array pointer to the 
+L<MinorImpact::tt()|MinorImpact/tt> sub.
+
+  push(@errors, "Invalid login.");
+  MinorImpact::tt('login', { errors => [ @errors ] });
+
+=head2 footer
+
+=head2 footer_javascript
+
+Default site javascript that goes in E<lt>footerE<gt>.
+
+=head2 footer_javascript_site
+
+Add custom javascript here.  You must include the surrounding E<lt>scriptE<gt> tags.
+
+=head2 header
+
+=head2 header_css
+
+Includes external libraries and creates a html "stylesheet" link to L<css|/css>.
+
+=head2 header_javascript
+
+=head2 header_script
+
+Default site javascript that goes in E<lt>headE<gt>.
+
+=head2 header_site
 
 Add custom html to the header here.
 
-=item sidebar_site
+=head2 header_sort
+
+=head2 list_object
+
+Generates a list of L<object|/object> templates from the "objects" array passed to 
+L<MinorImpact::tt()|MinorImpact/tt>.
+
+  MinorImpact::tt($template_name, { objects => [ @objects ] });
+
+=head2 list_object_site
+
+Insert custom template output here.
+
+=head2 object
+
+Called for each object in the "objects" array, this is a fairly complicated template designed to output
+a L<MinorImpact object|MinorImpact::Object>'s L<toString() method|MinorImpact::Object/toString>, with the
+"column" format.
+
+=head2 sidebar_site
 
 Add custom sidebare entries here.  Items should follow the format:
 
@@ -89,41 +215,8 @@ Add custom sidebare entries here.  Items should follow the format:
                 </div>
             </div>
 
-=item error
-
-The template for outputing error messages.  Displays errors passed as an array pointer to the 
-L<MinorImpact::tt()|MinorImpact/tt> sub.
-
-  push(@errors, "Invalid login.");
-  MinorImpact::tt('login', { errors => [ @errors ] });
-  
-=back
-
-=item footer
-
-=over
-
-=item copyright
-
-Dumps the value defined in the 'copyright' option in the 
-L<"E<sol>etcE<sol>minorimpact.conf"|MinorImpact/CONFIGURATION> file.
-
-=item footer_javascript
-
-=over
-
-=item footer_javascript_site
-
-Add custom javascript here.  You must include the surrounding E<lt>scriptE<gt> tags.
-
-=back
-
-=back
-
-=back
-
 =head1 AUTHOR
 
-Patrick Gillan <pgillan@minorimpact.com.>
+Patrick Gillan <pgillan@minorimpact.com>
 
 =cut

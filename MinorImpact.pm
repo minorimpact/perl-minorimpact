@@ -547,7 +547,7 @@ sub sessionID {
 
 =back
 
-A wrapper/shortcut function to the L<Template Toolkit|Template> library.
+A wrapper/shortcut function to the L<Template Toolkit|https://metacpan.org/pod/Template> library.
 
   MinorImpact::tt('template_name');
 
@@ -1284,7 +1284,7 @@ Adds a message to the application log output.  Severity levels are, in order:
 Messages with the "debug" severity are only logged if the global C<debug>
 switch is enabled.  See L<debug()|/debug>.
 
-Application-wide logging is configured in L<"E<sol>etcE<sol>minorimpact.conf"|MinorImpact/CONFIGURATION>.
+Application-wide logging is configured in L<E<sol>etcE<sol>minorimpact.conf|MinorImpact/CONFIGURATION>.
 
 =cut
 

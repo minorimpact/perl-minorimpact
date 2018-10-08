@@ -270,7 +270,7 @@ $value can be a hash or an array pointer and a deep copy will be stored.
 - tt($page)
 - tt($page, \\%vars)
 
-A wrapper/shortcut function to the [Template Toolkit](./Template.md) library.
+A wrapper/shortcut function to the [Template Toolkit](https://metacpan.org/pod/Template.md) library.
 
     MinorImpact::tt('template_name');
 
@@ -445,7 +445,7 @@ Adds a message to the application log output.  Severity levels are, in order:
 Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See [debug()](#debug).
 
-Application-wide logging is configured in ["/etc/minorimpact.conf"](./MinorImpact.md#configuration).
+Application-wide logging is configured in [/etc/minorimpact.conf](./MinorImpact.md#configuration).
 
 ## userID
 

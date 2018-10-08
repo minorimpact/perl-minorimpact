@@ -4,15 +4,29 @@ MinorImpact::Manual::Templates
 
 # DESCRIPTION
 
-See [Template](./Template.md).
+See [Template](https://metacpan.org/pod/Template.md).
 
 # VARIABLES
 
-## 
+Common variables that are supported by many MinorImpact [action](#action-templates) or [included](#included-templates) templates.
+
+## errors
+
+A list of strings to include as error messages to the user.
+See [error](#error).
+
+    push(@errors, "Invalid login.");
+    MinorImpact::tt('login', { errors => [ @errors ] });
+
+## objects
+
+A list of [MinorImpact objects](./MinorImpact_Object.md) to display on a page.
+
+    MinorImpact::tt("index", { objects => [ @objects ] });
 
 # METHODS
 
-A handful of MinorImpact methods are automatically  available to use from within templates.
+A handful of MinorImpact methods are available to use from within templates.
 
 ## url
 
@@ -27,60 +41,121 @@ A handful of MinorImpact methods are automatically  available to use from within
 - action
 - object\_type\_id
 
-# DEFAULT LAYOUT
+# ACTION TEMPLATES
 
 ## index
 
-- header
-    - header\_css
-        - css
+Intended to be a generic landing page, this will generate a list of objects from the "objects"
+variable.
+
+    MinorImpact::tt("index", { objects => [ @objects ] });
+
+### Includes
+
+- [header](#header)
+    - [header\_css](#header_css)
+        - [css](#css)
 
             Note that header\_css creates an html stylesheet link to this resource; it's not technically an INCLUDE, it's actually
             served up as a top level page.
 
-            - css\_site
+            - [css\_site](#css_site)
+    - [header\_javascript](#header_javascript)
+    - [header\_search](#header_search)
+    - [header\_sort](#header_sort)
+    - [header\_site](#header_site)
+    - [sidebar\_site](#sidebar_site)
+    - [error](#error)
 
-                Create a css\_site template in your application's template directory to add custom style sheet entries if you choose not
-                to override the css template completely.
-    - header\_javascript
-    - header\_search
-    - header\_sort
-    - header\_site
+- [list\_object](#list_object)
+    - [list\_object\_site](#list_object_site)
+    - [object](#object)
 
-        Add custom html to the header here.
+- [footer](#footer)
+    - [copyright](#copyright)
+    - [footer\_javascript](#footer_javascript)
+        - [footer\_javascript\_site](#footer_javascript_site)
 
-    - sidebar\_site
+# INCLUDED TEMPLATES
 
-        Add custom sidebare entries here.  Items should follow the format:
+## copyright
+Dumps the value defined in the 'copyright' option in the 
+[/etc/minorimpact.conf](./MinorImpact.md#configuration) file.
 
-                    <div class="w3-row">
-                        <div class="w3-col s3">
-                            &nbsp;
-                        </div>
-                        <div class="w3-col s9">
-                            <a class="w3-bar-item w3-button" href='[% url({ action=>'ACTION' }) %]'>TEXT</a>
-                        </div>
-                    </div>
+## css
 
-    - error
+Site wide style sheet.
 
-        The template for outputing error messages.  Displays errors passed as an array pointer to the 
-        [MinorImpact::tt()](./MinorImpact.md#tt) sub.
+## css\_site
 
-            push(@errors, "Invalid login.");
-            MinorImpact::tt('login', { errors => [ @errors ] });
-            
-- footer
-    - copyright
+Add custom style sheet entries here.
 
-        Dumps the value defined in the 'copyright' option in the 
-        ["/etc/minorimpact.conf"](./MinorImpact.md#configuration) file.
+## error
 
-    - footer\_javascript
-        - footer\_javascript\_site
+The template for outputing error messages.  Displays errors passed as an array pointer to the 
+[MinorImpact::tt()](./MinorImpact.md#tt) sub.
 
-            Add custom javascript here.  You must include the surrounding <script> tags.
+    push(@errors, "Invalid login.");
+    MinorImpact::tt('login', { errors => [ @errors ] });
+
+## footer
+
+## footer\_javascript
+
+Default site javascript that goes in <footer>.
+
+## footer\_javascript\_site
+
+Add custom javascript here.  You must include the surrounding <script> tags.
+
+## header
+
+## header\_css
+
+Includes external libraries and creates a html "stylesheet" link to [css](#css).
+
+## header\_javascript
+
+## header\_script
+
+Default site javascript that goes in <head>.
+
+## header\_site
+
+Add custom html to the header here.
+
+## header\_sort
+
+## list\_object
+
+Generates a list of [object](#object) templates from the "objects" array passed to 
+[MinorImpact::tt()](./MinorImpact.md#tt).
+
+    MinorImpact::tt($template_name, { objects => [ @objects ] });
+
+## list\_object\_site
+
+Insert custom template output here.
+
+## object
+
+Called for each object in the "objects" array, this is a fairly complicated template designed to output
+a [MinorImpact object](./MinorImpact_Object.md)'s [toString() method](./MinorImpact_Object.md#tostring), with the
+"column" format.
+
+## sidebar\_site
+
+Add custom sidebare entries here.  Items should follow the format:
+
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    &nbsp;
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'ACTION' }) %]'>TEXT</a>
+                </div>
+            </div>
 
 # AUTHOR
 
-Patrick Gillan <pgillan@minorimpact.com.>
+Patrick Gillan <pgillan@minorimpact.com>
