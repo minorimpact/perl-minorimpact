@@ -25,6 +25,12 @@ A list of L<MinorImpact objects|MinorImpact::Object> to display on a page.
 
   MinorImpact::tt("index", { objects => [ @objects ] });
 
+=head2 title
+
+The page title.
+
+  MinorImpact::tt($template_name, { title => "Page Name" });
+
 =head1 METHODS
 
 A handful of MinorImpact methods are available to use from within templates.
