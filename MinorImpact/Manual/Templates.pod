@@ -96,8 +96,6 @@ served up as a top level page.
 
 =item L<header_search|/header_search>
 
-=item L<header_sort|/header_sort>
-
 =item L<header_site|/header_site>
 
 =item L<sidebar_site|/sidebar_site>
@@ -212,8 +210,6 @@ Default site javascript that goes in E<lt>headE<gt>.
 =head2 header_site
 
 Add custom html to the header here.
-
-=head2 header_sort
 
 =head2 list_object
 

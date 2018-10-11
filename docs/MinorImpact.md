@@ -131,11 +131,11 @@ If none of the other methods result in a configuration, MinorImpact will look fo
 
 ### Sections
 
-Configuration options are grouped into multiple sections, the global, or "Default" section, the
-"DB" section, which contains database configuration parameters, and "USER\_DB", which is
-identical to the "DB", but defines the connection properties for connecting to a separate
+Configuration options are grouped into multiple sections, the global, or "default" section, the
+"db" section, which contains database configuration parameters, and "user\_db", which is
+identical to the "db", but defines the connection properties for connecting to a separate
 database for user authentication.  This is only useful for having multiple MinorImpact applications
-that need to share a common userbase.
+that need to share a common userbase. Other sections are listed below.
 
 #### default
 
@@ -195,6 +195,14 @@ that need to share a common userbase.
 
     Database user name.
 
+#### site
+
+WWW specific application settings.
+
+- no\_search
+
+    If true, do not display the search bar in the default header.
+
 ## Example
 
     application_id = minorimpact
@@ -215,6 +223,9 @@ that need to share a common userbase.
       db_port = 3306
       db_user = minorimpact
       db_password = minorimpactpw
+
+    [site]
+      no_search = true
 
 # METHODS
 
@@ -426,6 +437,14 @@ Sets up the WWW/CGI framework.
 
     See [MinorImpact::WWW](./MinorImpact_WWW.md) for a list of default actions.
 
+- site\_config
+
+    A hash containing a list of site settings.  Sets or overrides the values in the "site"
+    of the [configuration](#configuration).
+
+        # Turn off headers for the default templates.
+        $MINORIMPACT->www({site_config => { no_search => 'true' }});
+
 # SUBROUTINES
 
 ## cgi
@@ -480,3 +499,11 @@ Return the id of the current logged in user.
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 240:
+
+    You forgot a '=back' before '=head2'

@@ -31,12 +31,12 @@ Content-type: text/html
             <a class="w3-bar-item w3-button w3-hide-large w3-border-right" style='margin-top:0px;' onclick="sidebar_open();"><i class='fa fa-navicon'></i></a>
             <div class="w3-bar-item w3-hide-small w3-hide-medium w3-border-right" style='margin-top:0px;'><i class='fa fa-navicon' style="color:black"></i></div>
             <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
-            [% INCLUDE header_search %]
-            [%# INCLUDE collectionsDD %]
-            [% INCLUDE sort %]
         [% ELSE %]
             <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'login' }) %]'>Log In</a>
-            <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' %]'>Register</a>
+            <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' }) %]'>Register</a>
+        [% END %]
+        [% IF site_config.no_search != 'true' %]
+            [% INCLUDE header_search %]
         [% END %]
         [% INCLUDE header_menu_site %]
 </div>
@@ -57,7 +57,7 @@ Content-type: text/html
             [% END %]
             <div class="w3-row">
                 <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) }) %]'><i class="fa fa-user fa-2x"></i></a>
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) %]'><i class="fa fa-user fa-2x"></i></a>
                 </div>
                 <div class="w3-col s9">
                     <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) %]'>[% user.get('name') %]</a>

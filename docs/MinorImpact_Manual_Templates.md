@@ -69,7 +69,6 @@ variable.
             - [css\_site](#css_site)
     - [header\_javascript](#header_javascript)
     - [header\_search](#header_search)
-    - [header\_sort](#header_sort)
     - [header\_site](#header_site)
     - [sidebar\_site](#sidebar_site)
     - [error](#error)
@@ -149,8 +148,6 @@ Default site javascript that goes in <head>.
 ## header\_site
 
 Add custom html to the header here.
-
-## header\_sort
 
 ## list\_object
 

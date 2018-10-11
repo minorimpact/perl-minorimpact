@@ -155,11 +155,11 @@ If none of the other methods result in a configuration, MinorImpact will look fo
 
 =head3 Sections
 
-Configuration options are grouped into multiple sections, the global, or "Default" section, the
-"DB" section, which contains database configuration parameters, and "USER_DB", which is
-identical to the "DB", but defines the connection properties for connecting to a separate
+Configuration options are grouped into multiple sections, the global, or "default" section, the
+"db" section, which contains database configuration parameters, and "user_db", which is
+identical to the "db", but defines the connection properties for connecting to a separate
 database for user authentication.  This is only useful for having multiple MinorImpact applications
-that need to share a common userbase.
+that need to share a common userbase. Other sections are listed below.
 
 =head4 default
 
@@ -227,6 +227,16 @@ Database user name.
 
 =back
 
+=head4 site
+
+WWW specific application settings.
+
+=over
+
+=item no_search
+
+If true, do not display the search bar in the default header.
+
 =head2 Example
 
   application_id = minorimpact
@@ -247,6 +257,9 @@ Database user name.
     db_port = 3306
     db_user = minorimpact
     db_password = minorimpactpw
+
+  [site]
+    no_search = true
 
 =head1 METHODS
 
@@ -635,6 +648,7 @@ sub tt {
             page        => $page,
             script_name => MinorImpact::scriptName(),
             #search      => $search,
+            site_config => $self->{conf}{site},
             sort        => $sort,
             typeName    => sub { MinorImpact::Object::typeName(shift); },
             url         => sub { MinorImpact::url(shift); },
@@ -999,6 +1013,14 @@ A hash defining which subs get called for a particular 'a=' parameter.
 
 See L<MinorImpact::WWW|MinorImpact::WWW> for a list of default actions.
 
+=item site_config
+
+A hash containing a list of site settings.  Sets or overrides the values in the "site"
+of the L<configuration|/CONFIGURATION>.
+
+  # Turn off headers for the default templates.
+  $MINORIMPACT->www({site_config => { no_search => 'true' }});
+
 =back
 
 =cut
@@ -1015,6 +1037,14 @@ sub www {
     }
 
     $self = new MinorImpact() unless ($self);
+
+    my $local_params = cloneHash($params);
+    if (defined($local_params->{site_config})) {
+        foreach my $key (keys %{$local_params->{site_config}}) {
+            $self->{conf}{site}{$key} = $local_params->{site_config}{$key};
+        }
+    }
+    delete($local_params->{site_config});
 
     my $CGI = MinorImpact::cgi();
     my $action = $CGI->param('a') || $CGI->param('action') || 'index';
@@ -1042,54 +1072,54 @@ sub www {
         MinorImpact::log('debug', "$key='$ENV{$key}'");
     }
 
-    if ($params->{actions}{$action}) {
-        my $sub = $params->{actions}{$action};
-        $sub->($self, $params);
+    if ($local_params->{actions}{$action}) {
+        my $sub = $local_params->{actions}{$action};
+        $sub->($self, $local_params);
     } elsif ( $action eq 'add') {
-        MinorImpact::WWW::add($self, $params);
+        MinorImpact::WWW::add($self, $local_params);
     } elsif ( $action eq 'add_reference') {
-        MinorImpact::WWW::add_reference($self, $params);
+        MinorImpact::WWW::add_reference($self, $local_params);
     } elsif ( $action eq 'admin') {
-        MinorImpact::WWW::admin($self, $params);
+        MinorImpact::WWW::admin($self, $local_params);
     } elsif ( $action eq 'collections') {
-        MinorImpact::WWW::collections($self, $params);
+        MinorImpact::WWW::collections($self, $local_params);
     } elsif ( $action eq 'delete') {
-        MinorImpact::WWW::del($self, $params);
+        MinorImpact::WWW::del($self, $local_params);
     } elsif ( $action eq 'delete_search') {
-        MinorImpact::WWW::delete_search($self, $params);
+        MinorImpact::WWW::delete_search($self, $local_params);
     } elsif ( $action eq 'edit') {
-        MinorImpact::WWW::edit($self, $params);
+        MinorImpact::WWW::edit($self, $local_params);
     } elsif ( $action eq 'edit_settings') {
-        MinorImpact::WWW::edit_settings($self, $params);
+        MinorImpact::WWW::edit_settings($self, $local_params);
     } elsif ( $action eq 'edit_user') {
-        MinorImpact::WWW::edit_user($self, $params);
+        MinorImpact::WWW::edit_user($self, $local_params);
     } elsif ( $action eq 'home') {
-        MinorImpact::WWW::home($self, $params);
+        MinorImpact::WWW::home($self, $local_params);
     } elsif ( $action eq 'login') {
-        MinorImpact::WWW::login($self, $params);
+        MinorImpact::WWW::login($self, $local_params);
     } elsif ( $action eq 'logout') {
-        MinorImpact::WWW::logout($self, $params);
+        MinorImpact::WWW::logout($self, $local_params);
     } elsif ( $action eq 'object') {
-        MinorImpact::WWW::object($self, $params);
+        MinorImpact::WWW::object($self, $local_params);
     } elsif ( $action eq 'object_types') {
-        MinorImpact::WWW::object_types($self);
+        MinorImpact::WWW::object_types($self, $local_params);
     } elsif ( $action eq 'register') {
-        MinorImpact::WWW::register($self, $params);
+        MinorImpact::WWW::register($self, $local_params);
     } elsif ( $action eq 'save_search') {
-        MinorImpact::WWW::save_search($self, $params);
+        MinorImpact::WWW::save_search($self, $local_params);
     } elsif ( $action eq 'search') {
-        MinorImpact::WWW::search($self, $params);
+        MinorImpact::WWW::search($self, $local_params);
     } elsif ( $action eq 'settings') {
-        MinorImpact::WWW::settings($self, $params);
+        MinorImpact::WWW::settings($self, $local_params);
     } elsif ( $action eq 'tablist') {
-        MinorImpact::WWW::tablist($self, $params);
+        MinorImpact::WWW::tablist($self, $local_params);
     } elsif ( $action eq 'tags') {
-        MinorImpact::WWW::tags($self, $params);
+        MinorImpact::WWW::tags($self, $local_params);
     } elsif ( $action eq 'user') {
         MinorImpact::WWW::user($self);
     } else {
-        eval { MinorImpact::tt($action, $params); };
-        MinorImpact::WWW::index($self, $params) if ($@);
+        eval { MinorImpact::tt($action, $local_params); };
+        MinorImpact::WWW::index($self, $local_params) if ($@);
     }
     MinorImpact::log('debug', "ending");
 }
