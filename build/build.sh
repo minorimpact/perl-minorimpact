@@ -2,8 +2,8 @@
 
 set -x
 
-LIVE_DIR="/usr/share/perl5/vendor_perl";
-RELEASE_DIR="/data/repo";
+LIVE_DIR="/usr/share/perl5/vendor_perl"
+RELEASE_DIR="/data/repo"
 
 while getopts "hn?" cliopts
 do
@@ -33,6 +33,12 @@ then
     exit 1
 fi
 
+_PREFIX=`echo $NAME | cut -d'-' -f1`
+if [ "$_PREFIX" = "perl" ];
+then
+    LIBNAME=`echo $NAME | cut -d'-' -f2`
+fi
+
 PACKAGE_NAME="$NAME-$VERSION"
 BUILD_DIR="/tmp"
 BASE_DIR="$BUILD_DIR/$PACKAGE_NAME"
@@ -46,7 +52,12 @@ mkdir -p $ROOT_DIR
 cp -a $DIRNAME/../* $ROOT_DIR
 
 cd $BUILD_DIR
-tar -c -v -z --exclude='.git' --exclude='build' -f ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME/
+if [ "$LIBNAME" = '' ];
+then
+    tar -c -v -z --exclude='.git' --exclude='build' --exclude -f ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME/
+else
+    tar -c -v -z --exclude='.git' --exclude='build' --exclude -f ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME/$LIBNAME.*
+fi
 cp ${PACKAGE_NAME}.tar.gz $SOURCE_DIR/
 
 rm -rf $BASE_DIR
