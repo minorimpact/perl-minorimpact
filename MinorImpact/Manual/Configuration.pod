@@ -131,6 +131,16 @@ year.  For example:
 
 Header bar color.  Supports the default HTML color names: L<https://www.w3schools.com/colors/colors_names.asp>.
 
+=item no_login_links
+
+If 'true', disables login links in the default header.  This doesn't disable 
+logins on the site, it just removes the links.  Setting this value also sets
+C<no_register_links>.
+
+=item no_register_links
+
+If 'true', disables user registration links on the default header.  This doesn't disable registrations, it just removes the links.
+
 =item no_search
 
 If true, do not display the search bar in the default header.

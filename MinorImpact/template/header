@@ -32,9 +32,11 @@ Content-type: text/html
             <div class="w3-bar-item w3-hide-small w3-hide-medium w3-border-right" style='margin-top:0px;'><i class='fa fa-navicon' style="color:black"></i></div>
             <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
         [% ELSE %]
-            <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'login' }) %]'>Log In</a>
-            [% IF site_config.no_register != 'true' %]
-                <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' }) %]'>Register</a>
+            [% IF site_config.no_login_links != 'true' %]
+                <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'login' }) %]'>Log In</a>
+                [% IF site_config.no_register_links != 'true' %]
+                    <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' }) %]'>Register</a>
+                [% END %]
             [% END %]
         [% END %]
         [% IF site_config.no_search != 'true' %]
@@ -83,41 +85,45 @@ Content-type: text/html
                     </div>
                 </div>
             [% END %]
-            [% IF site_config.no_register != 'true' %]
+            [% IF site_config.no_login_links != 'true' %]
+                [% IF site_config.no_register_links != 'true' %]
+                    <div class="w3-row">
+                        <div class="w3-col s3">
+                            <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'><i class="fa fa-bookmark fa-2x"></i></a>
+                        </div>
+                        <div class="w3-col s9">
+                            <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'>Collections</a>
+                        </div>
+                    </div>
+                [% END %]
                 <div class="w3-row">
                     <div class="w3-col s3">
-                        <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'><i class="fa fa-bookmark fa-2x"></i></a>
+                        <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'><i class="fa fa-sign-out fa-2x"></i></a>
                     </div>
                     <div class="w3-col s9">
-                        <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'>Collections</a>
+                        <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'>Logout</a>
                     </div>
                 </div>
             [% END %]
-            <div class="w3-row">
-                <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'><i class="fa fa-sign-out fa-2x"></i></a>
-                </div>
-                <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'logout' }) %]'>Logout</a>
-                </div>
-            </div>
         [% ELSE %]
-            <div class="w3-row">
-                <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'login' }) %]'><i class="fa fa-sign-in fa-2x"></i></a>
-                </div>
-                <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'login' }) %]'>Log In</a>
-                </div>
-            </div>
-            [% IF site_config.no_register != 'true' %]
+            [% IF site_config.no_login_links != 'true' %]
                 <div class="w3-row">
                     <div class="w3-col s3">
+                        <a class="w3-bar-item w3-button" href='[% url({ action=>'login' }) %]'><i class="fa fa-sign-in fa-2x"></i></a>
                     </div>
                     <div class="w3-col s9">
-                        <a class="w3-bar-item w3-button" href='[% url({ action=>'register' }) %]'>Register</a>
+                        <a class="w3-bar-item w3-button" href='[% url({ action=>'login' }) %]'>Log In</a>
                     </div>
                 </div>
+                [% IF site_config.no_register_links != 'true' %]
+                    <div class="w3-row">
+                        <div class="w3-col s3">
+                        </div>
+                        <div class="w3-col s9">
+                            <a class="w3-bar-item w3-button" href='[% url({ action=>'register' }) %]'>Register</a>
+                        </div>
+                    </div>
+                [% END %]
             [% END %]
         [% END %]
     </div>

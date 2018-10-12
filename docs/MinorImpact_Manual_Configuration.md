@@ -124,6 +124,16 @@ WWW specific application settings.
 
     Header bar color.  Supports the default HTML color names: [https://www.w3schools.com/colors/colors\_names.asp](https://www.w3schools.com/colors/colors_names.asp.md).
 
+- no\_login\_links
+
+    If 'true', disables login links in the default header.  This doesn't disable 
+    logins on the site, it just removes the links.  Setting this value also sets
+    `no_register_links`.
+
+- no\_register\_links
+
+    If 'true', disables user registration links on the default header.  This doesn't disable registrations, it just removes the links.
+
 - no\_search
 
     If true, do not display the search bar in the default header.

@@ -52,7 +52,7 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
     db_user = minorimpact
     db_password = minorimpact
 
-See L<MinorImpact::Manual::Configuration||MinorImpact::Manual::Configuration> for more configuration options.
+See L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration> for more configuration options.
 
 =head1 AUTHOR
 
