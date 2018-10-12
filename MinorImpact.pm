@@ -54,9 +54,12 @@ MinorImpact - Application/object framework and utility library.
 
 =head1 DESCRIPTION
 
-The main interface to the MinorImpact library.
+The main interface to the MinorImpact library, a personal application/object framework and utility collection.
 
 =head1 INSTALLATION
+
+See L<MinorImpact::Manual::Installation|MinorImpact::Manual::Installation> for more detailed
+installation instructions.
 
 =head2 Packages
 
@@ -106,7 +109,7 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
     db_user = minorimpact
     db_password = minorimpact
 
-See L<MinorImpact::Manual::Configration|MinorImpact::Manual::Configation> for more configuration options.
+See L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration> for more configuration options.
 
 =head1 METHODS
 
