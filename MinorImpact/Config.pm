@@ -5,6 +5,16 @@ use Exporter 'import';
 use MinorImpact::Util;
 use Time::Local;
 
+=head1 NAME
+
+MinorImpact::Config
+
+=head1 DESCRIPTION
+
+Subs for reading and writing configuration files.
+
+=cut
+
 @EXPORT = (
     "readConfig", 
     "writeConfig",
@@ -17,6 +27,16 @@ my $ENCODE_MAP = {
     "\\]" => "_RBRACKET_",
 };
 
+=head1 METHODS
+
+=head2 new
+
+returns a new MinorImpact::Config object.
+
+  $CONFIG = new MinorImpact::Config({ config_file=>"/etc/minorimpact.conf"});
+
+=cut
+
 sub new {
     my $package = shift;
     my $params = shift || {};
@@ -28,6 +48,27 @@ sub new {
 
     return $self;
 }
+
+=head1 SUBS
+
+=head2 decode
+
+=over
+
+=item decode($string)
+
+=item decode(\$string)
+
+=back
+
+Returns a version of C<$string> with special encoded/escaped converted
+back to their unencoded values.  If C<$string> is a reference, the data
+will be modified directly.
+
+  $decoded_string = MinorImpact::Config::decode("This is a colon_COLON_ _COLON_");
+  # $decoded_string = "This is a colon: :" 
+
+=cut
 
 sub decode {
     my $string = shift || return;
@@ -69,6 +110,37 @@ sub get {
 
     return $self->{config}{$category}{$key};
 }
+
+=head2 readConfig
+
+=over
+
+=item readConfig($config_file)
+
+=back
+
+Reads configuration information from a given file and returns a hash containing
+data.
+
+  # cat /etc/minorimpact.conf
+  # 
+  # application_id = "minorimpact"
+  #
+  # [db]
+  #   db_host = "localhost"
+
+  $config = MinorImpact::Config::readConfig("/etc/minorimpact.conf");
+  
+  # $config = { 
+  #   default => { 
+  #     application_id => "minorimpact"
+  #   },
+  #   db => {
+  #     db_host => "localhost"
+  #   }
+  # }
+
+=cut
 
 sub readConfig {
     my $config_file = shift || return;
@@ -118,6 +190,33 @@ sub readConfig {
     return $config;
 }
 
+=head2 writeConfig
+
+=over
+
+=item writeConfig($config_file, \%config)
+
+=back
+
+Writes configuration data to a given file.
+
+  MinorImpact::Config::writeConfig("/etc/minorimpact.conf", { 
+    default => { 
+      application_id => "minorimpact"
+    },
+    db => {
+      db_host => "localhost"
+    }
+  });
+  # cat /etc/minorimpact.conf
+  # 
+  # application_id = "minorimpact"
+  #
+  # [db]
+  #   db_host = "localhost"
+
+=cut
+
 sub writeConfig {
     my $config_file = shift || return;
     my $config = shift || return;
@@ -150,5 +249,10 @@ sub writeConfig {
     close(CONFIG);
 }
 
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;

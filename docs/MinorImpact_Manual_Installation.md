@@ -1,45 +1,20 @@
 # NAME
 
-MinorImpact - Application/object framework and utility library.
-
-# SYNOPSIS
-
-    use MinorImpact;
-
-    $MINORIMPACT = new MinorImpact();
-
-    # define a new object type
-    MinorImpact::Object::Type::add({name => 'test'});
-
-    # create a new object 
-    $test = new MinorImpact::Object({ object_type_id => 'test', name => "test-$$" });
-    print $test->id() . ": " . $test->get('name') . "\n";
-
-    # retrieve a second copy of the same object using just the id
-    $test2 = new MinorImpact::Object($test->id());
-    print $test2->id() . ": " . $test2->get('name') . "\n";
-
-    # add a field to the object definition
-    MinorImpact::Object::Type::addField({ object_type_id => $test->typeID(), name => 'field_1', type => 'string' });
-    $test->update({field_1 => 'one'});
-
-    print $test->get('field_1') . "\n";
+MinorImpact::Manual::Installation
 
 # DESCRIPTION
 
-The main interface to the MinorImpact library.
+## Examples
 
-# INSTALLATION
+### RedHat/CentOS
 
-## Packages
-
-### ...from git
+#### ...from git
 
     $ git clone https://github.com/minorimpact/perl-minorimpact.git
     $ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
     $ yum -y install epel-release
 
-### ...from prebuilt packages
+#### ...from prebuilt packages
 
 Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo:
 
@@ -54,9 +29,7 @@ Install the package:
 
     $ yum -y install epel-release perl-MinorImpact
 
-## Basic Configuration
-
-### Database
+### Database Configuration
 
 Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
 
@@ -68,7 +41,7 @@ Set up a database to use, if you don't already have one.  Included are basic ins
     # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'localhost';"
     # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
 
-### Settings
+### Configuration File
 
 Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
 
@@ -79,7 +52,7 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
       db_user = minorimpact
       db_password = minorimpact
 
-See [MinorImpact::Manual::Configration](./MinorImpact_Manual_Configation.md) for more configuration options.
+See [MinorImpact::Manual::Configuration](./|MinorImpact_Manual_Configuration.md) for more configuration options.
 
 # AUTHOR
 

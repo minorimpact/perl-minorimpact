@@ -58,17 +58,15 @@ The main interface to the MinorImpact library.
 
 =head1 INSTALLATION
 
-=head2 Examples
+=head2 Packages
 
-=head3 RedHat/CentOS
+=head3 ...from git
 
-=head4 ...from git
+  $ git clone https://github.com/minorimpact/perl-minorimpact.git
+  $ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
+  $ yum -y install epel-release
 
-$ git clone https://github.com/minorimpact/perl-minorimpact.git
-$ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
-$ yum -y install epel-release
-
-=head4 ...from prebuilt packages
+=head3 ...from prebuilt packages
 
 Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo:
 
@@ -83,7 +81,9 @@ Install the package:
 
   $ yum -y install epel-release perl-MinorImpact
 
-=head3 Database Configuration
+=head2 Basic Configuration
+
+=head3 Database
 
 Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
 
@@ -95,7 +95,7 @@ Set up a database to use, if you don't already have one.  Included are basic ins
   # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'localhost';"
   # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
 
-=head3 Configuration File
+=head3 Settings
 
 Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
 
@@ -106,160 +106,7 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
     db_user = minorimpact
     db_password = minorimpact
 
-See [Configuration](#configuration) for more information.
-
-=head1 CONFIGURATION
-
-By default, MinorImpact will look for a configration file at /etc/minorimpact.conf.  There are multiple ways to define 
-the configuration file for a given application, however.  Each one of the following will be checked, in order, until a 
-valid configuration is discovered.
-
-=head2 Setting Configuration Options...
-
-=head3 ...from a Hash
-
-You can embedd configuration options directly in your application by passing a hash pointer to the "config" parameter when
-you create the MinorImpact object:
-
-    $MINORIMPACT = new MinorImpact({
-                        config => { 
-                            log_method => "file, 
-                            log_file => "/var/log/minorimpact.conf" 
-                        }
-                    });
-    
-=head3 ...from a File
-
-Similarly, you can pass a the name of a file that contains the configuration settings to the using the "config_file"
-when you create the MinorImpact object.
-
-    $MINORIMPACT = new MinorImpact({config_file => "/etc/minorimpact.conf"});
-    
-=head3 ...from an Environment Variable
-
-You can also set the $MINORIMPACT_CONFIG environment variable to the filename that contains the configuration options for
-application.
-
-    export MINORIMPACT_CONFIG="/etc/minorimpact.conf"
-    
-=head3 ...from a Local Configuration File
-
-If a file called "../conf/minorimpact.conf" exists, MinorImpact will read that for configuration information.  Specifically
-for running applications where the main script is in a "bin" directory, parallel to "lib" and "conf".
-
-=head3 ...from a Global Configuration File
-
-If none of the other methods result in a configuration, MinorImpact will look for a file called "/etc/minorimpact.conf."
-
-=head2 Settings
-
-=head3 Sections
-
-Configuration options are grouped into multiple sections, the global, or "default" section, the
-"db" section, which contains database configuration parameters, and "user_db", which is
-identical to the "db", but defines the connection properties for connecting to a separate
-database for user authentication.  This is only useful for having multiple MinorImpact applications
-that need to share a common userbase. Other sections are listed below.
-
-=head4 default
-
-=over
-
-=item application_id
-
-String used to differentiate log entries in multiple applications
-that might be writing to the same file or using syslog. 
-DEFAULT: minorimpact
-
-=item copyright
-
-Text to include at the bottom of every page.  YEAR is automatically translated to the current
-year.  For example:
-
-  copyright = "&copy;YEAR Minor Impact"
-
-=item log_file
-
-Name of the file to save log entries to.  Only valid when "log_method" is 
-set to *file*.  Logging is disabled if "log_method" is set to *file*
-and this value not set. DEFAULT: None.
-
-=item log_method
-
-Method of logging output from L<MinorImpact::log()|/log>.  Valid options are *file*, 
-*syslog* and *stderr*.  DEFAULT: *file*
-
-=item pretty_urls
-
-Set to *true* if MinorImpact should generate links as http://example.com/action 
-rather than http://example.com/cgi-bin/index.cgi?a=action. DEFAULT: false
-
-=item template_directory
-
-Directory that contains template files for this application.  Can be also be set (or
-overridden) by the value of $MINORIMPACT_TEMPLATE environment variable.
-
-=back
-
-=head4 db/user_db
-
-=over
-
-=item database
-
-Name of the database to use for storing MinorImpact application data.
-
-=item db_host
-
-Name of the database server.
-
-=item db_password
-
-Databse user password.
-
-=item db_port
-
-Database connection port.
-
-=item db_user
-
-Database user name.
-
-=back
-
-=head4 site
-
-WWW specific application settings.
-
-=over
-
-=item no_search
-
-If true, do not display the search bar in the default header.
-
-=head2 Example
-
-  application_id = minorimpact
-  copyright = "&copy;YEAR Minor Impact"
-  log_method = file
-  log_file = /var/log/minorimpact.log
-
-  [db]
-    database = minorimpact
-    db_host = localhost
-    db_port = 3306
-    db_user = minorimpact
-    db_password = minorimpactpw
-
-  [user_db]
-    database = minorimpact_user
-    db_host = remote
-    db_port = 3306
-    db_user = minorimpact
-    db_password = minorimpactpw
-
-  [site]
-    no_search = true
+See L<MinorImpact::Manual::Configration|MinorImpact::Manual::Configation> for more configuration options.
 
 =head1 METHODS
 
@@ -302,7 +149,10 @@ sub new {
         MinorImpact::log('notice', "creating new MinorImpact object") unless ($options->{no_log});
 
         my $config;
-        if ($options->{config}) {
+        if ($options->{config} && ref($options->{config}) eq 'HASH') {
+            # TODO: Make this into a "merge," so that the user can chose to override a subset
+            #   of values from the config file, rather than having to include an entire
+            #   configuration.
             $config = $options->{config};
         } elsif ($options->{config_file}) {
             $config = readConfig($options->{config_file});
@@ -313,7 +163,7 @@ sub new {
         } elsif (-f "/etc/minorimpact.conf") {
             $config = readConfig("/etc/minorimpact.conf");
         }
-       
+
         if (!$config) {
             die "No configuration";
         }
@@ -340,6 +190,8 @@ sub new {
         $self->{conf}{default}{home_script} ||= "index.cgi";
         $self->{conf}{default}{no_log} = 1 if ($options->{no_log});
         $self->{conf}{default}{log_method} ||= 'syslog';
+
+        $self->{conf}{site}{header_color} ||= 'blue';
 
         $self->{starttime} = [gettimeofday];
 
@@ -612,7 +464,8 @@ sub tt {
     } else {
         my $CGI = cgi();
         my $collection_id = MinorImpact::session('collection_id');
-        my $copyright = $self->{conf}{default}{copyright} || '';
+        # TODO: Remove reference to the default section once the config changes go through.
+        my $copyright = $self->{conf}{site}{copyright} || $self->{default}{conf}{copyright} || '';
         if ($copyright =~/YEAR/) {
             my $year = ((localtime(time))[5] + 1900);
             $copyright =~s/YEAR/$year/;
@@ -1020,6 +873,10 @@ of the L<configuration|/CONFIGURATION>.
 
   # Turn off headers for the default templates.
   $MINORIMPACT->www({site_config => { no_search => 'true' }});
+
+Note that once these values are altered, they override the global configuration for the
+b<duration of the script>, so be aware if you use these values outside of subs referenced
+by www().
 
 =back
 

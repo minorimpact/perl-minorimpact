@@ -46,6 +46,26 @@ foreach $m (findModules("$dir")) {
     print FILE $new_output_string;
 
     close(FILE);
+
+
+    # I want to eliminate maintenance of the README file, so I'm going to use the
+    #   contents of the "main" module (which includes a basic description, 
+    #   synopsis and simplified installation and configuration instructions) as the
+    #   README file, minus the code reference sections.  In this package, and
+    #   probably most packages that use this same model, the main module comes up
+    #   last in the list of files, so I'm going to rely on that and just write every
+    #   module's documentation to the file - trusting that the last one is one that'll
+    #   get kept - rather than try to come up with some clever way to identify the "main"
+    #   package.
+    my $readme = $new_output_string;
+    # Remove the entire METHODS section
+    $readme =~ s/^# METHODS\n.*?\n# /# /sm;
+
+    # Remove the entire SUBROUTINES section.
+    $readme =~ s/^# SUBROUTINES\n.*?\n# /# /sm;
+    open(FILE, ">README.md");
+    print FILE $readme;
+    close(FILE);
 }
 
 sub findModules {
