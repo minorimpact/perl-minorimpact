@@ -1,7 +1,7 @@
 Summary: MinorImpact Code Library
 Name: perl-MinorImpact
 Version: 0.0.9
-Release: 06
+Release: 07
 Epoch: 0
 License: GPL
 URL: http://www.minorimpact.com

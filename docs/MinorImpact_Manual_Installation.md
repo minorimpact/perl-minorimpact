@@ -54,6 +54,28 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
 
 See [MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md) for more configuration options.
 
+### Users
+
+Change the admin user password by running the update\_user.pl script installed from minorimpact-util.
+
+    # /usr/loca/bin/update_user.pl -u admin -p admin
+    Enter Password for admin: admin
+    Enter New Password for admin:
+           again:
+
+Add a new user for yourself:
+
+    # /usr/loca/bin/add_user.pl -u admin -a yes <user>
+    Enter Password for admin:
+    Enter New Password for <user>:
+           again:
+
+By default, MinorImpact will create a passwordless user in the database for any local
+user running a MinorImpact script, based on the value on the $USER environment varable.
+You can set a password for one of these users by running:
+
+    # /usr/local/bin/update_user.pl -u admin -p <user>
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>

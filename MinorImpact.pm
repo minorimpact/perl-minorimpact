@@ -67,7 +67,9 @@ installation instructions.
 =head3 ...from git
 
   $ git clone https://github.com/minorimpact/perl-minorimpact.git
+  $ git clone https://github.com/minorimpact/minorimpact-util.git
   $ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
+  $ export PATH=$PATH:$PWD/minorimpact-util/bin
   $ yum -y install epel-release
 
 =head3 ...from prebuilt packages
@@ -83,7 +85,7 @@ Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo
 
 Install the package:
 
-  $ yum -y install epel-release perl-MinorImpact
+  $ yum -y install epel-release perl-MinorImpact minorimpact-util
 
 =head2 Basic Configuration
 
@@ -111,6 +113,22 @@ Create /etc/minorimpact.conf, if it doesn't already exist, and add the following
     db_password = minorimpact
 
 See L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration> for more configuration options.
+
+=head3 Users
+
+Change the admin user password by running the update_user.pl script installed from minorimpact-util.
+
+  # /usr/loca/bin/update_user.pl -u admin -p admin 
+  Enter Password for admin: admin
+  Enter New Password for admin:
+         again:
+
+Add a new user for yourself:
+
+  # /usr/loca/bin/add_user.pl -u admin -a yes <user>
+  Enter Password for admin: 
+  Enter New Password for <user>:
+         again:
 
 =head1 METHODS
 
