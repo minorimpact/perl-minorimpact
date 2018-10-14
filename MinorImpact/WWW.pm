@@ -395,13 +395,13 @@ sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
-    my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user();
 
     $MINORIMPACT->redirect({ action => 'home' }) if ($user);
 
+    my $CGI = $MINORIMPACT->cgi();
     my $username = $CGI->param('username');
     my $redirect = $CGI->param('redirect');
     my @errors;
@@ -411,7 +411,7 @@ sub login {
     }
 
     MinorImpact::tt('login', { errors => [ @errors ], redirect => $redirect, username => $username });
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
 }
 
 sub logout {
@@ -562,7 +562,6 @@ sub save_search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', 'starting');
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });

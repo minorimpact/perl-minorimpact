@@ -77,6 +77,11 @@ that need to share a common userbase. Other sections are listed below.
     Method of logging output from [MinorImpact::log()](#log).  Valid options are \*file\*, 
     \*syslog\* and \*stderr\*.  DEFAULT: \*file\*
 
+- memcached\_server
+
+    Set this to the name of your memcached server to enable memcached caching.  If this is not
+    set, MinorImpact will use the "/tmp/cache" directory.
+
 - pretty\_urls
 
     Set to \*true\* if MinorImpact should generate links as http://example.com/action 

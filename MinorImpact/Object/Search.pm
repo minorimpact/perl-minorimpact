@@ -261,7 +261,7 @@ sub _search {
     }
     #MinorImpact::debug(0);
     my $sql = "$select $from $where";
-    MinorImpact::log('info', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
+    MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
 
 
     my $objects;
