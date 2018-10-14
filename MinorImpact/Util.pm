@@ -9,8 +9,6 @@ use strict;
 
 =head1 DESCRIPTION
 
-=head2 Methods
-
 =cut
 
 use Data::Dumper;
@@ -38,6 +36,10 @@ our @EXPORT = (
     "trunc",
     "uniq", 
 );
+
+=head1 SUBROUTINES
+
+=cut
 
 sub cloneHash {
     my $hash = shift || return;
@@ -79,20 +81,36 @@ sub commonRoot {
     return $root;
 }
 
-=item convertCronTimeItemToList($item, $field_time)
+=head2 convertCronTimeItemToList
 
- Internal function that returns a list of all the explicit values of a particular cron item type.
- For example, in a crontab, the month might be represented as */2.  When passed to this function
- as ('*/2','month'), would return "1,3,5,7,9,11".  Handles all the standard methods of specifying
- cron fields, including 'all' ('*'), 'inervals' ('*/3'), 'ranges' ('1-4'), and 'ranged-interval'
- ('1-7/4').
+=over
 
- Parameters:
-   $item         A cron field, such as '*', '*/3', or '5-7'.
-   $cron_field   Which field this applies to.
+=item convertCrontTimeItemToList($item, $field_time)
 
- Returns:
-   An array of values.
+=back
+
+Internal function that returns a list of all the explicit values of a particular cron item type.
+For example, in a crontab, the month might be represented as */2.  When passed to this function
+as ('*/2','month'), would return "1,3,5,7,9,11".  Handles all the standard methods of specifying
+cron fields, including 'all' ('*'), 'inervals' ('*/3'), 'ranges' ('1-4'), and 'ranged-interval'
+('1-7/4').
+
+=head3 Parameters
+
+=over
+
+=item $item 
+
+A cron field, such as '*', '*/3', or '5-7'.
+
+=item $cron_field
+Which field this applies to.
+
+=back
+
+=head3 Returns
+
+An array of values.
 
 =cut
 
@@ -329,34 +347,90 @@ sub indexOf {
     return undef;
 }
 
+=head2 isTrue
+
+=over
+
+=item isTrue()
+
+=item isTrue($string)
+
+=back
+
+Compares the value  of $string to a list of expressions to try 
+to determine whether or not it's positive, and returns "1" or "0".
+
+  isTrue("true");
+  # OUTPUT: 1
+  isTrue("no");
+  # OUTPUT: 0
+  isTrue("false");
+  # OUTPUT: 0
+  isTrue("okay");
+  # OUTPUT: 1
+  isTrue();
+  # OUTPUT: 0
+
+Otherwise, isTrue adheres to the basic standard that if $string is set to anything
+it's true, otherwise it's false.
+
+=head3 Returns
+
+1 if $string is true, 0 if it is not.
+
+=cut
+
 sub isTrue {
-    my $string = shift || return 0;
+    my $string = lc(shift) || return 0;
 
     my $TRUISMS = {
+        "1" => 1,
+        "0" => 0,
+        "absolutely" => 1,
+        "absolutely not" => 0,
+        "affirmative" => 1,
         "almost" => 0,
         "bonza" => 1,
         "certainly" => 1,
+        "damn straight" => 1,
         "false" => 0,
         "fuck no" => 0,
+        "fuck yes" => 1,
+        "negative" => 0,
         "nein" => 0,
         "never" => 0,
         "no" => 0,
         "not cool" => 0,
         "not true" => 0,
+        "off" => 0,
         "ok" => 1,
+        "okay" => 1,
         "nyet" => 0,
         "right" => 1,
         "shit yeah" => 1,
         "sure" => 1,
+        "true" => 1,
         "why not" => 1,
         "wrong" => 0,
         "yes" => 1,
     };
 
-    return (defined($TRUISMS->{lc($string)}))?$TRUISMS->{lc($string)}:1;
+    if (defined($TRUISMS->{$string})){
+        return $TRUISMS->{$string};
+    } elsif ($string) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
-=item lastRunTime($cron_entry[, $current_time])
+=head2 lastRunTime
+
+=over
+
+=item lastRunTime ($cron_entry[, $current_time])
+
+=back
 
  Parses a cron entry and determines the last time it should have run prior to $current_time.
 
