@@ -691,9 +691,10 @@ sub url {
 =back
 
 Returns the currently logged in user, or attempts to validate a user based on various
-criteria.
+criteria.  This is the main mechanism by which everything in MinorImpact validates
+the active user.
 
-  my $user = $MINORIMPACT->user();
+  $user = $MINORIMPACT->user();
 
 If username and password aren't passed explicitly (and they usually aren't), this method
 will first check the CGI object to see if there is a username and password included
@@ -707,14 +708,23 @@ silent, automatic failure.
 If user() is called from a command line script (ie, if $ENV{USER} is set), then a new
 user with a blank password will be created if no user already exists.  This is to make
 writing scripts easier, since most command-line applications simply assume the user
-has already been validated.  It will be up to the developer implement individual logins
-if they need to, by testing to see if the current used has a blank password and then 
-forcing the user to add a password. (see L<MinorImpact::User::validateUser()|MinorImpact::User/validateUser>)
+has already been validated.
+
+If $ENV{USER} does exist, and has a non-blank password, the user will be prompted 
+to enter one.
 
 =head3 Parameters
 
 =over
 
+=item force
+
+Redirect to a login page if a valid user is not found in a CGI context.  Results are 
+currently undefined on the command line.
+
+  # Don't return unless the current user is valid.
+  $user = MinorImpact::user({ force => });
+  
 =item username
 
 The username of the user to validate.
