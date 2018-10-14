@@ -148,7 +148,7 @@ sub search {
 sub _search {
     my $params = shift || {};
 
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
     my $DB = MinorImpact::db();
 
     my $query = $params->{query}; # || $params;
@@ -273,7 +273,7 @@ sub _search {
         MinorImpact::cache("search_$hash", $objects);
     }
 
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return map { $_->{id}; } @$objects;
 }
 

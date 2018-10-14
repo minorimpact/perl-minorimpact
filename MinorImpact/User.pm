@@ -235,8 +235,8 @@ Returns TRUE if the user has administrative priviledges for this application.
 
 sub isAdmin {
     my $self = shift || return;
-    #MinorImpact::log('info', "starting");
-    #MinorImpact::log('info', "ending");
+    #MinorImpact::log('debug', "starting");
+    #MinorImpact::log('debug', "ending");
     return $self->get('admin');
 }
 
@@ -540,7 +540,7 @@ sub search {
         push(@fields, $params->{limit});
     }
         
-    MinorImpact::log('info', "$sql, (" . join(',', @fields) . ")");
+    MinorImpact::log('debug', "$sql, (" . join(',', @fields) . ")");
     my $users = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields) || die $DB->errstr;
     return map { $_->{id}; } @$users if ($params->{id_only});
 
