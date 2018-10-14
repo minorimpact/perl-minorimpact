@@ -11,17 +11,18 @@ use DBI;
 use Digest::MD5 qw(md5 md5_hex);
 use File::Spec;
 use JSON;
+use MinorImpact::CLI;
+use MinorImpact::Config;
+use MinorImpact::Object;
+use MinorImpact::User;
+use MinorImpact::Util;
+use MinorImpact::WWW;
 use Sys::Syslog;
 use Template;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Time::Local;
 use URI::Escape;
 
-use MinorImpact::Config;
-use MinorImpact::Object;
-use MinorImpact::User;
-use MinorImpact::Util;
-use MinorImpact::WWW;
 
 our $SELF;
 
@@ -234,6 +235,8 @@ sub new {
 
 =over
 
+=item cache()
+
 =item cache($name)
 
 =item cache($name, $value)
@@ -265,12 +268,16 @@ $value can be a hash or an array pointer and a deep copy will be stored.
   print $old_hash->{one};
   # OUTPUT: 1
 
+Called with no values, cache() return the raw cache oject, either L<Cache::Memcached|https://metacpan.org/pod/Cache::Memcached>,
+a memcached server is configured, or L<CHI|https://metacpan.org/pod/CHI>. (see 
+L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration/Settings>) for more information on cache configuration.
 =cut
 
 sub cache {
     my $self = shift || return;
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
+
     if (!ref($self)) {
         unshift(@_, $self);
         $self = $MinorImpact::SELF;
@@ -304,10 +311,10 @@ sub cache {
         return $value;
     }
 
-    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
+    MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
     $cache->set($name, $value, $timeout);
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $cache;
 }
 
@@ -749,7 +756,7 @@ sub user {
     }
 
     if ($username) {
-        # ... or this username.
+        # ... or number of failures for this username.
         $login_failures = MinorImpact::cache("login_failures_$username") || 0;
         if ($login_failures >= 5) {
             MinorImpact::log('notice', "Excessive login failures for '$username'");
@@ -761,22 +768,25 @@ sub user {
     #   we'd have to validate against the database over and over again... so just validate against
     #   a stored hash and return the cached user.  Once USERHASH is set, we know we've already 
     #   checked this username/passsword combination, and if USER is set we already know it succeeded.
-    if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
+    if ($self->{USER} && $self->{USER}->name() eq $username && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
         return $self->{USER};
     }
 
     # If the username and password are provided, then validate the user.
     if ($username && $password && !$self->{USERHASH}) {
-        MinorImpact::log('notice', "validating " . $username);
+        MinorImpact::log('debug', "validating " . $username);
 
         $self->{USERHASH} = $user_hash;
         my $user = new MinorImpact::User($username);
         if ($user && $user->validateUser($password)) {
-            #MinorImpact::log('debug', "password verified for $username");
+            MinorImpact::log('debug', "password verified for $username");
             $self->{USER} = $user;
             MinorImpact::session('user_id', $user->id());
             return $user;
+        } elsif ($user) {
+            MinorImpact::log('debug', "unable to verify password for $username");
         }
+
         # We keep the login failure count for 7 minutes, which should be long enough to make
         #   a brute force attempt fail.
         $login_failures++;
@@ -817,14 +827,27 @@ sub user {
             #   dan't have a mechanism for automating database updates).
             $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '' });
         }
-        if ($user && $user->validateUser('')) {
-            $self->{USER} = $user;
-            return $user;
+        # Check to see if the user has a blank password, the assumption being that this is
+        #   some yahoo using the library for a simple command line script and doesn't care
+        #   about users or security.
+        if ($user) {
+            MinorImpact::log('debug', "Trying out a blank password");
+            if ($user->validateUser('')) {
+                $self->{USER} = $user;
+                return $user;
+            }
+
+            # If all else fails, prompt for a password on the command line.
+            my $password = MinorImpact::CLI::passwordPrompt({username => $username});
+            if ($user->validateUser($password)) {
+                $self->{USER} = $user;
+                return $user;
+            }
         }
     }
-    #MinorImpact::log('info', "no user found");
+    MinorImpact::log('debug', "no user found");
     MinorImpact::redirect({action => 'login' }) if ($params->{force});
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return;
 }
 
@@ -1023,7 +1046,7 @@ sub db {
     return $SELF->{DB};
 }
 
-my $VERSION = 1;
+my $VERSION = 2;
 sub dbConfig {
     #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
@@ -1153,7 +1176,12 @@ sub dbConfig {
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
-    #MinorImpact::log('debug', "ending");
+
+    my $admin = new MinorImpact::User('admin');
+    unless ($admin) {
+        $DB->do("INSERT INTO user(name, password, admin) VALUES (?,?,?)", undef, ("admin", "92.96PWMq8Us.", 1)) || die $DB->errstr;
+    }
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 debug
@@ -1241,8 +1269,21 @@ sub log {
     } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
         syslog($level, $log);
     }
+} 
+
+=head2 userDB
+
+Returns the global user database object.
+
+  $USERDB = MinorImpact::userDB();
+
+=cut
+
+sub userDB {
+    return $SELF->{USERDB};
 }
 
+ 
 =head2 userID
 
 Return the id of the current logged in user.

@@ -106,6 +106,7 @@ Create a new MinorImpact object.
 
 ## cache
 
+- cache()
 - cache($name)
 - cache($name, $value)
 - cache($name, $value, $timeout)
@@ -132,6 +133,10 @@ $value can be a hash or an array pointer and a deep copy will be stored.
     $old_hash = $MINORIMPACT->cache("hash");
     print $old_hash->{one};
     # OUTPUT: 1
+
+Called with no values, cache() return the raw cache oject, either [Cache::Memcached](https://metacpan.org/pod/Cache_Memcached.md),
+a memcached server is configured, or [CHI](https://metacpan.org/pod/CHI.md). (see 
+[MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md#settings)) for more information on cache configuration.
 
 ## tt
 
@@ -350,6 +355,12 @@ Messages with the "debug" severity are only logged if the global `debug`
 switch is enabled.  See [debug()](#debug).
 
 Application-wide logging is configured in [/etc/minorimpact.conf](./MinorImpact.md#configuration).
+
+## userDB
+
+Returns the global user database object.
+
+    $USERDB = MinorImpact::userDB();
 
 ## userID
 

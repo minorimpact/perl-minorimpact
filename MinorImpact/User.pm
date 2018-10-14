@@ -33,51 +33,38 @@ sub new {
     my $package = shift;
     my $params = shift;
 
-   #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $self = {};
 
-    $self->{DB} = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
+    $self->{DB} = MinorImpact::userDB() || die "User database is not defined.";
 
     dbConfig($self->{DB});
 
     my $user_id = $params;
-    #MinorImpact::log(8 "\$user_id='$params'");
+    MinorImpact::log('debug', "\$user_id='$params'");
 
     my $data = MinorImpact::cache("user_data_$user_id");
-    unless ($data) {
+    MinorImpact::log('debug', "1 \$data->{name}='" . $data->{name} . "'");
+    unless ($data->{id}) {
         if ($user_id =~/^\d+$/) {
+            MinorImpact::log('debug', "searching database by id");
             $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id));
         } else {
+            MinorImpact::log('debug', "searching database by name");
             $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id));
         }
+        MinorImpact::log('debug', "2 \$data->{name}='" . $data->{name} . "'");
         return unless $data;
         MinorImpact::cache("user_data_$user_id", $data);
     }
+    return unless ($data->{id});
+
     $self->{data} = $data;
     bless($self, $package);
 
-    #MinorImpact::log(8 "created user: '" .$self->name() . "'");
+    MinorImpact::log('debug', "created user: '" . $self->name() . "'");
     return $self;
-}
-
-sub addUser {
-    my $params = shift || return;
-    
-    #MinorImpact::log('info', "starting");
-
-    my $DB = $MinorImpact::SELF->{USERDB};
-    if ($DB && $params->{username}) {
-        # Only the first 8 characters matter to crypt(); disturbing and weird.
-        $DB->do("INSERT INTO user (name, password, create_date) VALUES (?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$))) || die $DB->errstr;
-        my $user_id = $DB->{mysql_insertid};
-        #MinorImpact::log('debug', "\$user_id=$user_id");
-        return new MinorImpact::User($user_id);
-    }
-    die "Couldn't add user " . $params->{username};
-
-    #MinorImpact::log('info', "ending");
-    return;
 }
 
 sub dbConfig {
@@ -102,27 +89,29 @@ sub dbConfig {
     }
 }
 
-sub count {
-    my $params = shift || {};
+=head2 delete
 
-    my $DB = $MinorImpact::SELF->{USERDB} || die "User database is not defined.";
+=over
 
-    my $sql = "SELECT count(*) FROM user WHERE id > 0";
-    my @fields = ();
-    if ($params->{name}) {
-        $sql .= " AND name LIKE ?";
-        push(@fields, $params->{name});
-    }
-    my $users = $DB->selectrow_array($sql, undef, @fields) || die $DB->errstr;
-    return $users;
-}
+=item delete(\%params)
+
+=back
+
+Delete the user and all of the objects owned by that user.
+
+  $USER->delete();
+
+=cut
 
 sub delete {
     my $self = shift || return;
     my $params = shift || {};
     
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    my $user = MinorImpact::user();
+    die "Invalid user\n" unless ($user && $user->isAdmin());
     my $user_id = $self->id();
+    my $username = $self->name();
     # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
     my $DB = $self->{DB};
     my @object_ids = $self->searchObjects({ query => { id_only => 1, debug => 'MinorImpact::User::delete();' } });
@@ -132,17 +121,22 @@ sub delete {
     foreach my $object_id (@object_ids) {
         my $object = new MinorImpact::Object($object_id);
         if ($object) {
-             MinorImpact::log('info', "deleting object " . $object->name());
+            MinorImpact::log('info', "deleting object " . $object->name());
             $object->delete($params);
             $deleted++;
         }
     }
     if ($object_count == $deleted) {
         MinorImpact::log('info', "deleting user $user_id");
-        MinorImpact::cache("user_data_$user_id", {});
         $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
+    } else {
+        die "object_count:$object_count does not match deleted count:$deleted";
     }
-    #MinorImpact::log('debug', "ending");
+
+    MinorImpact::cache("user_data_$user_id", {});
+    MinorImpact::cache("user_data_$username", {});
+    MinorImpact::log('debug', "ending");
+    return 1;
 }
 
 sub form {
@@ -370,15 +364,105 @@ Returns TRUE if $password is valid.
 
 sub validateUser {
     my $self = shift || return;
+    MinorImpact::log('debug', "starting");
 
     my $password = shift || '';
 
-    return (crypt($password, $self->{data}->{password}) eq $self->{data}->{password});
+    my $crypt = crypt($password, $self->{data}->{password});
+    my $valid = 1 if ($crypt eq $self->{data}->{password});
+    MinorImpact::log('debug', "User is " . ($valid?"valid":"invalid"));
+    MinorImpact::log('debug', "ending");
+    return $valid;
 }
 
 =head1 SUBROUTINES
 
 =cut
+
+=head2 addUser
+
+=over
+
+=item addUser(\%params)
+
+=back
+
+Add a MinorImpact user.
+
+  $new_user = MinorImpact::User::AddUser({username => 'foo', password => 'bar' });
+
+=head3 Settings
+
+=over
+
+=item admin
+
+Make the user an admin.
+
+=item password
+
+The new user's password.
+
+=item username
+
+The new user's login name.
+
+=back
+
+=cut
+
+sub addUser {
+    my $params = shift || return;
+    
+    MinorImpact::log('debug', "starting");
+
+    my $DB = $MinorImpact::SELF->{USERDB};
+    if ($DB && $params->{username}) {
+        $params->{admin} ||= 0;
+        # Only the first 8 characters matter to crypt(); disturbing and weird.
+        if ($params->{admin}) {
+            my $user = MinorImpact::user();
+            unless ($user && $user->isAdmin()) {
+                die "Only an admin user can add an admin user\n";
+            }
+        }
+        $DB->do("INSERT INTO user (name, password, admin, create_date) VALUES (?, ?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$), $params->{admin})) || die $DB->errstr;
+        my $user_id = $DB->{mysql_insertid};
+        #MinorImpact::log('debug', "\$user_id=$user_id");
+        return new MinorImpact::User($user_id);
+    }
+    die "Couldn't add user " . $params->{username};
+
+    MinorImpact::log('debug', "ending");
+    return;
+}
+
+=head2 count
+
+=over
+
+=item count()
+
+=item count(\%params)
+
+=back
+
+A shortcut to L<MinorImpact::User::search()|MinorImpact::User/search>
+that returns the number of results.  With no arguments, returns the 
+total number of MinorImpact users.  With arguments, returns the number
+of users matching the given criteria.
+
+  # get the number of admin users
+  $num_users = MinorImpact::Users::count({ admin => 1 });
+
+=cut
+
+sub count {
+    my $params = shift || {};
+
+    return scalar(search($params));
+}
+
 
 =head2 search
 
@@ -394,11 +478,27 @@ Search the database for users that match.
 
 =over
 
+=item admin
+
+Return admin users.
+
+  @users = MinorImpact::User::search({name => "% Smith" });
+
+=item limit
+
+Limit to X number of results.
+
+  @users = MinorImpact::User::search({name => "% Smith", limit => 5 });
+
 =item name
 
 Search for users by name.  Supports MySQL wildcards.
 
   @users = MinorImpact::User::search({name => "% Smith" });
+
+=item order_by
+
+Return returns sorted by a particular columnn.
 
 =back
 
@@ -415,6 +515,9 @@ sub search {
         $sql .= " AND name LIKE ?";
         push(@fields, $params->{name});
     }
+    if (isTrue($params->{admin})) {
+        $sql .= " AND admin IS TRUE";
+    }
 
     if ($params->{order_by}) {
         $sql .= " ORDER BY " . $params->{order_by};
@@ -430,6 +533,7 @@ sub search {
 
     return map { new MinorImpact::User($_->{id}); } @$users;
 }
+
 
 =head1 AUTHOR
 

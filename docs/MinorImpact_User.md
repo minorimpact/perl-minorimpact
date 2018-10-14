@@ -20,6 +20,14 @@ The object representing application users.
 
 # METHODS
 
+## delete
+
+- delete(\\%params)
+
+Delete the user and all of the objects owned by that user.
+
+    $USER->delete();
+
 ## get
 
 - get($field)
@@ -91,6 +99,41 @@ Returns TRUE if $password is valid.
 
 # SUBROUTINES
 
+## addUser
+
+- addUser(\\%params)
+
+Add a MinorImpact user.
+
+    $new_user = MinorImpact::User::AddUser({username => 'foo', password => 'bar' });
+
+### Settings
+
+- admin
+
+    Make the user an admin.
+
+- password
+
+    The new user's password.
+
+- username
+
+    The new user's login name.
+
+## count
+
+- count()
+- count(\\%params)
+
+A shortcut to [MinorImpact::User::search()](./MinorImpact_User.md#search)
+that returns the number of results.  With no arguments, returns the 
+total number of MinorImpact users.  With arguments, returns the number
+of users matching the given criteria.
+
+    # get the number of admin users
+    $num_users = MinorImpact::Users::count({ admin => 1 });
+
 ## search
 
 - search(\\%params)
@@ -99,11 +142,27 @@ Search the database for users that match.
 
 ### Parameters
 
+- admin
+
+    Return admin users.
+
+        @users = MinorImpact::User::search({name => "% Smith" });
+
+- limit
+
+    Limit to X number of results.
+
+        @users = MinorImpact::User::search({name => "% Smith", limit => 5 });
+
 - name
 
     Search for users by name.  Supports MySQL wildcards.
 
         @users = MinorImpact::User::search({name => "% Smith" });
+
+- order\_by
+
+    Return returns sorted by a particular columnn.
 
 # AUTHOR
 
