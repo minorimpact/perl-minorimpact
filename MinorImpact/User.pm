@@ -332,7 +332,32 @@ sub settings {
 
 Update one or more user fields.
 
-  $USER->update({name => "Sting", address => "6699 Tantic Ave." });
+  $USER->update({name => "Sting", password => "1234" });
+
+Updates can only be made by the user themself or an admin user.
+
+=head3 Fields
+
+=over
+
+=item admin
+
+True or false, this user has administrative rights in this application.
+Can only be set by another admin user.
+
+=item email
+
+Update the user's email address.
+
+=item name
+
+Update the user's login name.
+
+=item password 
+
+Sets a new password.
+
+=back
 
 =cut
 
@@ -353,7 +378,7 @@ sub update {
     }
     $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstr if ($params->{email});
     $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{name}, $self->id())) || die $self->{DB}->errstr if ($params->{name});
-    $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
+    $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password});
 
     MinorImpact::log('debug', "ending");
 }

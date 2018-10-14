@@ -84,7 +84,28 @@ Returns the user's MinorImpact::settings object.
 
 Update one or more user fields.
 
-    $USER->update({name => "Sting", address => "6699 Tantic Ave." });
+    $USER->update({name => "Sting", password => "1234" });
+
+Updates can only be made by the user themself or an admin user.
+
+### Fields
+
+- admin
+
+    True or false, this user has administrative rights in this application.
+    Can only be set by another admin user.
+
+- email
+
+    Update the user's email address.
+
+- name
+
+    Update the user's login name.
+
+- password 
+
+    Sets a new password.
 
 ## validateUser
 
