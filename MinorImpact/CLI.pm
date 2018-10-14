@@ -58,14 +58,15 @@ A username to supply for the prompt.
 sub passwordPrompt {
     my $params = shift || {};
 
-    print "Enter Password" . ($params->{username}?" for $params->{username}":"") . ": ";
+    my $prompt =  "Enter " . ($params->{confirm}?"new ":'') . "password" . ($params->{username}?" for $params->{username}":"");
+    print $prompt . ": ";
     ReadMode('noecho');
     chomp(my $password = <STDIN>);
     print "\n";
     ReadMode(0);
 
     if ($params->{confirm}) {
-        print "        Again: ";
+        printf("%" . (length($prompt)) . "s: ", "Again");
         ReadMode('noecho');
         chomp(my $password2 = <STDIN>);
         print "\n";
