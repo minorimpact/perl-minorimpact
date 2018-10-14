@@ -370,6 +370,7 @@ sub update {
     MinorImpact::cache("user_data_" . $self->name(), {});
 
     my $user = MinorImpact::user();
+    die "Unable to verify current user\n" unless ($user);
     die "Invalid user\n" unless ($user->id() == $self->id() || $user->isAdmin());
     if (defined($params->{admin})) {
         MinorImpact::log('debug', "Updating admin priviledges");
