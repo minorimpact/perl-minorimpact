@@ -109,7 +109,8 @@ sub delete {
     
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $user = MinorImpact::user();
-    die "Invalid user\n" unless ($user && $user->isAdmin());
+    die "Invalid user\n" unless ($user);
+    die "Not an admin user\n" unless ($user->isAdmin());
     my $user_id = $self->id();
     my $username = $self->name();
     # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
@@ -339,10 +340,22 @@ sub update {
     my $self = shift || return;
     my $params = shift || return;
 
+    MinorImpact::log('debug', "starting");
     MinorImpact::cache("user_data_" . $self->id(), {});
-    $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{name}, $self->id())) || die $self->{DB}->errstr if ($params->{name});
+    MinorImpact::cache("user_data_" . $self->name(), {});
+
+    my $user = MinorImpact::user();
+    die "Invalid user\n" unless ($user->id() == $self->id() || $user->isAdmin());
+    if (defined($params->{admin})) {
+        MinorImpact::log('debug', "Updating admin priviledges");
+        die "Not an admin user\n" unless ($user->isAdmin());
+        $self->{DB}->do("UPDATE user SET admin=? WHERE id=?", undef, (isTrue($params->{admin}), $self->id())) || die $self->{DB}->errstr;
+    }
     $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstr if ($params->{email});
+    $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{name}, $self->id())) || die $self->{DB}->errstr if ($params->{name});
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password} && $params->{confirm_password} && $params->{password} eq $params->{confirm_password});
+
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 validateUser
