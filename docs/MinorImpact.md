@@ -90,14 +90,14 @@ See [MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md) 
 
 Change the admin user password by running the update\_user.pl script installed from minorimpact-util.
 
-    # /usr/loca/bin/update_user.pl -u admin -p admin 
+    # /opt/minorimpact/bin/update_user.pl -u admin -p admin 
     Enter password for admin: admin
     Enter new password for admin:
                            Again:
 
 Add a new user for yourself:
 
-    # /usr/loca/bin/add_user.pl -u admin -a yes <user>
+    # /opt/minorimpact/bin/add_user.pl -u admin -a yes <user>
     Enter password for admin: 
     Enter new password for <user>:
                             Again:
