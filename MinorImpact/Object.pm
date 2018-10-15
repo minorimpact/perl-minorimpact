@@ -4,6 +4,8 @@ package MinorImpact::Object;
 
 MinorImpact::Object - The base class for MinorImpact objects.
 
+=cut
+
 =head1 SYNOPSIS
 
     use MinorImpact;
@@ -15,11 +17,9 @@ MinorImpact::Object - The base class for MinorImpact objects.
     # output
     foo: bar
 
+=cut
+
 =head1 DESCRIPTION
-
-=head1 METHODS
-
-=over 4
 
 =cut
 
@@ -31,6 +31,7 @@ use Text::Markdown 'markdown';
 
 use MinorImpact;
 use MinorImpact::collection;
+use MinorImpact::entry;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
 use MinorImpact::settings;
@@ -38,9 +39,19 @@ use MinorImpact::Util;
 
 my $OBJECT_CACHE;
 
+=head1 METHODS
+
+=cut
+
+=head2 new
+
+=over
+
 =item MinorImpact::Object::new( $id )
 
 =item MinorImpact::Object::new( { field => value[, ...] })
+
+=back
 
 Create a new MinorImpact::Object.
 
@@ -173,12 +184,26 @@ sub _new {
     return $self;
 }
 
+=head2 back
+
+=over
+
 =item back( \%options )
 
-Returns the url that makes the most sense when returning from viewing or editing this 
-object. Options:
+=back
 
-  url     Additional url parameters that you want to be included in the link.
+Returns the url that makes the most sense when returning from viewing or editing this 
+object. 
+
+=head3 options
+
+=over
+
+=item url
+
+Additional url parameters that you want to be included in the link.
+
+=back
 
 =cut
 
@@ -198,7 +223,13 @@ sub churn {
     return;
 }
 
+=head2 id
+
+=over
+
 =item id() 
+
+=back
 
 Returns the id of the this objec.t
 
@@ -208,7 +239,13 @@ sub id {
     return shift->{data}->{id}; 
 }
 
+=head2 name
+
+=over
+
 =item name( \%options )
+
+=back
 
 Returns the 'name' value for this object.   Shortcut for ->get('name', \%options). 
 
@@ -218,7 +255,13 @@ sub name {
     return shift->get('name', shift); 
 }
 
+=head2 public
+
+=over
+
 =item public()
+
+=back
 
 =cut
 
@@ -226,7 +269,13 @@ sub public {
     return shift->get('public'); 
 }
 
+=head2 userID
+
+=over
+
 =item userID()
+
+=back
 
 The ID of the user this object belongs to.
 
@@ -346,7 +395,13 @@ sub validateFields {
     #MinorImpact::log('debug', "ending");
 }
 
+=head2 update
+
+=over
+
 =item update( { field => value [,...] })
+
+=back
 
 Update the value of one or more of the object fields.
 
@@ -1170,13 +1225,27 @@ sub match {
     return 1;
 }
 
-=item $object->validateUser( \%options ) 
+=head2 validateUser
+
+=over
+
+=item validateUser( \%options ) 
+
+=back
 
 Verify that a given user has permission to instantiate this object.  Returns true for "system"
 object types. Options:
 
-  user              A MinorImpact::User object.  Defaults to the the current logged 
-                    in user if one exists.
+=head3 options
+
+=over
+
+=item user
+
+A MinorImpact::User object.  Defaults to the the current logged 
+in user if one exists.
+
+=back
 
 =cut
 
@@ -1204,11 +1273,15 @@ sub validateUser {
     return $valid;
 }
 
+=head2 version
+
+=over
+
 =item version()
 
-The value of the $VERSION variable ihe inherited class, or 0.
+=back
 
-=back 
+The value of the $VERSION variable ihe inherited class, or 0.
 
 =cut
 

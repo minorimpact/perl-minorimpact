@@ -165,7 +165,7 @@ sub new {
     my $options = shift || {};
 
     my $self = $SELF;
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     unless ($self) {
         MinorImpact::log('notice', "creating new MinorImpact object") unless ($options->{no_log});
@@ -245,7 +245,7 @@ sub new {
         $self->redirect();
     }
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $self;
 }
 
@@ -483,7 +483,7 @@ sub tt {
 
     if (!ref($self)) {
         unshift(@_, $self);
-        $self = $MinorImpact::SELF;
+        $self = new MinorImpact();
     }
 
     my $TT;
@@ -516,7 +516,9 @@ sub tt {
         (my $package = __PACKAGE__ ) =~ s#::#/#g;
         my $filename = $package . '.pm';
 
+        MinorImpact::log('debug', "\$INC{$filename}='" . $INC{$filename} . "'");
         (my $path = $INC{$filename}) =~ s#/\Q$filename\E$##g; # strip / and filename
+        MinorImpact::log('debug', "\$path='$path'");
         my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
         my $variables = {
@@ -546,7 +548,7 @@ sub tt {
         $self->{TT} = $TT;
     }
     $TT->process(@_) || die $TT->error();
-    MinorImpact::log('debug', "Ending");
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 url
@@ -1204,6 +1206,7 @@ sub dbConfig {
 
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
+    MinorImpact::entry::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::entry"));
 
     my $admin = new MinorImpact::User('admin');
     unless ($admin) {

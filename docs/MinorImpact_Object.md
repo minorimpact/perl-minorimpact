@@ -17,46 +17,73 @@ MinorImpact::Object - The base class for MinorImpact objects.
 
 # METHODS
 
+## new
+
 - MinorImpact::Object::new( $id )
 - MinorImpact::Object::new( { field => value\[, ...\] })
 
-    Create a new MinorImpact::Object.
+Create a new MinorImpact::Object.
+
+## back
 
 - back( \\%options )
 
-    Returns the url that makes the most sense when returning from viewing or editing this 
-    object. Options:
+Returns the url that makes the most sense when returning from viewing or editing this 
+object. 
 
-        url     Additional url parameters that you want to be included in the link.
+### options
+
+- url
+
+    Additional url parameters that you want to be included in the link.
+
+## id
 
 - id() 
 
-    Returns the id of the this objec.t
+Returns the id of the this objec.t
+
+## name
 
 - name( \\%options )
 
-    Returns the 'name' value for this object.   Shortcut for ->get('name', \\%options). 
+Returns the 'name' value for this object.   Shortcut for ->get('name', \\%options). 
+
+## public
 
 - public()
+
+## userID
+
 - userID()
 
-    The ID of the user this object belongs to.
+The ID of the user this object belongs to.
+
+## update
 
 - update( { field => value \[,...\] })
 
-    Update the value of one or more of the object fields.
+Update the value of one or more of the object fields.
 
-- $object->validateUser( \\%options ) 
+## validateUser
 
-    Verify that a given user has permission to instantiate this object.  Returns true for "system"
-    object types. Options:
+- validateUser( \\%options ) 
 
-        user              A MinorImpact::User object.  Defaults to the the current logged 
-                          in user if one exists.
+Verify that a given user has permission to instantiate this object.  Returns true for "system"
+object types. Options:
+
+### options
+
+- user
+
+    A MinorImpact::User object.  Defaults to the the current logged 
+    in user if one exists.
+
+## version
 
 - version()
 
-    The value of the $VERSION variable ihe inherited class, or 0.
+The value of the $VERSION variable ihe inherited class, or 0.
 
 # AUTHOR
 
