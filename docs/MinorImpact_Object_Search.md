@@ -21,6 +21,22 @@ Search for objects.
 
 #### query
 
+- "$field\_name\[>,<\]" => $value
+
+    If you pass a random field name, MinorImpact will attempt to find object types
+    with fields named $field\_name and values of $value.  If you don't specify an `object_type_id`,
+    **you may get different types of objects back in the same list!**  This can be chaotic, so it's
+    not recommended.
+
+        # get all MinorImpact::entry objects published on the 10th.
+        MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", publish_date => '2018-10-10' });
+
+    If you append ">" or "<" to the field name, it will use that operator to 
+    perform the comparison, rather than "=".
+
+        # get all MinorImpact::entry objects published after the 10th.
+        MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", "publish_date>" => '2018-10-10' });
+
 - id\_only
 
     Return an array of object IDs, rather than complete objects.
@@ -35,11 +51,41 @@ Search for objects.
     hopefully for the better).
     DEFAULT: 10 if `page` is defined.
 
+- name => $string
+
+    Find objects named "$string".
+
+        # find all objects named 'Ford'
+        MinorImpact::Object::Search::search({ name => 'Ford' });
+
+- object\_type\_id
+
+    Return objects of only a particular type.  Can be the numeric id or the name.
+
+        # get all MinorImpact::entry objects.
+        @objects = MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry" });
+
 - page
 
     Skip to `page` of results.
     DEFAULT: 1 of `limit` is defined.
 
+- public
+
+    Limit search to only items parked 'public.'
+
+        # find all public objects named 'Ford'
+        MinorImpact::Object::Search::search({ name => 'Ford', public => 1 });
+      =back
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 387:
+
+    You forgot a '=back' before '=head1'

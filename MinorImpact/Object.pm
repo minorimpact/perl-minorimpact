@@ -1515,6 +1515,9 @@ Search for objects.
   # get a list of public 'car' objects for a particular users.
   @objects = MinorImpact::Object::search({query => {object_type_id => 'car',  public => 1, user_id => $user->id() } });
 
+This documentation is incomplete, as this is a shortcut to L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search>.
+Please visit the documentation for that function for more information.
+
 =head3 params
 
 =head4 query

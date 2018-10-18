@@ -104,6 +104,22 @@ Search for objects.
 
 =over
 
+=item "$field_name[>,<]" => $value
+
+If you pass a random field name, MinorImpact will attempt to find object types
+with fields named $field_name and values of $value.  If you don't specify an C<object_type_id>,
+B<you may get different types of objects back in the same list!>  This can be chaotic, so it's
+not recommended.
+
+  # get all MinorImpact::entry objects published on the 10th.
+  MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", publish_date => '2018-10-10' });
+
+If you append ">" or "<" to the field name, it will use that operator to 
+perform the comparison, rather than "=".
+
+  # get all MinorImpact::entry objects published after the 10th.
+  MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", "publish_date>" => '2018-10-10' });
+
 =item id_only
 
 Return an array of object IDs, rather than complete objects.
@@ -118,11 +134,31 @@ way of indicating that there are additional items (this is stupid and will proba
 hopefully for the better).
 DEFAULT: 10 if C<page> is defined.
 
+=item name => $string
+
+Find objects named "$string".
+
+  # find all objects named 'Ford'
+  MinorImpact::Object::Search::search({ name => 'Ford' });
+
+=item object_type_id
+
+Return objects of only a particular type.  Can be the numeric id or the name.
+
+  # get all MinorImpact::entry objects.
+  @objects = MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry" });
+
 =item page
 
 Skip to C<page> of results.
 DEFAULT: 1 of C<limit> is defined.
 
+=item public
+
+Limit search to only items parked 'public.'
+
+  # find all public objects named 'Ford'
+  MinorImpact::Object::Search::search({ name => 'Ford', public => 1 });
 =back
 
 =cut
@@ -217,7 +253,7 @@ sub _search {
     $from .= $query->{from} if ($query->{from});
     if ($query->{where}) {
         my $w = $query->{where};
-        $w =~s/\s*and\s+//i;
+        $w =~s/^\s*and\s+//i;
         $where .= " AND $w";
         push (@fields, @{$query->{where_fields}});
     }
@@ -293,33 +329,46 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($query->{object_type_id}) {
+            my $value = $query->{$param};
+            my $operator = "=";
+            if ($param =~s/\>$//) { $operator = ">"; } 
+            elsif ($param =~s/\<$//) { $operator = "<"; } 
+            elsif ($param =~s/\=$//) { }
+
             MinorImpact::log('debug', "Find fieldID for '$param', '" . $query->{object_type_id} . "'");
 
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             #MinorImpact::log('debug', "\$object_field_id='$object_field_id'");
             $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
-            $where .= " AND (object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?)";
+            $where .= " AND (object_data$object_field_id.object_field_id = ? AND object_data$object_field_id.value $operator ?)";
             push(@fields, $object_field_id);
-            push(@fields, $query->{$param});
+            push(@fields, $value);
         } else {
             # At this point, assume the developer just specified a random field in one of his objects, and pull all the fields
             # with this name from all the objects in the system.
             MinorImpact::log('debug', "Find fieldIDs for '$param'");
+            my $value = $query->{$param};
+            my $operator = "=";
+            if ($param =~s/\>$//) { $operator = ">"; } 
+            elsif ($param =~s/\<$//) { $operator = "<"; } 
+            elsif ($param =~s/\=$//) { }
+
             my $field_where;
             my @object_field_ids = MinorImpact::Object::fieldIDs($param);
             foreach my $object_field_id (@object_field_ids) {
                 $from .= " LEFT JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
-                $field_where .= "(object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value=?) OR ";
+                $field_where .= "(object_data$object_field_id.object_field_id=? AND object_data$object_field_id.value $operator ?) OR ";
                 push(@fields, $object_field_id);
-                push(@fields, $query->{$param});
+                push(@fields, $value);
             }
             $field_where =~s/ OR $//;
             $where .=  "AND ($field_where)" if ($field_where);
         }
     }
-    #MinorImpact::debug(0);
+    MinorImpact::debug(1);
     my $sql = "$select $from $where";
     MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
+    #MinorImpact::debug(0);
 
 
     my $objects;

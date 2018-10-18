@@ -122,6 +122,21 @@ it's true, otherwise it's false.
     Returns:
       unixtime value (seconds send time epoch).
 
+## toMysqlDate
+
+- toMysqlDate()
+- toMysqlDate($time)
+
+Returns the current time, or the value of $time, in a value Mysql date formate (YYYY-MM-DD HH:MM:SS).
+
+    # get the current date
+    $date = toMysqlDate();
+    # OUTPUT: 2018-10-18 15:35:06
+
+    # get time an hour ago
+    $old_date = toMysqlDate(time() - 3600);
+    # OUTPUT: 2018-10-18 14:35:06
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
