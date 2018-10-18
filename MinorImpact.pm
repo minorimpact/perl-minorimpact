@@ -713,7 +713,8 @@ sub url {
         $url .= "&$key=" . $params->{params}{$key};
     }
 
-    #print $self->{CGI}->header(-location=>$location);
+    # Remove any extraneous characters.
+    $url =~s/[\?\/]$//;
     MinorImpact::log('debug', "\$url='$url'");
     MinorImpact::log('debug', "ending");
     return $url;
