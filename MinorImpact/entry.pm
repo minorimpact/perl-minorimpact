@@ -2,7 +2,6 @@ package MinorImpact::entry;
 
 use strict;
 
-use Data::Dumper;
 use Time::Local;
 
 use MinorImpact::Object;
@@ -78,4 +77,23 @@ sub dbConfig {
     return;
 }
 
+sub toString {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting");
+
+    MinorImpact::log('debug', "\$params='$params'");
+    my $string;
+    if ($params->{format} eq 'list') {
+        $string = $self->SUPER::toString({template => 'entry_list'});
+    } elsif ($params->{format} eq 'row') {
+        $string = "<tr><td>" . $self->get('publish_date') . "</td><td>" . $self->toString() . "</td></tr>\n";
+    } else {
+        $string = $self->SUPER::toString($params);
+    }
+
+    MinorImpact::log('debug', "ending");
+    return $string;
+}
 1;

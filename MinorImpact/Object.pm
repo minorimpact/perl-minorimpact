@@ -8,18 +8,36 @@ MinorImpact::Object - The base class for MinorImpact objects.
 
 =head1 SYNOPSIS
 
-    use MinorImpact;
     use MinorImpact::Object;
+
     $object = new MinorImpact::Object({ object_type_id => 'type', name => $name, description => 'bar' });
     $description = $object->get('description');
     print $object->name() . ": $description\n";
+    # OUTPUT
+    # foo: bar
 
-    # output
-    foo: bar
+    $object->update({description => "Bar."});
+    # OUTPUT
+    # foo: Bar.
+
+    $object->delete();
 
 =cut
 
 =head1 DESCRIPTION
+
+On the use of the terms "parent" and "child": In defiance of logic and common sense, perhaps, 
+the terms "parent" and "child" are used the opposite of how one might expect.  For example: take a
+"car" object and an "engine" object.  The car has an "engine" field from which one
+can select from a list of engine objects which were defined elsewhere.  Since the engine
+object can exist on its own, without reference to the car, the engine is the parent.  The
+car I<requires> an engine, therefore it is the child, despite the logical and intutive
+assumption that the car would be the parent, since the engine "belongs" to it.
+
+A better example of where this I<does> (kind of) make sense is a "project" object and a "task" object.
+The task must include a reference to the project - therefore the project is the parent and the
+task is the child, since the project exists on its own, but the task requires a project as part of
+its definition.
 
 =cut
 
@@ -269,6 +287,30 @@ sub public {
     return shift->get('public'); 
 }
 
+=head2 user
+
+=over
+
+=item user()
+
+=back
+
+Return the user object of the owner of this object.  
+
+  $user = $OBJECT->user();
+
+... is a shortcut for:
+
+  $user = new MinorImpact::User($OBJECT->get('user_id'));
+
+=cut
+
+sub user {
+    my $self = shift || return;
+
+    return new MinorImpact::User($self->get('user_id'));
+}
+
 =head2 userID
 
 =over
@@ -278,6 +320,8 @@ sub public {
 =back
 
 The ID of the user this object belongs to.
+
+  $user_id = $OBJECT->userID();
 
 =cut
 
@@ -337,6 +381,35 @@ sub selectList {
     return $select;
 }
 
+=head2 get
+
+=over
+
+=item ->get($field)
+
+=item ->get($field, \%params)
+
+=back
+
+Return the value of $name.
+
+  # get the object's name
+  $object_name = $OBJECT->get("name");
+  # get the description, and convert it from markdown to HTML.
+  $object_description = $OBJECT->get("description", { mardown => 1});
+
+=head3 params
+
+=over
+
+=item markdown
+
+Treat the field as a markdown field, and convert the data to HTML before returning it.
+
+=back
+
+=cut
+
 sub get {
     my $self = shift || return;
     my $name = shift || return;
@@ -393,6 +466,223 @@ sub validateFields {
         $field->validate($params->{$field_name});
     }
     #MinorImpact::log('debug', "ending");
+}
+
+sub toData {
+    my $self = shift || return;
+
+    my $data = {};
+    $data->{id} = $self->id();
+    $data->{name} = $self->name();
+    $data->{type_id} = $self->typeID();
+    my $fields = $self->fields();
+    foreach my $name (keys %$fields) {
+        my $field = $fields->{$name};
+        my @values = $field->value();
+        if ($field->isArray()) {
+            $data->{$name} = \@values;
+        } else {
+            $data->{$name} = $values[0];
+        }
+    }
+    @{$data->{tags}} = ($self->tags());
+    return $data;
+}
+
+=head2 toString
+
+=over
+
+=item toString(\%params)
+
+=back
+
+Output the object as a string in a specified format.
+
+  foreach $OBJECT (@OBJECTS) {
+      $object_list .= $OBJECT->toString({format => 'row'});
+  }
+
+If no formatting is specified, outputs using the C<object_link> template, 
+which is the name of the object as a link to the "object" page - the equivilant
+of either of:
+
+  $OBJECT->toString({template => 'object_link'});
+  $OBJECT->toString({format => 'link'});
+
+=head3 params
+
+=over
+
+=item format
+
+Which output format to use.
+
+=over
+
+=item page
+
+Standard full page representation.  Each field is processed and then formatted
+via the C<row_column> template, using the variables C<name> and C<value>.  You can
+override the default template by passing a different tempalte name using
+the C<template> parameter.
+
+The 'column' output also includes a &lt;!-- CUSTOM --&gt; string at the end, suitable
+for replacement later.
+
+=item json
+
+JSON data object.
+
+=item link
+
+Use the "object_link" template.  Equivilant to:
+
+  $output = $OBJECT->toString({template=>'object_link'});
+
+=item list
+
+Use the "object_list" template.  Equivilant to:
+
+  $output = $OBJECT->toString({template=>'object_list'});
+
+Intended to fall somewhere between the 'page' format and the 'link' format.
+
+=item row
+
+A horizontal represenation, each field as a table row of cells.
+
+=item text
+
+Just the object's name, no formating or markup.  Equivilant to L<$object->name()|MinorImpact::Object/name>.
+
+=back
+
+=item no_references
+
+If set, this prevents the 'column' format from displaying a list of objects
+that reference this object.
+
+=item template
+
+Output the object using a template.
+
+  $output = $OBJECT->toString({template => 'object_template'});
+
+The template will have access to the object via the C<object> variable.
+
+=back
+
+=cut
+
+sub toString {
+    my $self = shift || return;
+    my $params = shift || {};
+    MinorImpact::log('debug', "starting");
+
+    my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
+
+    my $MINORIMPACT = new MinorImpact();
+
+    my $string = '';
+    if ($params->{column}) { $params->{format} = "column"; }
+    elsif ($params->{row}) { $params->{format} = "row"; }
+    elsif ($params->{json}) { $params->{format} = "json"; }
+    elsif ($params->{text}) { $params->{format} = "text"; }
+
+    if ($params->{format} eq 'column' || $params->{format} eq 'page') {
+        #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
+        $string .= "<div class='w3-container'>\n";
+        foreach my $name (keys %{$self->{object_data}}) {
+            my $field = $self->{object_data}{$name};
+            #MinorImpact::log('info', "processing $name");
+            my $type = $field->type();
+            next if ($field->get('hidden'));
+            my $value;
+            if ($type =~/object\[(\d+)\]$/) {
+                foreach my $v ($field->value()) {
+                    if ($v && $v =~/^\d+/) {
+                        my $o = new MinorImpact::Object($v);
+                        $value .= $o->toString() if ($o);
+                    }
+                }
+            } elsif ($type =~/text$/) {
+                foreach my $val ($field->toString()) {
+                    my $id = $field->id();
+                    my $references = $self->getReferences($id);
+                    foreach my $ref (@$references) {
+                        my $test_data = $ref->{data};
+                        $test_data =~s/\W/ /gm;
+                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
+                        if ($val =~/($test_data)/mgi) {
+                            my $match = $1;
+                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->{object_id}});
+                            $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
+                        }
+                    }
+                    $value .= "<div onmouseup='getSelectedText($id);'>$val</div>\n";
+                }
+            } else {
+                $value = $field->toString();
+            }
+            my $row;
+            MinorImpact::tt($params->{template} || 'row_column', {name=>$field->displayName(), value=>$value}, \$row);
+            $string .= $row;
+        }
+        $string .= "<!-- CUSTOM -->\n";
+        $string .= "</div>\n";
+
+        unless ($params->{no_references}) {
+            my $references = $self->getReferences();
+            if (scalar(@$references)) {
+                $string .= "<h2>References</h2>\n";
+                $string .= "<table>\n";
+                foreach my $ref (@$references) {
+                    my $object = new MinorImpact::Object($ref->{object_id});
+                    $string .= "<tr><td>" . $object->toString(). "</td><td></td></tr>\n";
+                    $string .= "<tr><td colspan=2>\"" . $ref->{data} . "\"</td></tr>\n";
+                }
+                $string .= "</table>\n";
+            }
+        }
+
+        foreach my $tag ($self->tags()) {
+            my $t;
+            MinorImpact::tt('tag', {tag=>$tag}, \$t);
+            $string .= $t;
+        }
+    } elsif ($params->{format} eq 'json') {
+        $string = to_json($self->toData());
+    } elsif ($params->{format} eq 'list') {
+        MinorImpact::tt('object_list', { object => $self }, \$string);
+    } elsif ($params->{format} eq 'row') {
+        $string = "<tr>";
+        foreach my $key (keys %{$self->{data}}) {
+            $string .= "<td>$self->{data}{$key}</td>";
+        }
+        $string .= "</tr>\n";
+    } elsif ($params->{format} eq 'text') {
+        $string = $self->name();
+    } else {
+        my $template = $params->{template} || 'object_link';
+        MinorImpact::tt($template, { object => $self }, \$string);
+    }
+    MinorImpact::log('debug', "ending");
+    return $string;
+}
+
+
+sub getReferences {
+    my $self = shift || return;
+    my $object_text_id = shift;
+
+    my $DB = MinorImpact::db();
+    if ($object_text_id) {
+        # Only return references to a particular 
+        return $DB->selectall_arrayref("select object_id, data, object_text_id from object_reference where object_text_id=?", {Slice=>{}}, ($object_text_id));
+    }
+    # Return all references for this object.
+    return $DB->selectall_arrayref("select object.id as object_id, object_reference.data from object_reference, object_text, object where object_reference.object_text_id=object_text.id and object_text.object_id=object.id and object_reference.object_id=?", {Slice=>{}}, ($self->id()));
 }
 
 =head2 update
@@ -520,9 +810,38 @@ sub typeID {
     return $object_type_id;
 }
 
-# Returns the 'default' type for the current application, for when we 
-#   desperately need something, but we don't know what.
-sub getType {
+=head1 SUBROUTINES
+
+=cut
+
+=head2 getTypeID
+
+=over
+
+=item ::getTypeID()
+
+=back
+
+Returns the 'default' type id for the current application, for when we 
+desperately need some kind of object, but we don't know what, and we
+don't much care.  This is used extensively in MinorImpact to fill
+random lists and miscellaneous pages.
+
+By default it will return if the id of the package named in the
+L<default_object_type|MinorImpact::Manual::Configuration/settings> configuration
+setting.  If unset, it will look for an object that isn't referenced
+by another object (i.e, a "top level" object), or, if barring that, any 
+object type that's not designated as 'system' or 'readonly'.
+
+  # Generate a list of objects to display on the index page.
+  @objects = MinorImpact::Object::search({ object_type_id => MinorImpact::Object::getTypeID(), 
+                                           public => 1
+                                         });
+  MinorImpact::tt('index', { objects => [ @objects ] });
+
+=cut
+
+sub getTypeID {
     #MinorImpact::log('debug', "starting");
 
     my $DB = MinorImpact::db();
@@ -530,10 +849,10 @@ sub getType {
     if ($MinorImpact::SELF->{conf}{default}{default_object_type}) {
         return MinorImpact::Object::typeID($MinorImpact::SELF->{conf}{default}{default_object_type});
     }
+    #
     # If there's no glbal object type, return the first 'toplevel' object, something that no other object
     #   references.
     my $object_type_id = MinorImpact::cache("default_object_type_id");
-    
     unless ($object_type_id) {
         my $nextlevel = $DB->selectall_arrayref("SELECT DISTINCT object_type_id FROM object_field WHERE type LIKE 'object[%]'");
         if (scalar(@$nextlevel) > 0) {
@@ -554,21 +873,50 @@ sub getType {
     return $object_type_id;
 }
 
-# Return an array of all the object types.
+=head2 typeIDs
+
+Returns an array of object type IDs.
+
+  foreach $type_id (MinorImpact::Object::typeIDs()) {
+    print $type_id . ": " . MinorImpact::Object::typeName($type_id) . "\n";
+  }
+
+=cut
+
+sub typeIDs {
+    my @type_ids = ();
+
+    my @types = MinorImpact::Object::types();
+    foreach my $type (@types) {
+        push(@type_ids, $type->{id});
+    }
+
+    return @type_ids;
+}
+
+=head2 types
+
+Returns an array of object_type records.
+
+  foreach my $type (MinorImpact::Object::types()) {
+    print  $type->{id} . ": " . $type->{name} . "\n";
+  }
+
+=cut
+
 sub types {
-    my $params = shift || {};
     my $DB = MinorImpact::db();
 
     my $select = "SELECT * FROM object_type";
-    my $where = "WHERE id > 0 AND system = 0";
-    return $DB->selectall_arrayref("$select $where", {Slice=>{}});
+    my $where = "WHERE id > 0 AND system = 0 AND readonly = 0";
+    return @{$DB->selectall_arrayref("$select $where", {Slice=>{}})};
 }
 
 sub typeName {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $object_type_id;
     if (ref($self) eq 'HASH') {
@@ -581,7 +929,7 @@ sub typeName {
         $object_type_id = $self;
         undef($self);
     }
-    #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
+    MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
 
     my $type_name;
     my $plural_name;
@@ -600,8 +948,8 @@ sub typeName {
         ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($object_type_id));
     }
 
-    #MinorImpact::log('debug', "type_name=$type_name");
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "type_name=$type_name");
+    MinorImpact::log('debug', "ending");
 
     if ($params->{plural}) {
         if (!$plural_name) {
@@ -699,6 +1047,34 @@ sub log {
     return MinorImpact::log($level, $message);
 }
 
+=head2 tags
+
+=over
+
+=item ::tags() 
+
+=item ->tags()
+
+=item ->tags(@tags)
+
+=back
+
+Called as a package subroutine, returns a list of all the tags defined in the system
+for all users and all objects.
+
+  @all_tags = MinorImpact::Object::tags();
+
+Called as an object method, returns the tags assigned to an object.
+
+  @tags = $OBJECT->tags();
+
+Called as an object method with an array of @tags, replaces the objects tags.
+
+  @tags = ("tag1", "tag2");
+  $OBJECT->tags(@tags);
+
+=cut
+
 sub tags {
     my $self = shift;
    
@@ -723,7 +1099,43 @@ sub tags {
     return @tags;
 }
 
-sub getChildTypes {
+=head2 getChildTypeIDs
+
+=over
+
+=item ::getChildTypeIDs(\%params)
+
+=item ->getChildTypeIDs()
+
+=back
+
+Returns a list of oject types ids that have fields of a particular object type.
+If called as a subroutine, requires C<object_type_id> as a parameter.
+
+  @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $object_type_id});
+
+If called as an object method, uses that object's type_id.
+
+  @type_ids = $OBJECT->getChildTypeIDs();
+
+... is equivilant to:
+
+  @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $OBJECT->type_id()});
+
+=head3 params
+
+=over
+
+=item object_type_id
+
+Get a list of types that reference this type of object.
+REQUIRED
+
+=back
+
+=cut
+
+sub getChildTypeIDs {
     my $self = shift;
     my $params = shift || {};
 
@@ -740,15 +1152,15 @@ sub getChildTypes {
     }
     $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
 
-    my @childTypes;
+    my @childTypeIDs;
     my $sql = "select DISTINCT(object_type_id) from object_field where type like '%object[" . $local_params->{object_type_id} . "]'";
     my $DB = MinorImpact::db();
     my $data = $DB->selectall_arrayref($sql, {Slice=>{}});
     foreach my $row (@$data) {
-        push(@childTypes, $row->{object_type_id});
+        push(@childTypeIDs, $row->{object_type_id});
     }
     MinorImpact::log('debug', "ending");
-    return @childTypes;
+    return @childTypeIDs;
 }
 
 sub getChildren {
@@ -784,141 +1196,6 @@ sub stringType {
         return 1;
     }
     return;
-}
-
-# Renders an object to a string in a specified format.
-#
-# Parameters
-#   format
-#     'column': Standard full page representation.
-#     'json': JSON data object.
-#     'text': straight text, no markup; similar to $object->name().
-#     'row': a horizontal represenation, in cells.
-sub toString {
-    my $self = shift || return;
-    my $params = shift || {};
-    #$self->log('debug', "starting");
-
-    my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
-
-    my $MINORIMPACT = new MinorImpact();
-
-    my $string = '';
-    if ($params->{column}) { $params->{format} = "column";
-    } elsif ($params->{row}) { $params->{format} = "row";
-    } elsif ($params->{json}) {$params->{format} = "json";
-    } elsif ($params->{text}) {$params->{format} = "text";
-    } 
-    if ($params->{format} eq 'column') {
-        #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
-        $string .= "<div class='w3-container'>\n";
-        foreach my $name (keys %{$self->{object_data}}) {
-            my $field = $self->{object_data}{$name};
-            #MinorImpact::log('info', "processing $name");
-            my $type = $field->type();
-            next if ($field->get('hidden'));
-            my $value;
-            if ($type =~/object\[(\d+)\]$/) {
-                foreach my $v ($field->value()) {
-                    if ($v && $v =~/^\d+/) {
-                        my $o = new MinorImpact::Object($v);
-                        $value .= $o->toString() if ($o);
-                    }
-                }
-            } elsif ($type =~/text$/) {
-                foreach my $val ($field->toString()) {
-                    my $id = $field->id();
-                    my $references = $self->getReferences($id);
-                    foreach my $ref (@$references) {
-                        my $test_data = $ref->{data};
-                        $test_data =~s/\W/ /gm;
-                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
-                        if ($val =~/($test_data)/mgi) {
-                            my $match = $1;
-                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->{object_id}});
-                            $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
-                        }
-                    }
-                    $value .= "<div onmouseup='getSelectedText($id);'>$val</div>\n";
-                }
-            } else {
-                $value = $field->toString();
-            }
-            my $row;
-            MinorImpact::tt('row_column', {name=>$field->displayName(), value=>$value}, \$row);
-            $string .= $row;
-        }
-        $string .= "<!-- CUSTOM -->\n";
-        $string .= "</div>\n";
-
-        my $references = $self->getReferences();
-        if (scalar(@$references)) {
-            $string .= "<h2>References</h2>\n";
-            $string .= "<table>\n";
-            foreach my $ref (@$references) {
-                my $object = new MinorImpact::Object($ref->{object_id});
-                $string .= "<tr><td>" . $object->toString(). "</td><td></td></tr>\n";
-                $string .= "<tr><td colspan=2>\"" . $ref->{data} . "\"</td></tr>\n";
-            }
-            $string .= "</table>\n";
-        }
-
-        foreach my $tag ($self->tags()) {
-            my $t;
-            MinorImpact::tt('tag', {tag=>$tag}, \$t);
-            $string .= $t;
-        }
-    } elsif ($params->{format} eq 'row') {
-        foreach my $key (keys %{$self->{data}}) {
-            $string .= "<td>$self->{data}{$key}</td>\n";
-        }
-    } elsif ($params->{format} eq 'json') {
-        #$tt->process('object', { object=> $self}, \$string) || die $tt->error();
-        $string = to_json($self->toData());
-    } elsif ($params->{format} eq 'text') {
-        $string = $self->name();
-    } elsif ($params->{format} eq 'list') {
-        MinorImpact::tt('object_list', { object => $self }, \$string);
-    } else {
-        my $template = $params->{template} || 'object_link';
-        MinorImpact::tt($template, { object => $self }, \$string);
-    }
-    #$self->log('debug', "ending");
-    return $string;
-}
-
-sub toData {
-    my $self = shift || return;
-
-    my $data = {};
-    $data->{id} = $self->id();
-    $data->{name} = $self->name();
-    $data->{type_id} = $self->typeID();
-    my $fields = $self->fields();
-    foreach my $name (keys %$fields) {
-        my $field = $fields->{$name};
-        my @values = $field->value();
-        if ($field->isArray()) {
-            $data->{$name} = \@values;
-        } else {
-            $data->{$name} = $values[0];
-        }
-    }
-    @{$data->{tags}} = ($self->tags());
-    return $data;
-}
-
-sub getReferences {
-    my $self = shift || return;
-    my $object_text_id = shift;
-
-    my $DB = MinorImpact::db();
-    if ($object_text_id) {
-        # Only return references to a particular 
-        return $DB->selectall_arrayref("select object_id, data, object_text_id from object_reference where object_text_id=?", {Slice=>{}}, ($object_text_id));
-    }
-    # Return all references for this object.
-    return $DB->selectall_arrayref("select object.id as object_id, object_reference.data from object_reference, object_text, object where object_reference.object_text_id=object_text.id and object_text.object_id=object.id and object_reference.object_id=?", {Slice=>{}}, ($self->id()));
 }
 
 sub form {
@@ -1225,6 +1502,41 @@ sub match {
     return 1;
 }
 
+=head2 search
+
+=over
+
+=item ::search(\%params)
+
+=back
+
+Search for objects.
+
+  # get a list of public 'car' objects for a particular users.
+  @objects = MinorImpact::Object::search({query => {object_type_id => 'car',  public => 1, user_id => $user->id() } });
+
+=head3 params
+
+=head4 query
+
+=over
+
+=item id_only
+
+Return an array of object IDs, rather than complete objects.
+
+  # get just the object IDs of dogs named 'Spot'.
+  @object_ids = MinorImpact::Object::search({query => {object_type_id => 'dog', name => "Spot", id_only => 1}});
+
+=back
+
+=cut
+
+sub search {
+    return MinorImpact::Object::Search::search(@_);
+}
+
+
 =head2 validateUser
 
 =over
@@ -1281,7 +1593,7 @@ sub validateUser {
 
 =back
 
-The value of the $VERSION variable ihe inherited class, or 0.
+The value of the $VERSION variable of the inherited class, or 0.
 
 =cut
 

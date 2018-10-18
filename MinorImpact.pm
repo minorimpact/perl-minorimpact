@@ -438,17 +438,31 @@ sub sessionID {
 
 =item tt($page, \%vars)
 
+=item tt($page, \%vars, \$string)
+
 =back
 
 A wrapper/shortcut function to the L<Template Toolkit|https://metacpan.org/pod/Template> library.
+Called with a single string, processes the named template and sends the output to
+STDOUT.
 
   MinorImpact::tt('template_name');
 
-See L<MinorImpact::Manual::Templates|MinorImpact::Manual::Templates>.
+Adda hash pointer to pass variables to the template.
+
+  MinorImpact::tt('template_name', {foo => 'bar' });
+
+Variables can be accessed from within templates as C<[% foo %]>.
+
+Pass a pointer as the third argument to write the output to a variable.
+
+  MinorImpact::tt('template_name', {}, \$output );
+
+See L<MinorImpact::Manual::Templates|MinorImpact::Manual::Templates> for more.
 
 =head3 Variables
 
-The following variables should work when calling most of the default templates.
+The following variables should be available in most of the default templates.
 
 =over
 
@@ -479,12 +493,13 @@ A page title.
 sub tt {
     my $self = shift || return; 
 
-    MinorImpact::log('debug', "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);
         $self = new MinorImpact();
     }
+
+    MinorImpact::log('debug', "starting(" . $_[0] . ")");
 
     my $TT;
     if ($self->{TT}) {
@@ -498,6 +513,10 @@ sub tt {
             my $year = ((localtime(time))[5] + 1900);
             $copyright =~s/YEAR/$year/;
         }
+        if ($copyright =~/NAME/ && $self->{conf}{site}{name}) {
+            $copyright =~s/NAME/$self->{conf}{site}{name}/;
+        }
+        my $limit = $CGI->param('limit') || 30;
         my $limit = $CGI->param('limit') || 30;
         my $page = $CGI->param('page') || 1;
         my $search = MinorImpact::session('search');
@@ -1032,7 +1051,10 @@ sub www {
         MinorImpact::WWW::user($self);
     } else {
         eval { MinorImpact::tt($action, $local_params); };
-        MinorImpact::WWW::index($self, $local_params) if ($@);
+        if ($@) {
+            MinorImpact::log('debug', $@);
+            MinorImpact::WWW::index($self, $local_params) if ($@);
+        }
     }
     MinorImpact::log('debug', "ending");
 }
@@ -1073,6 +1095,8 @@ Returns the global database object.
 =cut
 
 sub db {
+    my $MINORIMPACT = new MinorImpact();
+
     return $SELF->{DB};
 }
 

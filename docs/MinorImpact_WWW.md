@@ -16,13 +16,27 @@ MinorImpact::WWW
       MinorImpact::WWW::index($MINORIMPACT, $params);
     }
 
-# METHODS
+# SUBROUTINES
 
 ## add
 
 - add(\\%params)
 
 ## edit\_user
+
+## home
+
+- home($MINORIMPACT, \[\\%params\])
+
+Display all the objects found by executing $params->{query}.  If query is not defined, 
+pull a list of everything the user owns.  This action/page requires a currently
+logged in user.
+
+## index
+
+- ::($MINORIMPACT, \\%params)
+
+The main site page, what's displayed to the world.  By default, 
 
 ## settings
 

@@ -1,10 +1,50 @@
 # NAME
 
+MinorImpact::Util - MinorImpact utility library
+
 # SYNOPSIS
+
+    use MinorImpact::Util;
+
+    $hash = { one => 1, two=> 2};
+    $copy = cloneHash($hash);
 
 # DESCRIPTION
 
+Contains a set of basic utility functions.
+
 # SUBROUTINES
+
+## cloneHash
+
+- cloneHash(\\%hash, \[\\%new\_hash\])
+
+Returns a pointer to a copy of %hash.  If passed a second pointer to
+%new\_hash it will store the copy there.
+
+    $original = { one => 1, two => 2 };
+    $copy = cloneHash($original);
+    print $copy->{one};
+    # OUTPUT: 1
+
+## commonRoot
+
+- commonRoot(@strings)
+
+Looks at a list of strings and returns the common root of all
+of them.  Returns "" if no common root exists.
+
+    @strings = ("/usr/local", "/usr/bin", "/usr/local/bin");
+    print commonRoot(@strings);
+    # OUTPUT: /usr/
+
+    @strings = ("test1", "test2", "tapioca");
+    print commonRoot(@strings);
+    # OUTPUT: t
+
+    @strings = ("foo", "foobar", "bar");
+    print commonRoot(@strings);
+    # OUTPUT: 
 
 ## convertCronTimeItemToList
 
@@ -28,6 +68,20 @@ Which field this applies to.
 ### Returns
 
 An array of values.
+
+## f
+
+- f()
+- f($string)
+
+This literally just prints an html header and  $string, (or "FUCK"
+if no string is supplied), so I can make something happen on a CGI page.
+
+    f();
+    # OUTPUT:
+    # Content-type: text/html
+    # 
+    # FUCK
 
 ## isTrue
 
@@ -67,3 +121,7 @@ it's true, otherwise it's false.
 
     Returns:
       unixtime value (seconds send time epoch).
+
+# AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>

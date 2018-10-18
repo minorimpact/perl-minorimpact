@@ -26,7 +26,7 @@ sub dbConfig {
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 0, no_name => 1, no_tags => 1 });
+    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 1, no_name => 1, no_tags => 1 });
     die "Could not add object_type record\n" unless ($object_type_id);
 
     MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);

@@ -18,7 +18,7 @@
     [% IF not object.isNoName() %]
         <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
     [% END %]
-    [% object.toString({format=>'column'}) %]
+    [% object.toString({format=>'page'}) %]
     <div class="w3-tiny w3-right" style="padding-bottom:4px"><em>Last modified [% object.get('mod_date') %]</em></div>
     </div>
 [% END %]

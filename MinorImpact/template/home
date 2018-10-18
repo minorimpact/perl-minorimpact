@@ -4,6 +4,6 @@
 
 [% INCLUDE add_types %]
 
-[% INCLUDE list_object %]
+[% INCLUDE table_object %]
 
 [% INCLUDE footer %]

@@ -84,10 +84,13 @@ variable.
 
 # INCLUDED TEMPLATES
 
+Any of these templates can be overridden by creating a template with the same name in the
+directory named in the template\_directory configuration setting. See [MinorImpact::Manual::Configuration](./Minorimpact_Manual_Configuration.md#settings).
+
 ## copyright
 
 Dumps the value defined in the 'copyright' option in the 
-[/etc/minorimpact.conf](./MinorImpact.md#configuration) file.
+[/etc/minorimpact.conf](./MinorImpact_Manual_Configuration.md#configurationfile) file.
 
 ## css
 
@@ -95,7 +98,7 @@ Site wide style sheet.
 
 ## css\_site
 
-Add custom style sheet entries here.
+Included at the end of [css](#css); add custom style sheet entries here.
 
 ## error
 
@@ -165,6 +168,14 @@ Insert custom template output here.
 Called for each object in the "objects" array, this is a fairly complicated template designed to output
 a [MinorImpact object](./MinorImpact_Object.md)'s [toString() method](./MinorImpact_Object.md#tostring), with the
 "column" format.
+
+## object\_link
+
+The object's name as a link to the /object/<id> page.
+
+## object\_page
+
+A shorter version of [object](#object), but a longer version of [object\_link](#object_link).
 
 ## sidebar\_site
 

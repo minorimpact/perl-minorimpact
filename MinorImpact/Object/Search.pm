@@ -1,5 +1,17 @@
 package MinorImpact::Object::Search;
 
+=head1 NAME
+
+MinorImpact::Object::Search
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
+=cut
+
 use strict;
 
 use Digest::MD5 qw(md5 md5_hex);
@@ -73,10 +85,52 @@ sub parseSearchString {
     return $params;
 }
 
+=head2 search
+
+=over
+
+=item ::search(\%params)
+
+=back
+
+Search for objects.
+
+  # get a list of public 'car' objects for a particular users.
+  @objects = MinorImpact::Object::Search::search({query => {object_type_id => 'car',  public => 1, user_id => $user->id() } });
+
+=head3 params
+
+=head4 query
+
+=over
+
+=item id_only
+
+Return an array of object IDs, rather than complete objects.
+
+  # get just the object IDs of dogs named 'Spot'.
+  @object_ids = MinorImpact::Object::Search::search({query => {object_type_id => 'dog', name => "Spot", id_only => 1}});
+
+=item limit
+
+Return only C<limit> items.  C<search()> actually return C<limit> + 1 results, which is a lame
+way of indicating that there are additional items (this is stupid and will probably change,
+hopefully for the better).
+DEFAULT: 10 if C<page> is defined.
+
+=item page
+
+Skip to C<page> of results.
+DEFAULT: 1 of C<limit> is defined.
+
+=back
+
+=cut
+
 sub search {
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $local_params = cloneHash($params);
 
@@ -85,7 +139,7 @@ sub search {
     parseSearchString($local_params);
 
     my @ids = _search($local_params);
-    # We'll sort them since somewone requested it, but it's kind of
+    # We'll sort them since someone requested it, but it's kind of
     #   pointless without the whole object.
     @ids = sort @ids if ($params->{query}{sort});
 
@@ -124,15 +178,15 @@ sub search {
         }
     }
     MinorImpact::log('debug', 'Paging');
-    my $page = $params->{query}{page} || 1;
-    my $limit = $params->{query}{limit} || ($page?10:0);
+    my $page = $params->{query}{page} || ($params->{query}{limit}?1:0);
+    my $limit = $params->{query}{limit} || ($params->{query}{page}?10:0);
 
     if ($page && $limit) {
         @objects = splice(@objects, (($page - 1) * $limit), $limit + 1);
     }
 
     unless ($params->{query}{type_tree}) {
-        #MinorImpact::log('debug', "ending");
+        MinorImpact::log('debug', "ending");
         return @objects;
     }
 
@@ -141,7 +195,7 @@ sub search {
     foreach my $object (@objects) {
         push(@{$objects->{$object->typeID()}}, $object);
     }
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $objects;
 }
 
@@ -206,6 +260,10 @@ sub _search {
         } elsif ($param eq "user_id" || $param eq "user") {
             $where .= " AND object.user_id=?";
             push(@fields, $query->{user_id} || $query->{user});
+        } elsif ($param eq "readonly") {
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
+            $where .= " AND object_type.readonly = ? ";
+            push(@fields, $query->{readonly});
         } elsif ($param eq "system") {
             $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
             $where .= " AND object_type.system = ? ";
@@ -256,7 +314,7 @@ sub _search {
                 push(@fields, $query->{$param});
             }
             $field_where =~s/ OR $//;
-            $where .=  "AND ($field_where)";
+            $where .=  "AND ($field_where)" if ($field_where);
         }
     }
     #MinorImpact::debug(0);
@@ -276,5 +334,11 @@ sub _search {
     MinorImpact::log('debug', "ending");
     return map { $_->{id}; } @$objects;
 }
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;

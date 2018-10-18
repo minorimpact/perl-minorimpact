@@ -160,16 +160,29 @@ a memcached server is configured, or [CHI](https://metacpan.org/pod/CHI.md). (se
 
 - tt($page)
 - tt($page, \\%vars)
+- tt($page, \\%vars, \\$string)
 
 A wrapper/shortcut function to the [Template Toolkit](https://metacpan.org/pod/Template.md) library.
+Called with a single string, processes the named template and sends the output to
+STDOUT.
 
     MinorImpact::tt('template_name');
 
-See [MinorImpact::Manual::Templates](./MinorImpact_Manual_Templates.md).
+Adda hash pointer to pass variables to the template.
+
+    MinorImpact::tt('template_name', {foo => 'bar' });
+
+Variables can be accessed from within templates as `[% foo %]`.
+
+Pass a pointer as the third argument to write the output to a variable.
+
+    MinorImpact::tt('template_name', {}, \$output );
+
+See [MinorImpact::Manual::Templates](./MinorImpact_Manual_Templates.md) for more.
 
 ### Variables
 
-The following variables should work when calling most of the default templates.
+The following variables should be available in most of the default templates.
 
 - errors
 

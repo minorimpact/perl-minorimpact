@@ -27,13 +27,15 @@ Content-type: text/html
 </head>
 <body>
 <div class="w3-bar w3-top w3-border w3-[% site_config.header_color %]">
+        <a class="w3-bar-item w3-button w3-hide-large w3-border-right" style='margin-top:0px;' onclick="sidebar_open();"><i class='fa fa-navicon'></i></a>
+        <div class="w3-bar-item w3-hide-small w3-hide-medium w3-border-right" style='margin-top:0px;'><i class='fa fa-navicon' style="color:black"></i></div>
+        <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'index' }) %]'>[% site_config.name %]</a>
         [% IF user %]
-            <a class="w3-bar-item w3-button w3-hide-large w3-border-right" style='margin-top:0px;' onclick="sidebar_open();"><i class='fa fa-navicon'></i></a>
-            <div class="w3-bar-item w3-hide-small w3-hide-medium w3-border-right" style='margin-top:0px;'><i class='fa fa-navicon' style="color:black"></i></div>
             <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
+            <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'user' }) %]'><i class='fa fa-user'></i></a>
         [% ELSE %]
             [% IF site_config.no_login_links != 'true' %]
-                <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'login' }) %]'>Log In</a>
+                <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
                 [% IF site_config.no_register_links != 'true' %]
                     <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' }) %]'>Register</a>
                 [% END %]
@@ -59,14 +61,6 @@ Content-type: text/html
                 </div>
             </div>
             [% END %]
-            <div class="w3-row">
-                <div class="w3-col s3">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) %]'><i class="fa fa-user fa-2x"></i></a>
-                </div>
-                <div class="w3-col s9">
-                    <a class="w3-bar-item w3-button" href='[% url({ action=>'user' }) %]'>[% user.get('name') %]</a>
-                </div>
-            </div>
             <div class="w3-row">
                 <div class="w3-col s3">
                     <a class="w3-bar-item w3-button" href='[% url({ action=>'settings' }) %]' title='Site settings'><i class="fa fa-gear fa-2x"></i></a>

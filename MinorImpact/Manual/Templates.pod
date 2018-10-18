@@ -142,10 +142,13 @@ served up as a top level page.
 
 =head1 INCLUDED TEMPLATES
 
+Any of these templates can be overridden by creating a template with the same name in the
+directory named in the template_directory configuration setting. See L<MinorImpact::Manual::Configuration|Minorimpact::Manual::Configuration/settings>.
+
 =head2 copyright
 
 Dumps the value defined in the 'copyright' option in the 
-L<E<sol>etcE<sol>minorimpact.conf|MinorImpact/CONFIGURATION> file.
+L<E<sol>etcE<sol>minorimpact.conf|MinorImpact::Manual::Configuration/configurationfile> file.
 
 =head2 css
 
@@ -153,7 +156,7 @@ Site wide style sheet.
 
 =head2 css_site
 
-Add custom style sheet entries here.
+Included at the end of L<css|/css>; add custom style sheet entries here.
 
 =head2 error
 
@@ -227,6 +230,14 @@ Insert custom template output here.
 Called for each object in the "objects" array, this is a fairly complicated template designed to output
 a L<MinorImpact object|MinorImpact::Object>'s L<toString() method|MinorImpact::Object/toString>, with the
 "column" format.
+
+=head2 object_link
+
+The object's name as a link to the /object/E<lt>idE<gt> page.
+
+=head2 object_page
+
+A shorter version of L<object|/object>, but a longer version of L<object_link|/object_link>.
 
 =head2 sidebar_site
 

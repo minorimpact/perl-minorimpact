@@ -1,0 +1,13 @@
+
+<!-- TEMPLATE: default.table_object -->
+
+
+[% INCLUDE pagination %]
+
+<table>
+[% FOREACH object IN objects %]
+    [% object.toString({format => 'row'}) %]
+[% END %]
+</table>
+
+[% INCLUDE pagination %]

@@ -2,4 +2,6 @@
 
 <!-- TEMPLATE:default.about -->
 
+[% INCLUDE about_site %]
+
 [% INCLUDE footer %]

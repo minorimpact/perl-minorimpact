@@ -6,5 +6,4 @@
 [% INCLUDE add_reference_dialog %]
 [% INCLUDE footer_javascript %]
 
-
 </html>

@@ -8,21 +8,35 @@ use MinorImpact::Util;
 
 =head1 NAME
 
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=over 4
+MinorImpact::Object::Type 
 
 =cut
 
+=head1 SYNOPSIS
+
+=cut
+
+=head1 DESCRIPTION
+
+=cut
+
+=head1 SUBROUTINES
+
+=cut
+
+=head2 add
+
+=over
+
 =item add( \%options )
+
+=back
 
 Add a new object type to the MinorImpact application.
 
-=over 4
+=head3 options
+
+=over
 
 =item name => STRING
 
@@ -37,7 +51,6 @@ developer doesn't add a name value programatically during the 'new' or
 'update' functions of the inherited object class, 
 '$object->type()->name() . "-" . $obect-id()' will be used instead.
 Default: FALSE
-
 
 =item public => BOOLEAN
 
@@ -105,18 +118,65 @@ sub add {
     return $DB->{mysql_insertid};
 }
 
+=head2 addField
+
+=over
+
+=item addField(\%options)
+
+=back
+
+Adds a field to the database
+
+  MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name=>'address', type=>'string'});
+
+=head3 options
+
+=over
+
+=item name
+
+The field name.
+
+=item type
+
+The type of field.
+
+=cut
+
 sub addField { 
     return MinorImpact::Object::Field::add(@_); 
 } 
+
+=head2 del
+
+=over
+
+=item ::del(\%params)
+
+=back
+
+Delete a given object type from the system.
+
+  MinorImpact::Object::Type::del({ object_type_id => 'object'});
+
+=head3 params
+
+=over
+
+=item object_type_id
+
+The type ID of the object to the delete.  REQUIRED.
+
+=back
+
+=cut
 
 sub del {
     my $params = shift || return;
 
     my $DB = MinorImpact::db();
-    my $object_type_id = $params->{object_type_id};
-    unless ($object_type_id) {
-        $object_type_id = MinorImpact::Object::typeID($params->{name});
-    }
+    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id} || $params->{type_id} || $params->{name});
     die "No object type" unless ($object_type_id);
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
@@ -168,9 +228,13 @@ sub fields {
     return $fields;
 }
 
+=head2 setVersion
+
+=over
+
 =item setVersion
 
-=back 
+=back
 
 =cut
 
@@ -195,7 +259,7 @@ sub setVersion {
 
 =head1 AUTHOR
 
-Patrick Gillan (pgillan@minorimpact.com)
+Patrick Gillan <pgillan@minorimpact.com>
 
 =cut
 1;

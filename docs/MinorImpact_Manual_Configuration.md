@@ -8,9 +8,9 @@ By default, MinorImpact will look for a configration file at /etc/minorimpact.co
 the configuration file for a given application, however.  Each one of the following will be checked, in order, until a 
 valid configuration is discovered.
 
-## Setting Configuration Options...
+## Configuration Methods
 
-### ...from a Hash
+### Hash
 
 You can embedd configuration options directly in your application by passing a hash pointer to the "config" parameter when
 you create the MinorImpact object:
@@ -23,7 +23,7 @@ you create the MinorImpact object:
                     });
     
 
-### ...from a File
+### Configuration File
 
 Similarly, you can pass a the name of a file that contains the configuration settings to the using the "config\_file"
 when you create the MinorImpact object.
@@ -31,7 +31,7 @@ when you create the MinorImpact object.
     $MINORIMPACT = new MinorImpact({config_file => "/etc/minorimpact.conf"});
     
 
-### ...from an Environment Variable
+### Environment Variable
 
 You can also set the $MINORIMPACT\_CONFIG environment variable to the filename that contains the configuration options for
 application.
@@ -39,12 +39,12 @@ application.
     export MINORIMPACT_CONFIG="/etc/minorimpact.conf"
     
 
-### ...from a Local Configuration File
+### Local File
 
 If a file called "../conf/minorimpact.conf" exists, MinorImpact will read that for configuration information.  Specifically
 for running applications where the main script is in a "bin" directory, parallel to "lib" and "conf".
 
-### ...from a Global Configuration File
+### Global Configuration File
 
 If none of the other methods result in a configuration, MinorImpact will look for a file called "/etc/minorimpact.conf."
 
@@ -66,16 +66,27 @@ that need to share a common userbase. Other sections are listed below.
     that might be writing to the same file or using syslog. 
     DEFAULT: minorimpact
 
+- default\_object\_type
+
+    The package name of the object type that sits at the heart of your application, 
+    if one exists.  The id of this object type is what will get returned by 
+    [MinorImpact::Object::getTypeID()](./MinorImpact_Object.md#gettypeid), which is used
+    extensively within MinorImpact to fill out random lists and miscellaneous
+    pages.
+    DEFAULT: none
+
 - log\_file
 
     Name of the file to save log entries to.  Only valid when "log\_method" is 
     set to \*file\*.  Logging is disabled if "log\_method" is set to \*file\*
-    and this value not set. DEFAULT: None.
+    and this value not set. 
+    DEFAULT: None.
 
 - log\_method
 
     Method of logging output from [MinorImpact::log()](#log).  Valid options are \*file\*, 
-    \*syslog\* and \*stderr\*.  DEFAULT: \*file\*
+    \*syslog\* and \*stderr\*.
+    DEFAULT: \*file\*
 
 - memcached\_server
 
@@ -125,9 +136,15 @@ WWW specific application settings.
 
         copyright = "&copy;YEAR Minor Impact"
 
+    NAME is automatically replaced with the 'name' configuration option from this same section.
+
 - header\_color
 
     Header bar color.  Supports the default HTML color names: [https://www.w3schools.com/colors/colors\_names.asp](https://www.w3schools.com/colors/colors_names.asp.md).
+
+- name
+
+    The name of the site.
 
 - no\_login\_links
 
@@ -168,7 +185,8 @@ WWW specific application settings.
       db_password = minorimpactpw
 
     [site]
-      copyright = "&copy;YEAR Minor Impact"
+      copyright = "&copy;YEAR NAME"
+      name = "Minor Impact"
       no_search = true
 
 # AUTHOR

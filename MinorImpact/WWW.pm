@@ -25,7 +25,7 @@ MinorImpact::WWW
     MinorImpact::WWW::index($MINORIMPACT, $params);
   }
 
-=head1 METHODS
+=head1 SUBROUTINES
 
 =cut
 
@@ -36,8 +36,6 @@ MinorImpact::WWW
 =item add(\%params)
 
 =back
-
-
 
 =cut
 
@@ -302,13 +300,25 @@ sub edit_user {
     });
 }
 
-# Display all the objects found by executing $params->{query}.  If query is not defined, 
-# pull a list of everything the user owns.
+=head2 home
+
+=over
+
+=item home($MINORIMPACT, [\%params])
+
+=back
+
+Display all the objects found by executing $params->{query}.  If query is not defined, 
+pull a list of everything the user owns.  This action/page requires a currently
+logged in user.
+
+=cut
+
 sub home {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user({ force => 1 });
@@ -322,7 +332,6 @@ sub home {
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
 
-
     my $local_params = cloneHash($params);
 
     # The local home() sub should specify a query that defines list of objects that 
@@ -331,6 +340,8 @@ sub home {
         $local_params->{query} = {};
         $local_params->{query}{user_id} = $user->id();
     }
+    $local_params->{query}{system} = 0;
+    $local_params->{query}{readonly} = 0;
     $local_params->{query}{limit} = $limit;
     $local_params->{query}{page} = $page;
 
@@ -338,10 +349,10 @@ sub home {
 
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
-    my @types;
-    foreach my $object_type_id (MinorImpact::Object::getType()) {
-        push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object_type_id}));
-    }
+    my @type_ids = MinorImpact::Object::typeIDs();
+    #foreach my $object_type_id (MinorImpact::Object::getTypeID()) {
+    #    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object_type_id}));
+    #}
 
     my $url_last;
     my $url_next;
@@ -351,44 +362,74 @@ sub home {
         pop(@objects) if ($url_next);
     }
 
-    #MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
+    MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
     MinorImpact::tt('home', {
                             objects             => [ @objects ],
                             sort                => $sort,
                             #tab_number          => $tab_number,
-                            types               => [ @types ],
+                            types               => [ @type_ids ],
                             url_last            => $url_last,
                             url_next            => $url_next,
                             });
+    MinorImpact::log('debug', "ending");
 }
+
+=head2 index
+
+=over
+
+=item ::($MINORIMPACT, \%params)
+
+=back
+
+The main site page, what's displayed to the world.  By default, 
+
+=cut
 
 sub index {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
     
     my $CGI = $MINORIMPACT->cgi();
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
 
     my $local_params = cloneHash($params);
-    my @types;
     my @objects;
-    push(@types, MinorImpact::Object::getType());
-    if (scalar(@types) == 1) {
-        $local_params->{query}{object_type_id} = $types[0];
-        $local_params->{query}{public} = 1;
+    if (defined($local_params->{query})) {
+        # The caller supplied us with a query they want to use.
+        push(@objects, MinorImpact::Object::Search::search($local_params));
+    } else {
+        # Just grab whatever comes up as the default type and hope for
+        #   the best.
+        my @types;
+        push(@types, MinorImpact::Object::getTypeID());
+        foreach my $object_type_id (@types) {
+            $local_params->{query}{object_type_id} = $object_type_id;
+            $local_params->{query}{public} = 1;
         
-        delete($local_params->{query}{type_tree});
-        @objects = MinorImpact::Object::Search::search($local_params);
+            push(@objects, MinorImpact::Object::Search::search($local_params));
+        }
     }
+
+    # This is dumb, but the only good way I have right now to determine if there
+    #   are more beyond what we set for 'limit'.  If $over, then you know there's
+    #   at least one more page of data to display, but you have to remember to 
+    #   pull it from the end before you display the page.
+    my $over;
+    if ($local_params->{query}{limit}) {
+        while (scalar(@objects) > $local_params->{query}{limit}) {
+            $over = pop(@objects);
+        }
+    }
+
 
     MinorImpact::tt('index', {
         objects => [ @objects ],
-        types => [ @types ],
     });
-    #MinorImpact::log('debug', 'ending');
+    MinorImpact::log('debug', 'ending');
 }
 
 sub login {
@@ -460,7 +501,7 @@ sub object {
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
     my @types;
-    push(@types, MinorImpact::Object::getChildTypes({ object_type_id=>$object->typeID()}));
+    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object->typeID()}));
 
     my @objects;
     if ($format eq 'json') {
@@ -506,7 +547,7 @@ sub object_types {
 
     print "Content-type: text/plain\n\n";
     my @json;
-    foreach my $object_type (@{MinorImpact::Object::types()}) {
+    foreach my $object_type (MinorImpact::Object::types()) {
         push(@json, {id=>$object_type->{id}, name=>$object_type->{name}});
     }
     print to_json(\@json);

@@ -1,15 +1,26 @@
 package MinorImpact::Util;
 
-use strict;
 
 =head1 NAME
 
+MinorImpact::Util - MinorImpact utility library
 
 =head1 SYNOPSIS
 
+  use MinorImpact::Util;
+
+  $hash = { one => 1, two=> 2};
+  $copy = cloneHash($hash);
+
 =head1 DESCRIPTION
 
+Contains a set of basic utility functions.
+
+=head1 SUBROUTINES
+
 =cut
+
+use strict;
 
 use Data::Dumper;
 use Time::Local;
@@ -37,7 +48,21 @@ our @EXPORT = (
     "uniq", 
 );
 
-=head1 SUBROUTINES
+=head2 cloneHash
+
+=over
+
+=item cloneHash(\%hash, [\%new_hash])
+
+=back
+
+Returns a pointer to a copy of %hash.  If passed a second pointer to
+%new_hash it will store the copy there.
+
+  $original = { one => 1, two => 2 };
+  $copy = cloneHash($original);
+  print $copy->{one};
+  # OUTPUT: 1
 
 =cut
 
@@ -55,6 +80,31 @@ sub cloneHash {
     }
     return $new_hash;
 }
+
+=head2 commonRoot
+
+=over
+
+=item commonRoot(@strings)
+
+=back
+
+Looks at a list of strings and returns the common root of all
+of them.  Returns "" if no common root exists.
+
+  @strings = ("/usr/local", "/usr/bin", "/usr/local/bin");
+  print commonRoot(@strings);
+  # OUTPUT: /usr/
+
+  @strings = ("test1", "test2", "tapioca");
+  print commonRoot(@strings);
+  # OUTPUT: t
+
+  @strings = ("foo", "foobar", "bar");
+  print commonRoot(@strings);
+  # OUTPUT: 
+
+=cut
 
 sub commonRoot {
     my $root;
@@ -239,8 +289,27 @@ sub extractTags {
     return sort uniq map { lc($_); } keys %tags;
 }
 
-# This literally just prints an html header and a FUCK, 
-# so I can make something happen on a CGI page.
+=head2 f
+
+=over
+
+=item f()
+
+=item f($string)
+
+=back
+
+This literally just prints an html header and  $string, (or "FUCK"
+if no string is supplied), so I can make something happen on a CGI page.
+
+  f();
+  # OUTPUT:
+  # Content-type: text/html
+  # 
+  # FUCK
+
+=cut
+
 sub f {
     my $fuck = shift || "FUCK";
 
@@ -619,6 +688,12 @@ sub uniq {
     my %seen;
     return grep { !$seen{$_}++ } @_;
 }
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;
 
