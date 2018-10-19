@@ -69,7 +69,21 @@ Returns the 'name' value for this object.   Shortcut for ->get('name', \\%option
 
 ## public
 
-- public()
+- ->public()
+
+Returns true if $OBJECT is marked "public".
+
+    if ($OBJECT->public()) {
+      # show the object
+      return $OBJECT->toString();
+    } else {
+      # get bent
+      return "DENIED";
+    }
+
+Equivilant to:
+
+    $OBJECT->get('public');
 
 ## user
 
@@ -286,6 +300,21 @@ objects are the same, <0 if $comparison\_object->cmp() is larger,
 or <0 if it's smaller.
 
     # @sorted_object_list = sort { $a->cmp($b); } @object_list;
+
+## isType
+
+- ::isType($object\_type\_id, $setting )
+- ->isType($setting)
+
+Return the value of a particular $setting for a specified object type.
+
+    # check to see if the MinorImpact::entry type supports tags.
+    if (isType('MinorImpact::entry', 'no_tags')) {
+      # tag stuff
+    }
+
+See [MinorImpact::Object::Type::add()](./MinorImpact_Object_Type.md#add) for 
+more information on various settings when creating new MinorImpact types.
 
 ## search
 

@@ -660,11 +660,26 @@ sub save_search {
     }
 }
 
+=head2 search
+
+  /cgi-bin/index.cgi?a=search
+
+=head3 URL parameters
+
+=over
+
+=item search
+
+A string to search for.
+
+=back
+
+=cut
 sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
     my $user = MinorImpact::user();
@@ -766,7 +781,7 @@ sub search {
                         query               => $local_params->{query},
                         search              => $search,
                         search_placeholder  => "$local_params->{search_placeholder}",
-                        types               => sub { MinorImpact::Object::types(shift); },
+                        typeIDs             => sub { MinorImpact::Object::typeIDs(shift); },
                         url_last            => $url_last,
                         url_next            => $url_next,
                     };
@@ -778,6 +793,7 @@ sub search {
         }
     }
     MinorImpact::tt('search', $tt_variables);
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 settings

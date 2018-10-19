@@ -277,9 +277,23 @@ sub name {
 
 =over
 
-=item public()
+=item ->public()
 
 =back
+
+Returns true if $OBJECT is marked "public".
+
+  if ($OBJECT->public()) {
+    # show the object
+    return $OBJECT->toString();
+  } else {
+    # get bent
+    return "DENIED";
+  }
+
+Equivilant to:
+
+  $OBJECT->get('public');
 
 =cut
 
@@ -1433,6 +1447,28 @@ sub isNoTags {
     return isType($self, 'no_tags', shift || {});
 }
 
+=head2 isType
+
+=over
+
+=item ::isType($object_type_id, $setting )
+
+=item ->isType($setting)
+
+=back
+
+Return the value of a particular $setting for a specified object type.
+
+  # check to see if the MinorImpact::entry type supports tags.
+  if (isType('MinorImpact::entry', 'no_tags')) {
+    # tag stuff
+  }
+
+See L<MinorImpact::Object::Type::add()|MinorImpact::Object::Type/add> for 
+more information on various settings when creating new MinorImpact types.
+
+=cut
+
 sub isType {
     my $self = shift || return;
     my $thingie = shift || return;
@@ -1456,12 +1492,11 @@ sub isType {
         unless ($object_type_id =~/^\d+$/) {
             $object_type_id = MinorImpact::Object::typeID($object_type_id);
         }
-        MinorImpact::log('debug', "\$thingie='$thingie'");
+        MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$thingie='$thingie'");
         MinorImpact::log('debug', "cache is turned " . ($params->{no_cache}?'off':'on'));
         my $DB = MinorImpact::db();
         my $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
         unless ($data) {
-            MinorImpact::log('debug', "\$object_type_id='" . $object_type_id . "'");
             $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
             MinorImpact::cache("object_type_$object_type_id", $data);
         }

@@ -50,13 +50,21 @@ If TRUE, this object will not include a "Name" field in input/edit forms. If
 developer doesn't add a name value programatically during the 'new' or 
 'update' functions of the inherited object class, 
 '$object->type()->name() . "-" . $obect-id()' will be used instead.
+
 Default: FALSE
+
+=item no_tags => BOOLEAN
+
+If TRUE, this type will no longer support tagging.
+
+DEFAULT: FALSE
 
 =item public => BOOLEAN
 
 This option does **not** make the objects public.  If TRUE, the user will have
 the *option* of designating the type a public.  Essentially controls whether or
 the the 'public' checkbox appears on object input/edit forms.
+
 Default: FALSE
 
 =item readonly => BOOLEAN
@@ -64,6 +72,7 @@ Default: FALSE
 'readonly' objects are not editable by the user, and they will never be given 
 option from the standard library.  These differ from 'sytem' objects by virtue
 of having and owners and containing information that's relevant to said user.
+
 Default: FALSE
 
 =item system => BOOLEAN
@@ -141,6 +150,8 @@ The field name.
 =item type
 
 The type of field.
+
+=back
 
 =cut
 

@@ -53,6 +53,16 @@ logged in user.
 
 The main site page, what's displayed to the world.  By default, 
 
+## search
+
+    /cgi-bin/index.cgi?a=search
+
+### URL parameters
+
+- search
+
+    A string to search for.
+
 ## settings
 
 ## viewHistory

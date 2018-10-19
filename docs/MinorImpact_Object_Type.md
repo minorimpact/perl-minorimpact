@@ -28,13 +28,21 @@ Add a new object type to the MinorImpact application.
     developer doesn't add a name value programatically during the 'new' or 
     'update' functions of the inherited object class, 
     '$object->type()->name() . "-" . $obect-id()' will be used instead.
+
     Default: FALSE
+
+- no\_tags => BOOLEAN
+
+    If TRUE, this type will no longer support tagging.
+
+    DEFAULT: FALSE
 
 - public => BOOLEAN
 
     This option does \*\*not\*\* make the objects public.  If TRUE, the user will have
     the \*option\* of designating the type a public.  Essentially controls whether or
     the the 'public' checkbox appears on object input/edit forms.
+
     Default: FALSE
 
 - readonly => BOOLEAN
@@ -42,6 +50,7 @@ Add a new object type to the MinorImpact application.
     'readonly' objects are not editable by the user, and they will never be given 
     option from the standard library.  These differ from 'sytem' objects by virtue
     of having and owners and containing information that's relevant to said user.
+
     Default: FALSE
 
 - system => BOOLEAN
@@ -90,11 +99,3 @@ Delete a given object type from the system.
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 151:
-
-    You forgot a '=back' before '=head2'
