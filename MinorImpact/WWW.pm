@@ -182,6 +182,32 @@ sub delete_search {
     $MINORIMPACT->redirect({ action => 'collections' });
 }
 
+=head2 edit
+
+=over
+
+=item edit($MINORIMPACT, [\%params])
+
+=back
+
+Edit an object.
+
+  /cgi-bin/index.cgi?a=edit&id=<id>
+
+=head3 URL Parameters
+
+=over
+
+=item id
+
+=item object_id
+
+=back
+
+The id of the object to edit.
+
+=cut
+
 sub edit {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
@@ -208,6 +234,11 @@ sub edit {
                 $params->{$name} = 0;
             }
         }
+
+        if ($object->isType('public')) {
+            $params->{public} = 0 if (!defined($params->{public}));
+        }
+
         eval {
             $object->update($params);
         };
@@ -269,6 +300,7 @@ sub edit_settings {
 =head2 edit_user
 
 =cut
+
 sub edit_user {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};

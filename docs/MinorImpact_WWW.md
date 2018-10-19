@@ -22,6 +22,21 @@ MinorImpact::WWW
 
 - add(\\%params)
 
+## edit
+
+- edit($MINORIMPACT, \[\\%params\])
+
+Edit an object.
+
+    /cgi-bin/index.cgi?a=edit&id=<id>
+
+### URL Parameters
+
+- id
+- object\_id
+
+The id of the object to edit.
+
 ## edit\_user
 
 ## home
