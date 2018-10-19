@@ -394,13 +394,33 @@ sub getMonth {
     return;
 }
 
+=head2 htmlEscape
+
+=over
+
+=item htmlEscape($string)
+
+=item htmlEscape($string, \$new_string)
+
+=back
+
+Escape a bunch of HTML special characters.
+
+  $escaped_string = htmlEscape($string);
+
+Or:
+
+  htmlEscape($string, \$escaped_string);
+
+=cut
+
 sub htmlEscape {
     my $string = shift || return;
     my $text = ref($string)?$$string:$string;
     $text =~ s/&/&amp;/g;
     $text =~ s/</&lt;/g;
     $text =~ s/>/&rt;/g;
-    $text =~ s/"/&quote;/g;
+    $text =~ s/"/&quot;/g;
     $text =~ s/'/&#39;/g;
     $$string = $text if (ref($string));
     return $text;
