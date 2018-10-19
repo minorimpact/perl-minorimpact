@@ -271,6 +271,22 @@ If called as an object method, uses that object's type\_id.
     Get a list of types that reference this type of object.
     REQUIRED
 
+## cmp
+
+- ->cmp()
+- ->cmp($comparison\_object)
+
+Used to compare one object to another for purposes of sorting.
+Without an argument, return the $value of the sortby field.
+
+    # @sorted_object_list = sort { $a->cmp() cmp $b->cmp(); } @object_list;
+
+With an object parameter, returns 0 if the cmp() value from both
+objects are the same, <0 if $comparison\_object->cmp() is larger,
+or <0 if it's smaller.
+
+    # @sorted_object_list = sort { $a->cmp($b); } @object_list;
+
 ## search
 
 - ::search(\\%params)

@@ -1301,12 +1301,29 @@ sub form {
     return $form;
 }
 
-# Used to compare one object to another for purposes of sorting.
-# Example:
-#   @sorted_object_list = sort { $a->cmp($b); } @object_list;
-# Without an argument return the $value of the sortby field.
-# Example:
-#   @sorted_object_list = sort { $a->cmp() cmp $b->cmp(); } @object_list;
+=head2 cmp
+
+=over
+
+=item ->cmp()
+
+=item ->cmp($comparison_object)
+
+=back
+
+Used to compare one object to another for purposes of sorting.
+Without an argument, return the $value of the sortby field.
+
+  # @sorted_object_list = sort { $a->cmp() cmp $b->cmp(); } @object_list;
+
+With an object parameter, returns 0 if the cmp() value from both
+objects are the same, <0 if $comparison_object->cmp() is larger,
+or <0 if it's smaller.
+
+  # @sorted_object_list = sort { $a->cmp($b); } @object_list;
+
+=cut
+
 sub cmp {
     my $self = shift || return;
     my $b = shift;
@@ -1316,7 +1333,7 @@ sub cmp {
         my $field = $self->{object_data}{$field_name};
         $sortby = $field->name() if ($field->get('sortby'));
     }
-    if ($b) {
+    if ($b && ref($b)) {
         return ($self->get($sortby) cmp $b->cmp());
     }
 
