@@ -29,6 +29,10 @@ input[type=search]::-webkit-search-cancel-button {
 pre code {
     border: 1px solid darkgrey;
     background-color: lightgrey;
+    display: block;
+    margin-left: 2%;
+    padding: 1%;
+    width: 95%;
 }
 
 [% INCLUDE css_site %]
