@@ -375,7 +375,7 @@ sub _search {
             $where .=  "AND ($field_where)" if ($field_where);
         }
     }
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     my $sql = "$select $from $where";
     MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
     #MinorImpact::debug(0);
