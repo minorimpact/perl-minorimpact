@@ -61,6 +61,9 @@ sub dbConfig {
     return;
 }
 
+# A good example of overriding the 'get' method to use raw text data in
+#   a very specific way.  This object stores a serialized hash in a 'text'
+#   field and just thaws it out when it's retrieved.
 sub get {
     my $self = shift || return;
     my $name = shift || return;
@@ -136,6 +139,9 @@ sub searchText {
     return $text;
 }
 
+# Overrides the default update() method to serialize a field before storing it.
+#   The corresponding get() override thaws it before returning it, so all 
+#   the user has to deal with is a hash pointer.
 sub update {
     my $self = shift || return;
     my $params = shift || {};

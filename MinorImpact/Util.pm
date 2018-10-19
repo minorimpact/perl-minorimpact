@@ -251,9 +251,9 @@ sub extractFields {
     foreach my $t (@_) {
         my $text = ref($t)?$$t:$t;
         $text =~s/\r\n/\n/g;
-        foreach ($text =~/(\w+[:=]\w+)/g) {
+        while ($text =~/(\w+[:=]\S+)/g) {
             my $match = $&;
-            my ($key, $value) = $match =~/(\w+)[:=](\w+)/;
+            my ($key, $value) = $match =~/(\w+)[:=](\S+)/;
             MinorImpact::log('debug', "$key='$value'");
             $fields{$key} = $value;
             $text =~s/$match//;

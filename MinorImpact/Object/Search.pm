@@ -21,37 +21,83 @@ use MinorImpact;
 use MinorImpact::Util;
 use Text::ParseWords;
 
+=head2 parseSearchString
+
+=over
+
+=item parseSearchString($string)
+
+=item parseSearchString(\%params)
+
+=back
+
+Parses $string and returns a %query hash pointer.
+
+  $local_params->{query} = MinorImpact::Object::Search::parseSearchString("tag:foo tag:bar dust");
+  # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'dust' };
+
+If parseSearchString() is called with a standard \%params variable, it will look for 
+$params->{query}, parse anything in $params->{query}{search}, and add the results to
+the existing query hash.
+
+  $local_params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
+  $local_params->{query} = MinorImpact::Object::Search::parseSearchString($local_params);
+  # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
+
+=cut
+
 sub parseSearchString {
     my $string = shift || return;
 
-    my $params = {};
-    if (ref($string) eq "HASH") {
-        $params = $string;
-        $string = $params->{query}{search} || $params->{query}{text} || '';
+    MinorImpact::log('debug', "starting");
+
+    my $query = {};
+    if (ref($string) eq "HASH" && defined($string->{query})) {
+        $query = $string->{query};
+        $string = $query->{search} || '';
     }
 
-    $string = lc($string) || '';
-    $params->{query}{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
-    $params->{query}{tag} = '';
+    $query->{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
+
     my @tags = extractTags(\$string);
-    trim(\$string);
-    foreach my $tag (@tags) {
-        $params->{query}{tag} .= ",$tag";
+    if (scalar(@tags)) {
+        $query->{tag} = ',' . $query->{tag};
+        foreach my $tag (@tags) {
+            $query->{tag} .= ",$tag" unless ($query->{tag} =~/,$tag\b/);
+        }
+        $query->{tag} =~s/^,//;
     }
-    $params->{query}{tag} =~s/^,//;
 
-    #my $fields = extractFields(\$string);
-    #trim(\$string);
+    my $fields = extractFields(\$string);
+    if (scalar(keys(%$fields))) {
+        foreach my $field_name (keys %$fields) {
+            my $field_value = $fields->{$field_name};
+            MinorImpact::log('debug', "$field_name='$field_value'");
+            if ($field_name eq 'object_type_id') {
+                $field_value = MinorImpact::Object::typeID($field_value);
+            }
+            $query->{$field_name} = $field_value;
+        }
+    }
 
+    trim(\$string);
     # This is confusing because the two strings do different things at different times, but
     #   generally the "search" string is what the user sees, when they type it into the
     #   search bar, and "text" is what's left when all the special sauce has be been
     #   extracted. "search" gets processed and obliterated, and "text" just becomes one of 
     #   the many search search parameters, along with "tag", "order" and "field=value" pairs.
-    delete($params->{query}{search});
-    $params->{query}{text} = $string;
+    delete($query->{search});
+    MinorImpact::log('debug', "\$string='$string'");
+    if ($string) {
+        if ($query->{text}) {
+            $query->{text} .= " $string";
+        } else {
+            $query->{text} = $string;
+        }
+    }
 
-    return $params;
+    MinorImpact::log('debug', "ending");
+    return $query;
     # Working on a more complicated search mechanism, uncomment the previous return to make it
     # active.
     my @ors;
@@ -82,7 +128,8 @@ sub parseSearchString {
     #$params->{tag} =~s/,$//;
     #trim(\$string);
 
-    return $params;
+    MinorImpact::log('debug', "ending");
+    return $query;
 }
 
 =head2 search
@@ -182,7 +229,7 @@ sub search {
 
     return unless defined ($local_params->{query});
     $local_params->{query}{debug} .= "MinorImpact::Object::Search::search();";
-    parseSearchString($local_params);
+    $local_params->{query} = parseSearchString($local_params);
 
     my @ids = _search($local_params);
     # We'll sort them since someone requested it, but it's kind of

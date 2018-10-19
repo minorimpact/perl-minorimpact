@@ -8,6 +8,24 @@ MinorImpact::Object::Search
 
 # METHODS
 
+## parseSearchString
+
+- parseSearchString($string)
+- parseSearchString(\\%params)
+
+Parses $string and returns a %query hash pointer.
+
+    $local_params->{query} = MinorImpact::Object::Search::parseSearchString("tag:foo tag:bar dust");
+    # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'dust' };
+
+If parseSearchString() is called with a standard \\%params variable, it will look for 
+$params->{query}, parse anything in $params->{query}{search}, and add the results to
+the existing query hash.
+
+    $local_params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
+    $local_params->{query} = MinorImpact::Object::Search::parseSearchString($local_params);
+    # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
+
 ## search
 
 - ::search(\\%params)

@@ -679,6 +679,7 @@ sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
@@ -702,28 +703,39 @@ sub search {
     my $local_params = cloneHash($params);
     my @types;
     my @objects;
+
+    $local_params->{query} = {} unless (defined($local_params->{query}));
+    # Override everything in the query with whatever is set in the URL
+    #  parameters - the user has the final say over what they see.
+    $local_params->{query}{object_type_id} = $object_type_id if ($object_type_id);
+    $local_params->{query}{page} = $page if ($page);
+    $local_params->{query}{limit} = $limit + 1 if ($limit);
+    $local_params->{query}{sort} = $sort if ($sort);
+
+    # Anything coming in through here is coming from a user, they 
+    #   don't need to search system objects.
+    $local_params->{query}{system} = 0;
+    $local_params->{query}{debug} .= 'MinorImpact::WWW::search();';
+
     if ($params->{objects}) {
         @objects = @{$params->{objects}};
         $search ||= $collection->searchText() if ($collection);
     } elsif ($collection || $search) {
         if ($search) {
-            $local_params->{query}{search} = $search;
+            MinorImpact::log('debug', "\$search='$search'");
+            # Likewise, override any of the previous query settings if they're included
+            #   in the search string - the user who knows how to enter complicated 
+            #   searches has the even final-er say over what they see.
+            $local_params->{query} = { %{$local_params->{query}}, %{MinorImpact::Object::Search::parseSearchString($search)} };
         } elsif ($collection) {
             #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
-            $local_params->{query} ||= {};
+            # Override any of the previous settings with what what was saved in a previous
+            #   search.
             $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
             $search = $collection->searchText();
         }
 
-        $local_params->{query}{object_type_id} = $object_type_id if ($object_type_id);
-        $local_params->{query}{debug} .= 'MinorImpact::WWW::search();';
-        $local_params->{query}{page} = $page;
-        $local_params->{query}{limit} = $limit + 1;
 
-        $local_params->{query}{sort} = $sort;
-        # Anything coming in through here is coming from a user, they 
-        #   don't need to search system objects.
-        $local_params->{query}{system} = 0;
 
         # Getting rid of the whole concept of the 'type-tree', for now, it just adds
         # complexity, and I decided that in all the current use cases, I just want to show
@@ -756,7 +768,9 @@ sub search {
         #    @objects = MinorImpact::Object::Search::search($local_params);
         #}
         @objects = MinorImpact::Object::Search::search($local_params);
+        $search = $local_params->{query}{text};
     }
+    MinorImpact::debug(0);
 
     my $tab_number = 0;
     # TODO: figure out some way for these to be alphabetized

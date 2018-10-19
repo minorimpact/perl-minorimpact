@@ -1509,14 +1509,14 @@ sub isType {
 #   and check the object to see if it matches.
 sub match {
     my $self = shift || return;
-    my $params = shift || {};
+    my $query = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     # Check tags first.
-    if ($params->{tag}) {
+    if (defined($query->{tag})) {
         my @tags = $self->tags();
-        foreach my $tag (split(/,/, $params->{tag})) {
+        foreach my $tag (split(/,/, $query->{tag})) {
             if ($tag =~/^!(\w+)$/) {
                 # We found it - that's bad.
                 return if (indexOf($1, @tags));
@@ -1526,8 +1526,8 @@ sub match {
         }
     }
 
-    if ($params->{text}) {
-        my $test = $params->{text};
+    if ($query->{text}) {
+        my $test = $query->{text};
         my $match = 1;
         if ($test =~/^!(.*)$/) {
             $test = $1;
@@ -1551,6 +1551,7 @@ sub match {
         return ($match?0:1);
     }
 
+    MinorImpact::log('debug', "ending");
     return 1;
 }
 
