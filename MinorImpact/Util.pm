@@ -263,6 +263,26 @@ sub extractFields {
     return \%fields;
 }
 
+=head2 extractTags
+
+=over
+
+=item extractTags(@strings)
+
+=back
+
+Takes a list of strings and returns an array of tags found embedded in the strings.  If @strings
+countains pointers, any tags that are found will be extracted, altering the original 
+data.
+
+  # parse these strings for tags.
+  @strings = ("one #one", "#two", "tag:three four #six#");
+  @tags = extractTags(@strings);
+  print join(@tags, ", ");
+  # OUTPUT: one, two, three, six
+
+=cut
+
 sub extractTags {
     my %tags;
     foreach my $t (@_) {
@@ -317,6 +337,26 @@ sub f {
     print $fuck;
 }
 
+=head2 fleshDate
+
+=over
+
+=item fleshDate($string)
+
+=back
+
+Takes a partial date and fills in the missing parts to return an approximate
+epoch time value.
+
+  print fleshDate("2001-09-11 08") . "\n";'
+  # OUTPUT: 1000220400
+  print fleshDate("2001-09-11 08:46") . "\n";'
+  #OUTPUT: 1000223160
+  fleshDate("2001-09-11 08:46:01") . "\n";'
+  #OUTPUT: 1000223161
+
+=cut
+
 sub fleshDate {
     my $date = trim(shift) || return;
 
@@ -328,6 +368,17 @@ sub fleshDate {
         $hour = $4;
         $min = $5;
         $sec = $6;
+    } elsif ($date =~/^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{1,2})$/) {
+        $year = $1;
+        $month = $2;
+        $day = $3;
+        $hour = $4;
+        $min = $5;
+    } elsif ($date =~/^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2})$/) {
+        $year = $1;
+        $month = $2;
+        $day = $3;
+        $hour = $4;
     } elsif ($date =~/^(\d{4})-(\d{1,2})-(\d{1,2})$/) {
         $year = $1;
         $month = $2;
@@ -343,33 +394,56 @@ sub fleshDate {
     return timelocal($sec, $min, $hour, $day, ($month-1), $year);
 }
 
+=head2 fromMysqlDate
+
+=over
+
+=item fromMysqlDate(@date_strings)
+
+=back
+
+Takes one or more Mysql date strings and return an epoch time value.  Returns an array
+if passed an array, otherwise returns a scalar.
+
+  print fromMysqlDate("2001-09-11 08:46") . "\n";
+  # OUTPUT: 1000223160
+
+  print join(", ", fromMysqlDate("1999-12-31 23:59:59", "2000-01-01 00:00:00")) . "\n";
+  # OUTPUT: 946713599, 946713600
+
+=cut
+
 sub fromMysqlDate {
     my @data = @_;
     my @dates = ();
 
     foreach my $date (@data) {
-        my $time;
-        if ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}:\d{1,2}:\d{1,2})$/) {
-            my $year = $1;
-            my $month = ($2 - 1);
-            my $mday = $3;
-            my ($hour, $min, $sec)  = split(/:/, $4);
-
-            $time = timelocal($sec, $min, $hour, $mday, $month, $year);
-        } elsif ($date =~ /^(\d{4})-(\d{1,2})-(\d{1,2})$/) {
-            my $year = $1;
-            my $month = ($2 - 1);
-            my $mday = $3;
-
-            $time = timelocal(0, 0, 0, $mday, $month, $year);
-        }
-        push(@dates,$time);
+        push(@dates, fleshDate($date));
     }
     if (scalar(@data) > 1) {
         return @dates;
     }
     return $dates[0];
 }
+
+=head2 getMonth
+
+=over
+
+=item getMonth($string)
+
+=back
+
+If passed a common month or abbreviation, returns the number of the month (1-12).  If passed
+an integer from 1-12, returns the 3 letter abbreviation for the month.
+
+  print getMonth('january');
+  # OUTPUT: 1
+
+  print getMonth(4);
+  # OUTPUT: apr
+
+=cut
 
 sub getMonth {
     my $mon = lc(shift) || return;
@@ -382,12 +456,13 @@ sub getMonth {
                 'may'=>5,
                 'jun'=>6, 'june'=>6,
                 'jul'=>7, 'july'=>7,
-                'aug'=>8, 'august'=>8,
-                'sep' => 9, 'september' => 9,
+                'aug'=>8, 'august'=>8, augst => 8,
+                'sep' => 9, 'september' => 9, 'sept' => 9,
                 'oct' => 10, 'october'=>10,
                 'nov'=>11, 'november'=>11,
                 'dec'=>12, 'december'=>12);
     return $months{$mon} if ($months{$mon});
+
     if ($mon =~/^[0-9]+$/) {
         return ( grep { $months{$_} eq $mon;} keys %months)[0];
     }

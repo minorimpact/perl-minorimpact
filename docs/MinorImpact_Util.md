@@ -69,6 +69,20 @@ Which field this applies to.
 
 An array of values.
 
+## extractTags
+
+- extractTags(@strings)
+
+Takes a list of strings and returns an array of tags found embedded in the strings.  If @strings
+countains pointers, any tags that are found will be extracted, altering the original 
+data.
+
+    # parse these strings for tags.
+    @strings = ("one #one", "#two", "tag:three four #six#");
+    @tags = extractTags(@strings);
+    print join(@tags, ", ");
+    # OUTPUT: one, two, three, six
+
 ## f
 
 - f()
@@ -82,6 +96,59 @@ if no string is supplied), so I can make something happen on a CGI page.
     # Content-type: text/html
     # 
     # FUCK
+
+## fleshDate
+
+- fleshDate($string)
+
+Takes a partial date and fills in the missing parts to return an approximate
+epoch time value.
+
+    print fleshDate("2001-09-11 08") . "\n";'
+    # OUTPUT: 1000220400
+    print fleshDate("2001-09-11 08:46") . "\n";'
+    #OUTPUT: 1000223160
+    fleshDate("2001-09-11 08:46:01") . "\n";'
+    #OUTPUT: 1000223161
+
+## fromMysqlDate
+
+- fromMysqlDate(@date\_strings)
+
+Takes one or more Mysql date strings and return an epoch time value.  Returns an array
+if passed an array, otherwise returns a scalar.
+
+    print fromMysqlDate("2001-09-11 08:46") . "\n";
+    # OUTPUT: 1000223160
+
+    print join(", ", fromMysqlDate("1999-12-31 23:59:59", "2000-01-01 00:00:00")) . "\n";
+    # OUTPUT: 946713599, 946713600
+
+## getMonth
+
+- getMonth($string)
+
+If passed a common month or abbreviation, returns the number of the month (1-12).  If passed
+an integer from 1-12, returns the 3 letter abbreviation for the month.
+
+    print getMonth('january');
+    # OUTPUT: 1
+
+    print getMonth(4);
+    # OUTPUT: apr
+
+## htmlEscape
+
+- htmlEscape($string)
+- htmlEscape($string, \\$new\_string)
+
+Escape a bunch of HTML special characters.
+
+    $escaped_string = htmlEscape($string);
+
+Or:
+
+    htmlEscape($string, \$escaped_string);
 
 ## isTrue
 

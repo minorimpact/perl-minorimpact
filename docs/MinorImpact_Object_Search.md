@@ -76,16 +76,16 @@ Search for objects.
 
         # find all public objects named 'Ford'
         MinorImpact::Object::Search::search({ name => 'Ford', public => 1 });
-      =back
+
+- sort => $sort
+
+    If sort the results before they are returned.  If id\_only is true, then the
+    list of IDs will come back sorted, which may not be useful.  Otherwise, the
+    objects will be sorted in ascending order (if $sort > 0) or descending order
+    if ($sort < 0) using the objects' [cmp()](./MinorImpact_Object.md#cmp) function.
+
+        @objects = MinorImpact::Object::Search::search({ sort => 1 });
 
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 387:
-
-    You forgot a '=back' before '=head1'
