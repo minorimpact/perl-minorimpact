@@ -494,7 +494,7 @@ sub htmlEscape {
     my $text = ref($string)?$$string:$string;
     $text =~ s/&/&amp;/g;
     $text =~ s/</&lt;/g;
-    $text =~ s/>/&rt;/g;
+    $text =~ s/>/&gt;/g;
     $text =~ s/"/&quot;/g;
     $text =~ s/'/&#39;/g;
     $$string = $text if (ref($string));
