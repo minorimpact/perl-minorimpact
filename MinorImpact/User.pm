@@ -422,27 +422,35 @@ sub validateUser {
 
 =over
 
-=item addUser(\%params)
+=item ::addUser(\%params)
 
 =back
 
 Add a MinorImpact user.
 
-  $new_user = MinorImpact::User::AddUser({username => 'foo', password => 'bar' });
+  $new_user = MinorImpact::User::AddUser({
+    password => 'bar',
+    username => 'foo', 
+    email => 'foo@bar.com",
+  });
 
 =head3 Settings
 
 =over
 
-=item admin
+=item admin => true/false
 
 Make the user an admin.
 
-=item password
+=item email => $string
+
+Set the user's email to $string.
+
+=item password => $string
 
 The new user's password.
 
-=item username
+=item username => $string
 
 The new user's login name.
 
@@ -465,7 +473,7 @@ sub addUser {
                 die "Only an admin user can add an admin user\n";
             }
         }
-        $DB->do("INSERT INTO user (name, password, admin, create_date) VALUES (?, ?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$), $params->{admin})) || die $DB->errstr;
+        $DB->do("INSERT INTO user (name, password, admin, email, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$), isTrue($params->{admin}), $params->{email})) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);

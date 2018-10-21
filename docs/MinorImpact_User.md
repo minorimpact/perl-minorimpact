@@ -122,23 +122,31 @@ Returns TRUE if $password is valid.
 
 ## addUser
 
-- addUser(\\%params)
+- ::addUser(\\%params)
 
 Add a MinorImpact user.
 
-    $new_user = MinorImpact::User::AddUser({username => 'foo', password => 'bar' });
+    $new_user = MinorImpact::User::AddUser({
+      password => 'bar',
+      username => 'foo', 
+      email => 'foo@bar.com",
+    });
 
 ### Settings
 
-- admin
+- admin => true/false
 
     Make the user an admin.
 
-- password
+- email => $string
+
+    Set the user's email to $string.
+
+- password => $string
 
     The new user's password.
 
-- username
+- username => $string
 
     The new user's login name.
 

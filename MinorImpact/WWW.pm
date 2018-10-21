@@ -589,9 +589,9 @@ sub register {
     my $MI = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
-    my $CGI = $MI->cgi();
+    my $CGI = MinorImpact::cgi();
 
     my $username = $CGI->param('username');
     my $email = $CGI->param('email');
@@ -616,19 +616,23 @@ sub register {
             my $user;
             eval {
                 #MinorImpact::log('debug', "FUCK");
-                MinorImpact::User::addUser({ email=>$email, password=>$password, username=>$username });
-                $user  = $MI->user({ password=>$password, username=>$username });
+                $user = MinorImpact::User::addUser({ email=>$email, password=>$password, username=>$username });
             };
-            push(@errors, $@) if ($@);
+            if ($@) {
+                my $error = $@;
+                $error = "Duplicate entry for $username." if ($error =~/Duplicate entry/);
+                push(@errors, $error);
+            }
             if ($user) {
                 $MI->redirect({ action => 'home' });
             } else {
-                push(@errors, "Can't create new user");
+                if (scalar(@errors)) { unshift(@errors, "Can't create new user:"); }
+                else { unshift(@errors, "Can't create new user."); }
             }
         }
     }
     MinorImpact::tt('register', { email => $email, errors => [ @errors ], username => $username });
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
 }
 
 sub save_search {
