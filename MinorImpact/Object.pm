@@ -53,6 +53,7 @@ use MinorImpact::entry;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
 use MinorImpact::settings;
+use MinorImpact::User;
 use MinorImpact::Util;
 
 my $OBJECT_CACHE;
@@ -345,6 +346,24 @@ sub userID {
 
 sub user_id { 
     return shift->userID(); 
+}
+
+=head2 userName
+
+=over
+
+=item ->userName()
+
+=back
+
+Return the name of the user that owns this object.
+
+  $name = $OBJECT->userName();
+
+=cut
+
+sub userName {
+    return shift->user()->name();
 }
 
 sub selectList {

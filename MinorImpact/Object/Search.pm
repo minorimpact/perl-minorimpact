@@ -380,14 +380,16 @@ sub _search {
             push(@fields, $query->{system});
         } elsif ($param eq "tag") {
             my $tag_where;
-            foreach my $tag (split(",", $query->{tag})) {
-                $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag /);
-                if (!$tag_where) {
-                    $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
-                } else {
-                    $tag_where = "SELECT object_id FROM object_tag WHERE name=? AND object_id IN ($tag_where)";
+            foreach my $tag (split(/[, ]+/, $query->{tag})) {
+                if ($tag) {
+                    $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag /);
+                    if (!$tag_where) {
+                        $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
+                    } else {
+                        $tag_where = "SELECT object_id FROM object_tag WHERE name=? AND object_id IN ($tag_where)";
+                    }
+                    push(@fields, $tag);
                 }
-                push(@fields, $tag);
             }
             $where .= " AND object_tag.object_id IN ($tag_where)" if ($tag_where);
         } elsif ($param eq "description") {

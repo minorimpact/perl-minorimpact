@@ -394,6 +394,50 @@ sub param {
     return $CGI->param($param);
 }
 
+=head2 redirect
+
+=over
+
+=item ::redirect()
+=item ::redirect($string)
+=item ::redirect(\%params)
+=item ->redirect()
+=item ->redirect($string)
+=item ->redirect(\&params)
+
+=back
+
+Redirects an application to a new location; does not return.  
+
+With no value, will redirect to the index page - this is a proper way
+to handle an unexpected error or security violation.
+
+If called with $string, will redirect directly to that value.  
+
+Otherwise, sends \&params to L<MinorImpact::url()|MinorImpact/url> and redirects
+to the value returned.
+
+  # send them to the login page.
+  MinorImpact::redirect({ action => 'login' });
+
+Must be called before any other output, obviously, since relocation is done
+via C<Location> http header.
+
+=head3 params
+
+=over
+
+=item url => $string
+
+Redirect to $string.
+
+  # send this punk to learn something
+  MinorImpact::redirect("http://google.com");
+
+=back
+
+=cut
+
 sub redirect {
     my $self = shift || return;
     my $params = shift || {};
@@ -404,7 +448,7 @@ sub redirect {
         $params = $self;
         undef($self);
     } elsif (!ref($self)) {
-        $params->{redirect} = $self;
+        $params->{url} = $self;
         undef($self);
     }
 
@@ -700,7 +744,7 @@ sub url {
         $params = $self;
         undef($self);
     } elsif (!ref($self)) {
-        $params->{redirect} = $self;
+        $params->{url} = $self;
         undef($self);
     }
 
@@ -718,6 +762,7 @@ sub url {
     my $search = $params->{search} if ($params->{search});
     my $sort = $params->{sort} if ($params->{sort});
     my $tab_id = $params->{tab_id} if ($params->{tab_id});
+    my $user_id = $params->{user_id} if ($params->{user_id});
 
     my $pretty = isTrue($self->{conf}{default}{pretty_urls});
     my $qualified = isTrue($params->{qualified});
@@ -729,31 +774,45 @@ sub url {
     # This is unintuitive, but in the cases where the action sub has a particular "main"
     #   parameter, it will accept it as "id", and it will work with the default pretty
     #   url format /<action>/<id>.
+    # TODO: This should really be something that gets defined in the object.
+    my $id;
     if ($action eq 'add' && $object_type_id) {
-        $object_id = $object_type_id;
+        $id = $object_type_id;
         undef($object_type_id);
     } elsif (($action eq 'delete_search' || $action eq 'search') && $collection_id) {
-        $object_id = $collection_id;
+        $id = $collection_id;
         undef($collection_id);
+    } elsif (($action eq 'object' || $action eq 'edit') && $object_id) {
+        $id = $object_id;
+        undef($object_id);
+    } elsif ($action eq 'user' && $user_id) {
+        my $user = new MinorImpact::User($user_id);
+        if ($user) {
+            $id = $user->name();
+        } else {
+            $id = $user_id;
+        }
+        undef($user_id);
     }
+
     if ($pretty) {
         $url .= "/$action";
-        if ($object_id) {
-            $url .= "/$object_id" 
-        } 
+        $url .= "/$id" if ($id);
         $url .= "?";
     } else {
         my $script_name = MinorImpact::scriptName();
         $url .= "/cgi-bin/$script_name?a=$action";
-        $url .= "&id=$object_id" if ($object_id); 
+        $url .= "&id=$id" if ($id); 
     }
     $url .= "&cid=$collection_id" if ($collection_id);
     $url .= "&page=$page" if ($page);
     $url .= "&limit=$limit" if ($limit);
+    $url .= "&object_id=$object_id" if ($object_id);
     $url .= "&search=$search" if ($search);
     $url .= "&sort=$sort" if ($sort);
     $url .= "&tab_id=$tab_id" if ($tab_id);
     $url .= "&type_id=$object_type_id" if ($object_type_id);
+    $url .= "&user_id=$user_id" if ($user_id);
 
     foreach my $key (keys %{$params->{params}}) {
         $url .= "&$key=" . $params->{params}{$key};

@@ -105,6 +105,14 @@ The ID of the user this object belongs to.
 
     $user_id = $OBJECT->userID();
 
+## userName
+
+- ->userName()
+
+Return the name of the user that owns this object.
+
+    $name = $OBJECT->userName();
+
 ## get
 
 - ->get($field)

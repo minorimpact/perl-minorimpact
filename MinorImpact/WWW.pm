@@ -938,13 +938,44 @@ sub tags {
     MinorImpact::tt('tags', { tags => $tags, });
 }
 
+=head2 user
+
+=over
+
+=item ::user($MINORIMPACT, \%params)
+
+=back
+
+Display objects and information about a particular user.
+
+=head3 params
+
+=cut
+
 sub user {
     my $MI = shift || return;
+    my $params = shift || {};
 
-    my $user = $MI->user({ force => 1 });
-    my $script_name = MinorImpact::scriptName();
+    my $CGI = MinorImpact::cgi();
+    my $current_user = MinorImpact::user();
 
-    MinorImpact::tt('user');
+    my $user_id = $CGI->param('user_id') || $CGI->param('id') || $CGI->param('user') || ($current_user?$current_user->id():'') || MinorImpact::redirect();
+    my $user = new MinorImpact::User($user_id) || MinorImpact::redirect();
+
+    my $local_params = cloneHash($params);
+
+    unless (defined($local_params->{query})) {
+        $local_params->{query} = {};
+        $local_params->{query}{sort} = 1;
+    }
+
+    $local_params->{query}{user_id} = $user->id();
+    if (!$current_user || ($current_user->id() != $user->id())) {
+        $local_params->{query}{public} = 1;
+    }
+    my @objects = MinorImpact::Object::Search::search($local_params);
+
+    MinorImpact::tt('user', { objects => [ @objects ] });
 }
 
 =head2 viewHistory

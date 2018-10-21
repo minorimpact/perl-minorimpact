@@ -180,6 +180,40 @@ Called with no values, cache() return the raw cache oject, either [Cache::Memcac
 a memcached server is configured, or [CHI](https://metacpan.org/pod/CHI.md). (see 
 [MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md#settings)) for more information on cache configuration.
 
+## redirect
+
+- ::redirect()
+=item ::redirect($string)
+=item ::redirect(\\%params)
+=item ->redirect()
+=item ->redirect($string)
+=item ->redirect(\\&params)
+
+Redirects an application to a new location; does not return.  
+
+With no value, will redirect to the index page - this is a proper way
+to handle an unexpected error or security violation.
+
+If called with $string, will redirect directly to that value.  
+
+Otherwise, sends \\&params to [MinorImpact::url()](./MinorImpact.md#url) and redirects
+to the value returned.
+
+    # send them to the login page.
+    MinorImpact::redirect({ action => 'login' });
+
+Must be called before any other output, obviously, since relocation is done
+via `Location` http header.
+
+### params
+
+- url => $string
+
+    Redirect to $string.
+
+        # send this punk to learn something
+        MinorImpact::redirect("http://google.com");
+
 ## tt
 
 - tt($page)

@@ -1,6 +1,6 @@
 <div class="w3-row">
     <h3>[% object.name() %]</h3>
-    <small>[% object.get('publish_date') %]</small><br />
+    <small>[% object.get('publish_date') %] - <a href=[% url({ action => 'user', user_id => object.get('user_id')}) %]>[% object.userName() %]</a></small><br />
     [% object.get('content', { markdown => 1}) %]<br />
 </div>
 <hr>

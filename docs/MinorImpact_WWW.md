@@ -65,6 +65,14 @@ The main site page, what's displayed to the world.  By default,
 
 ## settings
 
+## user
+
+- ::user($MINORIMPACT, \\%params)
+
+Display objects and information about a particular user.
+
+### params
+
 ## viewHistory
 
 - viewHistory()
