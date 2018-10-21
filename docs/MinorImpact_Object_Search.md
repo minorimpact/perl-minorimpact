@@ -53,7 +53,20 @@ Search for objects.
     perform the comparison, rather than "=".
 
         # get all MinorImpact::entry objects published after the 10th.
-        MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", "publish_date>" => '2018-10-10' });
+        @objects = MinorImpact::Object::Search::search({ 
+              object_type_id => "MinorImpact::entry", 
+              "publish_date>" => '2018-10-10' 
+        });
+
+- admin BOOLEAN
+
+    Only return objects that belong to a user with admin rights.
+
+        # get all public objects owned by an admin
+        @objects = MinorImpact::Object::Search::search({ 
+              admin => 1,
+              public => 1,
+        });
 
 - id\_only
 

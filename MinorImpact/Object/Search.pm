@@ -165,7 +165,20 @@ If you append ">" or "<" to the field name, it will use that operator to
 perform the comparison, rather than "=".
 
   # get all MinorImpact::entry objects published after the 10th.
-  MinorImpact::Object::Search::search({ object_type_id => "MinorImpact::entry", "publish_date>" => '2018-10-10' });
+  @objects = MinorImpact::Object::Search::search({ 
+        object_type_id => "MinorImpact::entry", 
+        "publish_date>" => '2018-10-10' 
+  });
+
+=item admin BOOLEAN
+
+Only return objects that belong to a user with admin rights.
+
+  # get all public objects owned by an admin
+  @objects = MinorImpact::Object::Search::search({ 
+        admin => 1,
+        public => 1,
+  });
 
 =item id_only
 
@@ -339,11 +352,15 @@ sub _search {
         if ($param eq "name") {
             $where .= " AND object.name = ?",
             push(@fields, $query->{name});
+        } elsif ($param eq "admin") {
+            $from .= " JOIN user ON (object.user_id=user.id)" unless ($from =~/JOIN user /);
+            $where .= " AND user.admin = ?";
+            push(@fields, ($query->{admin}?1:0));
         } elsif ($param eq "public") {
             $where .= " AND object.public = ?",
             push(@fields, ($query->{public}?1:0));
         } elsif ($param eq "object_type_id") {
-            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type /);
             if ($query->{object_type_id} =~/^[0-9]+$/) {
                 $where .= " AND object_type.id=?";
             } else {
@@ -354,17 +371,17 @@ sub _search {
             $where .= " AND object.user_id=?";
             push(@fields, $query->{user_id} || $query->{user});
         } elsif ($param eq "readonly") {
-            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type /);
             $where .= " AND object_type.readonly = ? ";
             push(@fields, $query->{readonly});
         } elsif ($param eq "system") {
-            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type/);
+            $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type /);
             $where .= " AND object_type.system = ? ";
             push(@fields, $query->{system});
         } elsif ($param eq "tag") {
             my $tag_where;
             foreach my $tag (split(",", $query->{tag})) {
-                $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag/);
+                $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag /);
                 if (!$tag_where) {
                     $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
                 } else {
@@ -379,7 +396,7 @@ sub _search {
         } elsif ($param eq "text" || $param eq "search") {
             my $text = $query->{text} || $query->{search};
             if ($text) {
-                $from .= " LEFT JOIN object_text ON (object.id=object_text.object_id)" unless ($from =~/JOIN object_text/);
+                $from .= " LEFT JOIN object_text ON (object.id=object_text.object_id)" unless ($from =~/JOIN object_text /);
                 $where .= " AND (object.name LIKE ? OR object_data.value LIKE ? OR object_text.value LIKE ?)";
                 push(@fields, "\%$text\%");
                 push(@fields, "\%$text\%");
@@ -396,6 +413,7 @@ sub _search {
 
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             #MinorImpact::log('debug', "\$object_field_id='$object_field_id'");
+            next unless ($object_field_id);
             $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
             $where .= " AND (object_data$object_field_id.object_field_id = ? AND object_data$object_field_id.value $operator ?)";
             push(@fields, $object_field_id);
@@ -422,10 +440,11 @@ sub _search {
             $where .=  "AND ($field_where)" if ($field_where);
         }
     }
-    #MinorImpact::debug(1);
+
+    MinorImpact::debug(1);
     my $sql = "$select $from $where";
     MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
-    #MinorImpact::debug(0);
+    MinorImpact::debug(0);
 
 
     my $objects;

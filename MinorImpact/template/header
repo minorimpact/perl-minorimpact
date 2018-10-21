@@ -33,13 +33,6 @@ Content-type: text/html
         [% IF user %]
             <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
             <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'user' }) %]'><i class='fa fa-user'></i></a>
-        [% ELSE %]
-            [% IF site_config.no_login_links != 'true' %]
-                <a class="w3-bar-item w3-button w3-border-right" style='margin-top:0px;' href='[% url({ action=>'home' }) %]'><i class='fa fa-home'></i></a>
-                [% IF site_config.no_register_links != 'true' %]
-                    <a class="w3-bar-item w3-button w3-border-right" href='[% url({ action=>'register' }) %]'>Register</a>
-                [% END %]
-            [% END %]
         [% END %]
         [% IF site_config.no_search != 'true' %]
             [% INCLUDE header_search %]
@@ -80,7 +73,7 @@ Content-type: text/html
                 </div>
             [% END %]
             [% IF site_config.no_login_links != 'true' %]
-                [% IF site_config.no_register_links != 'true' %]
+                [% IF site_config.no_collections_links != 'true' %]
                     <div class="w3-row">
                         <div class="w3-col s3">
                             <a class="w3-bar-item w3-button" href='[% url({ action=>'collections' }) %]'><i class="fa fa-bookmark fa-2x"></i></a>
@@ -112,6 +105,7 @@ Content-type: text/html
                 [% IF site_config.no_register_links != 'true' %]
                     <div class="w3-row">
                         <div class="w3-col s3">
+                            &nbsp;
                         </div>
                         <div class="w3-col s9">
                             <a class="w3-bar-item w3-button" href='[% url({ action=>'register' }) %]'>Register</a>

@@ -29,6 +29,30 @@ MinorImpact - Application/object framework and utility library.
 
 The main interface to the MinorImpact library, a personal application/object framework and utility collection.
 
+## Documenation
+
+### Manual Pages
+
+- [Installation](./MinorImpact_Manual_Installation.md)
+- [Configuration](./MinorImpact_Manual_Configuration.md)
+- [Templates ](./MinorImpact_Manual_Templates.md)
+
+### Sub Modules
+
+- [CLI](./MinorImpact_CLI.md)
+- [Config](./MinorImpact_Config.md)
+- [Object](./MinorImpact_Object.md)
+- [Object::Field](./MinorImpact_Object_Field.md)
+- [Object::Search](./MinorImpact_Object_Search.md)
+- [Object::Type](./MinorImpact_Object_Type.md)
+- [User](./MinorImpact_User.md)
+- [Util](./MinorImpact_Util.md)
+- [WWW](./MinorImpact_WWW.md)
+
+### Default Objects
+
+- [MinorImpact::entry](./MinorImpact_entry.md)
+
 # INSTALLATION
 
 See [MinorImpact::Manual::Installation](./MinorImpact_Manual_Installation.md) for more detailed
