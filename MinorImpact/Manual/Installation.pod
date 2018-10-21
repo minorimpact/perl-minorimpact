@@ -80,9 +80,9 @@ You can set a password for one of these users by running:
 
 =head2 Site
 
-=over
-
 Here is a simple example of a complete MinorImact website.
+
+=over
 
 =item /etc/minorimpact.com/minorimpact.com.conf
 

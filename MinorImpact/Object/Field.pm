@@ -18,8 +18,6 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 
 =head1 METHODS
 
-=over 4
-
 =cut
 
 our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
@@ -417,5 +415,11 @@ sub deleteField { del(@_); }
 sub delField { del(@_); }
 
 sub isText { return shift->{attributes}{is_text}; }
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;

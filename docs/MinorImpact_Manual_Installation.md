@@ -80,100 +80,92 @@ You can set a password for one of these users by running:
 
 ## Site
 
-> Here is a simple example of a complete MinorImact website.
->
-> /etc/minorimpact.com/minorimpact.com.conf
->
-> Assuming multiple applications, each one needs it's own config file.  If you're running multiple applications, include an \`application\_id\`, so the logs and caches won't overlap.
->
->     application_id = minorimpact.com
->     pretty_urls = true
->     template_directory = /var/www/minorimpact.com/template
->
->     [db]
->         database = minorimpact
->         db_host = db
->         db_port = 3306
->         db_user = <user>
->         db_password = <password>
->
->     [site]
->         copyright = "&copy;YEAR NAME"
->         name = "Minor Impact"
->
-> /etc/conf.d/minorimpact.com.conf
->
-> A real apache config will have more options than this, obviously, but these are the essential settings.  The RewriteEngine rules are really only necessary if you set \`pretty\_urls\` in the minorimpact.com.conf file, $MINORIMPACT\_CONFIG variable only matters if you if you have multiple applications (with multiple config files), and the $PERL5LIB variable doesn't have to be set if your application doesn't have any local libraries, but I included them for clarity.
->
->     DocumentRoot "/var/www/minorimpact.com/html"
->     
->     <Directory "/var/www/minorimpact.com/html">
->         AllowOverride None
->         Require all granted
->         DirectoryIndex index.html
->         RewriteEngine On
->         RewriteCond %{REQUEST_FILENAME} !-f
->         RewriteCond %{REQUEST_FILENAME} !-d
->         RewriteRule ^(.*)\/([0-9a-z_\-]+)(.*)$ /cgi-bin/index.cgi?a=$1&id=$2$3 [L,QSA]
->         RewriteCond %{REQUEST_FILENAME} !-f
->         RewriteCond %{REQUEST_FILENAME} !-d
->         RewriteRule ^([a-z0-9_\-]*)$ /cgi-bin/index.cgi?a=$1 [L,QSA]
->     </directory>
->     
->     ScriptAlias /cgi-bin "/var/www/minorimpact.com/cgi-bin"
->     
->     SetEnv MINORIMPACT_CONFIG /etc/minorimpact/minorimpact.com.conf
->     SetEnv MINORIMPACT_TEMPLATE /var/www/minorimpact.com/template
->     SetEnv PERL5LIB /var/www/minorimpact.com/lib
->
-> /var/www/minorimpact.com/html/index.html
->
-> There may be a way to do this redirect to the cgi in the apache config file, but it's one line and in twenty years I've never bothered to figure it out.
->
-> <meta http-equiv='refresh' content='0;url=/cgi-bin/index.cgi'>
->
-> /var/www/minorimpact.com/cgi-bin/index.cgi
->
-> The actual \`index.cgi\` script is the final file we need to install for our application, and the only action sub we need to override is the [index](./MinorImpact_WWW.md#index) action - and only so we can define the query has we need to populate the object list on the default index page.
->
->     #!/usr/bin/perl
->     
->     use MinorImpact;
->     use MinorImpact::Util;
->     
->     MinorImpact::www({
->         actions => {
->             index => \&index,
->             register => \&index,
->         },
->         site_config => {
->             no_collections => 'true',
->             no_login_links => 'true',
->             no_tags => 'true'
->         }
->     
->     });
->     
->     sub index {
->         my $MINORIMPACT = shift || return;
->         my $params = shift || {};
->     
->         $params->{query} = { object_type_id => 'MinorImpact::entry', 
->                 public => 1,
->                 'sort' => -1, 
->                 "publish_date<" => toMysqlDate() 
->         } ;
->         MinorImpact::WWW::index($MINORIMPACT, $params);
->     }
+Here is a simple example of a complete MinorImact website.
+
+- /etc/minorimpact.com/minorimpact.com.conf
+
+    Assuming multiple applications, each one needs it's own config file.  If you're running multiple applications, include an \`application\_id\`, so the logs and caches won't overlap.
+
+        application_id = minorimpact.com
+        pretty_urls = true
+        template_directory = /var/www/minorimpact.com/template
+
+        [db]
+            database = minorimpact
+            db_host = db
+            db_port = 3306
+            db_user = <user>
+            db_password = <password>
+
+        [site]
+            copyright = "&copy;YEAR NAME"
+            name = "Minor Impact"
+
+- /etc/conf.d/minorimpact.com.conf
+
+    A real apache config will have more options than this, obviously, but these are the essential settings.  The RewriteEngine rules are really only necessary if you set \`pretty\_urls\` in the minorimpact.com.conf file, $MINORIMPACT\_CONFIG variable only matters if you if you have multiple applications (with multiple config files), and the $PERL5LIB variable doesn't have to be set if your application doesn't have any local libraries, but I included them for clarity.
+
+        DocumentRoot "/var/www/minorimpact.com/html"
+        
+        <Directory "/var/www/minorimpact.com/html">
+            AllowOverride None
+            Require all granted
+            DirectoryIndex index.html
+            RewriteEngine On
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^(.*)\/([0-9a-z_\-]+)(.*)$ /cgi-bin/index.cgi?a=$1&id=$2$3 [L,QSA]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^([a-z0-9_\-]*)$ /cgi-bin/index.cgi?a=$1 [L,QSA]
+        </directory>
+        
+        ScriptAlias /cgi-bin "/var/www/minorimpact.com/cgi-bin"
+        
+        SetEnv MINORIMPACT_CONFIG /etc/minorimpact/minorimpact.com.conf
+        SetEnv MINORIMPACT_TEMPLATE /var/www/minorimpact.com/template
+        SetEnv PERL5LIB /var/www/minorimpact.com/lib
+
+- /var/www/minorimpact.com/html/index.html
+
+    There may be a way to do this redirect to the cgi in the apache config file, but it's one line and in twenty years I've never bothered to figure it out.
+
+    <meta http-equiv='refresh' content='0;url=/cgi-bin/index.cgi'>
+
+- /var/www/minorimpact.com/cgi-bin/index.cgi
+
+    The actual \`index.cgi\` script is the final file we need to install for our application, and the only action sub we need to override is the [index](./MinorImpact_WWW.md#index) action - and only so we can define the query has we need to populate the object list on the default index page.
+
+        #!/usr/bin/perl
+        
+        use MinorImpact;
+        use MinorImpact::Util;
+        
+        MinorImpact::www({
+            actions => {
+                index => \&index,
+                register => \&index,
+            },
+            site_config => {
+                no_collections => 'true',
+                no_login_links => 'true',
+                no_tags => 'true'
+            }
+        
+        });
+        
+        sub index {
+            my $MINORIMPACT = shift || return;
+            my $params = shift || {};
+        
+            $params->{query} = { object_type_id => 'MinorImpact::entry', 
+                    public => 1,
+                    'sort' => -1, 
+                    "publish_date<" => toMysqlDate() 
+            } ;
+            MinorImpact::WWW::index($MINORIMPACT, $params);
+        }
 
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 83:
-
-    You can't have =items (as at line 87) unless the first thing after the =over is an =item

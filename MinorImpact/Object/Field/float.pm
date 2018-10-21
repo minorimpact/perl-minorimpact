@@ -6,8 +6,6 @@ MinorImpact::Object::Field::float
 
 =head1 METHODS
 
-=over 4
-
 =cut
 
 use strict;
@@ -42,5 +40,11 @@ sub validate {
 
     return $value;
 }
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
 
 1;
