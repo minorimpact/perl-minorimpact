@@ -254,8 +254,9 @@ Returns an array of object\_type records.
 - ->tags()
 - ->tags(@tags)
 
-Called as a package subroutine, returns a list of all the tags defined in the system
-for all users and all objects.
+Called as a package subroutine, returns a list of all the tags defined for all
+objects owned by the logged in user, or tags for all public objects owned by 
+all admin users if the no one is logged in.
 
     @all_tags = MinorImpact::Object::tags();
 
