@@ -439,7 +439,7 @@ Redirect to $string.
 =cut
 
 sub redirect {
-    my $self = shift || return;
+    my $self = shift;
     my $params = shift || {};
 
     #MinorImpact::log('debug', "starting");
@@ -447,16 +447,17 @@ sub redirect {
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
-    } elsif (!ref($self)) {
+    } elsif ($self && !ref($self)) {
         $params->{url} = $self;
         undef($self);
-    }
+    } 
 
-    if (ref($params) ne 'HASH') {
+    if (ref($params) eq 'SCALAR') {
         my $redirect = $params;
         $params = {};
         $params->{url} = $redirect;
     }
+    $params->{action} = "index" unless ($params->{url} || $params->{action});
 
     my $url = (defined($params->{url}) && $params->{url})?$params->{url}:MinorImpact::url($params);
     MinorImpact::log('info', "redirecting to $url");
