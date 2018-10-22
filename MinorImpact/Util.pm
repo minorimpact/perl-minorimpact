@@ -501,6 +501,27 @@ sub htmlEscape {
     return $text;
 }
 
+=head2 indexOf
+
+=over
+
+=item indexOf($string, @array)
+
+=back
+
+Returns the position of $string in @array, 
+or 'undef' if $string does not appear in @array.
+
+  @array = ("one", "two", "foo", "spatula", "river");
+  $index = indexOf("foo", @array);
+  # RESULT: $index = 2
+  $index = indexOf("one", @array);
+  # RESULT: $index = 0
+  $index = indexOf("napalm", @array);
+  # RESULT: $index = undef
+ 
+=cut
+
 sub indexOf {
     my $string = shift || return;
     my @data = @_;
