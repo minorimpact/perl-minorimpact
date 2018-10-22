@@ -43,6 +43,16 @@ Content-type: text/html
     <div class="w3-container">
         <button class="w3-button w3-hide-large" onclick="sidebar_close();"><i class="fa fa-close fa-2x"></i></button>
         [% INCLUDE sidebar_site %]
+        [% IF site_config.no_tags != 'true' %]
+            <div class="w3-row">
+                <div class="w3-col s3">
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'tags' }) %]'><i class="fa fa-tags fa-2x"></i></a>
+                </div>
+                <div class="w3-col s9">
+                    <a class="w3-bar-item w3-button" href='[% url({ action=>'tags' }) %]'>Tags</a>
+                </div>
+            </div>
+        [% END %]
         [% IF user %]
             [% IF user.isAdmin %]
             <div class="w3-row">
@@ -62,16 +72,6 @@ Content-type: text/html
                     <a class="w3-bar-item w3-button" href='[% url({ action=>'settings' }) %]' title='Site settings'>Settings</a>
                 </div>
             </div>
-            [% IF site_config.no_tags != 'true' %]
-                <div class="w3-row">
-                    <div class="w3-col s3">
-                        <a class="w3-bar-item w3-button" href='[% url({ action=>'tags' }) %]'><i class="fa fa-tags fa-2x"></i></a>
-                    </div>
-                    <div class="w3-col s9">
-                        <a class="w3-bar-item w3-button" href='[% url({ action=>'tags' }) %]'>Tags</a>
-                    </div>
-                </div>
-            [% END %]
             [% IF site_config.no_login_links != 'true' %]
                 [% IF site_config.no_collections_links != 'true' %]
                     <div class="w3-row">

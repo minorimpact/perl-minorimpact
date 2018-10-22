@@ -1085,16 +1085,17 @@ sub log {
 
 =over
 
-=item ::tags() 
+=item ::tags([\%params])
 
-=item ->tags()
+=item ->tags([\%params])
 
 =item ->tags(@tags)
 
 =back
 
-Called as a package subroutine, returns a list of all the tags defined in the system
-for all users and all objects.
+Called as a package subroutine, returns a list of all the tags defined for all
+objects owned by the logged in user, or tags for all public objects owned by 
+all admin users if the no one is logged in.
 
   @all_tags = MinorImpact::Object::tags();
 
@@ -1111,22 +1112,49 @@ Called as an object method with an array of @tags, replaces the objects tags.
 
 sub tags {
     my $self = shift;
+    my $params = shift || {};
    
     my @tags = ();
+
+    if (ref($self) eq "HASH") {
+        $params = $self;
+        undef($self);
+    }
+    if ($params && !ref($params)) {
+       unshift($params);
+       $params = {};
+   }
+   if ($self && !ref($self)) {
+      unshift($self);
+      undef($self);
+   }
+
     unless ($self) {
-        my $DB = MinorImpact::db();
-        my $all_tags = $DB->selectall_arrayref("SELECT distinct(name) FROM object_tag", {Slice=>{}});
-        foreach my $tag (@$all_tags) {
-            push(@tags, $tag->{name});
+        unless (defined($params->{query})) {
+            $params->{query} = {};
+            my $user = MinorImpact::user();
+            if ($user) {
+                $params->{query}{user_id} = $user->id();
+            } else {
+                $params->{query}{public} = 1;
+            }
         }
+
+        foreach my $object (MinorImpact::Object::Search::search($params)) {
+            push(@tags, $object->tags());
+        }
+        # Not sure if I want to return just the unique tags.  So far, the only thing
+        #   that's using this sub (MinorImpact::WWW::tags()) counts of the number of 
+        #   each tag and diplays it.
+        @tags = uniq(@tags) if ($params->{unique});
+
         return @tags;  
     }
    
     if (scalar(@_)) {
-        $self->update({ tags => join(",", @_) });
+        $self->update({ tags => join(",", uniq(@_)) });
     }
 
-    @tags = ();
     foreach my $data (@{$self->{tags}}) {
         push @tags, $data->{name};
     }

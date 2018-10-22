@@ -35,6 +35,24 @@ The page title.
 
 A handful of MinorImpact methods are available to use from within templates.
 
+## tags
+
+- tags()
+
+Returns an array of tags applicable to the current user.  See [MinorImpact::Object::tags()](./MinorImpact_Object.md#tags).
+
+    [% FOREACH tag IN tags() %]
+      [% tag %]
+    [% ENF %]
+
+## typeName
+
+- typeName(object\_type\_id)
+
+Returns the name of an object type.
+
+    <a href=[% url({ action => 'add', object_type_id => object_type_id}) %]Add a new [% typeName(object_type_id) %]</a>
+
 ## url
 
 - url(\\%params)

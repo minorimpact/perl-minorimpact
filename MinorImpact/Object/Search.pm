@@ -21,6 +21,41 @@ use MinorImpact;
 use MinorImpact::Util;
 use Text::ParseWords;
 
+=head2 mergeQuery
+
+=over
+
+=item ::mergeQuery(\%query, \%params);
+
+=back
+
+Merges the values from %query into $params->{query}.
+
+=cut
+
+sub mergeQuery {
+    my $query = shift || return;
+    my $params = shift || {};
+
+    $params->{query}{tags} = [] unless (defined($params->{query}{tags}));
+    $query->{tags} = [] unless (defined($query->{tags}));
+    push(@{$params->{query}{tags}}, @{$query->{tags}});
+    @{$params->{query}{tags}} = uniq(@{$params->{query}{tags}});
+
+    my @tags = split(/,/, $query->{tag});
+    $params->{query}{tag} = "," . $params->{query}{tag} unless ($params->{query}{tag} =~/^,/);
+    foreach my $tag (@tags) {
+        $params->{query}{tag} = $params->{query}{tag} . ",$tag" unless ($params->{query}{tag} =~/,$tag\b/);
+    }
+    $params->{query}{tag} =~s/^,//;
+
+    foreach my $field (keys %{$query}) {
+        next if ($field =~/^(tag|tags)$/);
+        $params->{query}{$field} = $query->{$field};
+    }
+    return $params->{query};
+}
+
 =head2 parseSearchString
 
 =over
@@ -36,32 +71,23 @@ Parses $string and returns a %query hash pointer.
   $local_params->{query} = MinorImpact::Object::Search::parseSearchString("tag:foo tag:bar dust");
   # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'dust' };
 
-If parseSearchString() is called with a standard \%params variable, it will look for 
-$params->{query}, parse anything in $params->{query}{search}, and add the results to
-the existing query hash.
-
-  $local_params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
-  $local_params->{query} = MinorImpact::Object::Search::parseSearchString($local_params);
-  # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
-
 =cut
 
 sub parseSearchString {
-    my $string = shift || return;
+    my $string = shift || return {};
 
     MinorImpact::log('debug', "starting");
 
     my $query = {};
-    if (ref($string) eq "HASH" && defined($string->{query})) {
-        $query = $string->{query};
-        $string = $query->{search} || '';
-    }
 
-    $query->{debug} .= 'MinorImpact::Object::Search::parseSearchString();';
+    $query->{debug} = 'MinorImpact::Object::Search::parseSearchString();';
 
     my @tags = extractTags(\$string);
+
+    $query->{tags} = \@tags;
+
     if (scalar(@tags)) {
-        $query->{tag} = ',' . $query->{tag};
+        $query->{tag} = ',' . $query->{tag} unless ($query->{tag} =~/^,/);
         foreach my $tag (@tags) {
             $query->{tag} .= ",$tag" unless ($query->{tag} =~/,$tag\b/);
         }
@@ -130,6 +156,41 @@ sub parseSearchString {
 
     MinorImpact::log('debug', "ending");
     return $query;
+}
+
+=head2 processQuery
+
+=over
+
+=item ::processQuery(\%params);
+
+=back
+
+Looks at $params->{query} and converts $params->{query}{search} into
+the proper query hash values, merging whatever it finds with the 
+current $params->{params}{query} values.
+
+  $params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
+  MinorImpact::Object::Search::parseSearchString($params);
+  # RESULT: $params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
+
+=cut
+
+sub processQuery {
+    my $params = shift || return;
+
+    MinorImpact::log('debug', "starting");
+
+    my $query = {};
+    if (ref($params) eq "HASH" && defined($params->{query})) {
+        $query = $params->{query};
+    }
+
+    my $new_query = parseSearchString($params->{query}{search}) if (defined($params->{query}{search}) && $params->{query}{search});
+    delete($params->{query}{search});
+    mergeQuery($new_query, $params);
+    MinorImpact::log('debug', "ending");
+    return $params->{query};
 }
 
 =head2 search
@@ -238,13 +299,13 @@ sub search {
 
     MinorImpact::log('debug', "starting");
 
-    my $local_params = cloneHash($params);
+    #my $local_params = cloneHash($params);
 
-    return unless defined ($local_params->{query});
-    $local_params->{query}{debug} .= "MinorImpact::Object::Search::search();";
-    $local_params->{query} = parseSearchString($local_params);
+    return unless defined ($params->{query});
+    $params->{query}{debug} .= "MinorImpact::Object::Search::search();";
+    processQuery($params);
 
-    my @ids = _search($local_params);
+    my @ids = _search($params);
     # We'll sort them since someone requested it, but it's kind of
     #   pointless without the whole object.
     @ids = sort @ids if ($params->{query}{sort});
@@ -339,14 +400,28 @@ sub _search {
         }
     }
 
+    if (defined($query->{tags}) && scalar(@{$query->{tags}})) {
+        my $tag_where;
+        foreach my $tag (@{$query->{tags}}) {
+            $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag /);
+            if (!$tag_where) {
+                $tag_where = "SELECT object_id FROM object_tag WHERE name=?";
+            } else {
+                $tag_where = "SELECT object_id FROM object_tag WHERE name=? AND object_id IN ($tag_where)";
+            }
+            push(@fields, $tag);
+        }
+        $where .= " AND object_tag.object_id IN ($tag_where)" if ($tag_where);
+    }
+
     # Proces all the options.  I don't like that that process settings are mixed up with field/search data
     # but that's how I did it.
     # TODO: Go through all the code and separate the terms that define "how" the search should be handled from
     #  "what" we're searching for. 
     #MinorImpact::debug(1);
     foreach my $param (keys %$query) {
+        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|search|select|tags|type_tree)$/);
         MinorImpact::log('debug', "\$param='$param', \$query->{$param}='" . $query->{$param} . "'");
-        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|select|type_tree)$/);
         next unless (defined($query->{$param}));
         MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
@@ -380,7 +455,7 @@ sub _search {
             push(@fields, $query->{system});
         } elsif ($param eq "tag") {
             my $tag_where;
-            foreach my $tag (split(/[, ]+/, $query->{tag})) {
+            foreach my $tag (extractTags($params->{tag})) {
                 if ($tag) {
                     $from .= " LEFT JOIN object_tag ON (object.id=object_tag.object_id)" unless ($from =~/JOIN object_tag /);
                     if (!$tag_where) {

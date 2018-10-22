@@ -55,15 +55,23 @@ The main site page, what's displayed to the world.  By default,
 
 ## search
 
-    /cgi-bin/index.cgi?a=search
+Search the system application.
 
 ### URL parameters
 
 - search
 
-    A string to search for.
+    A string to search for.  See [MinorImpact::Object::Search::parseSearchString()](./MinorImpact_Object_Search.md#parsesearchstring).
+
+        # search for objects tagged with 'test' that contain the word 'poop'.
+        /cgi-bin/index.cgi?a=search&search=poop%tag:test
 
 ## settings
+
+## tags
+
+Display a list of the current user's tags - or the tags for all public objects
+owned by 'admin' users, if no user is currenly logged in.
 
 ## user
 

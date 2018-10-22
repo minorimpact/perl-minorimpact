@@ -631,6 +631,14 @@ sub tt {
         MinorImpact::log('debug', "\$path='$path'");
         my $global_template_directory = File::Spec->catfile($path, "$package/template");
 
+        # Add indexOf sub to Template Toolkit list options.
+        use Template::Stash;
+
+        $Template::Stash::LIST_OPS->{ indexOf } = sub {
+            my $list = shift;
+            return indexOf(shift, @$list);
+        };
+
         my $variables = {
             cid         => $collection_id,
             #collections => [ @collections ],
@@ -643,6 +651,7 @@ sub tt {
             #search      => $search,
             site_config => $self->{conf}{site},
             sort        => $sort,
+            tags        => sub { MinorImpact::Object::tags(shift); },
             typeName    => sub { MinorImpact::Object::typeName(shift); },
             url         => sub { MinorImpact::url(shift); },
             user        => $user,
@@ -1227,7 +1236,8 @@ sub dbConfig {
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
         )") || die $DB->errstr;
-        $DB->do("create index idx_object_user_id on object(user_id)") || die $DB->errstr;
+        $DB->do("create index idx_object_public    on object(public)") || die $DB->errstr;
+        $DB->do("create index idx_object_user_id   on object(user_id)") || die $DB->errstr;
         $DB->do("create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
     }
     eval {

@@ -250,8 +250,8 @@ Returns an array of object\_type records.
 
 ## tags
 
-- ::tags() 
-- ->tags()
+- ::tags(\[\\%params\])
+- ->tags(\[\\%params\])
 - ->tags(@tags)
 
 Called as a package subroutine, returns a list of all the tags defined for all

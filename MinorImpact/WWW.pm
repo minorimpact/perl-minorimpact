@@ -108,7 +108,6 @@ sub add_reference {
     my $user = $MINORIMPACT->user({ force => 1 });
     my $CGI = MinorImpact::cgi();
     my $DB = MinorImpact::db();
-    my $script_name = MinorImpact::scriptName();
 
     my $object_id = $CGI->param('object_id');
     my $object_text_id = $CGI->param('object_text_id');
@@ -359,7 +358,6 @@ sub home {
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || $settings->get('results_per_page') || 25;
     my $page = $CGI->param('page') || 1; 
-    my $script_name = MinorImpact::scriptName();
 
     my $sort = MinorImpact::session('sort');
     my $tab_id = MinorImpact::session('tab_id');
@@ -666,7 +664,7 @@ sub save_search {
 
 =head2 search
 
-  /cgi-bin/index.cgi?a=search
+Search the system application.
 
 =head3 URL parameters
 
@@ -674,11 +672,15 @@ sub save_search {
 
 =item search
 
-A string to search for.
+A string to search for.  See L<MinorImpact::Object::Search::parseSearchString()|MinorImpact::Object::Search/parseSearchString>.
+
+  # search for objects tagged with 'test' that contain the word 'poop'.
+  /cgi-bin/index.cgi?a=search&search=poop%tag:test
 
 =back
 
 =cut
+
 sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
@@ -694,13 +696,20 @@ sub search {
     my $limit = $CGI->param('limit') || 30;
     my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id');
     my $page = $CGI->param('page') || 1; 
-    my $script_name = MinorImpact::scriptName();
+    my $sort = $CGI->param('sort');
+    undef($sort) if ($sort eq '');
+
+    my $admin = $CGI->param('admin');
+    undef($admin) if ($admin eq '');
+    my $public = $CGI->param('public');
+    undef($public) if ($public eq '');
+    my @tags = $CGI->param('tags');
+
+    my $tab_id = MinorImpact::session('tab_id');
 
     #my $collection_id = MinorImpact::session('collection_id');
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid') || $CGI->param('id');
-    my $search = $CGI->param('search');
-    my $sort = MinorImpact::session('sort');
-    my $tab_id = MinorImpact::session('tab_id');
+    my $search = $CGI->param('search') || '';
 
     my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
 
@@ -709,12 +718,18 @@ sub search {
     my @objects;
 
     $local_params->{query} = {} unless (defined($local_params->{query}));
+    $local_params->{query}{tags} = [] unless (defined($local_params->{query}{tags}));
     # Override everything in the query with whatever is set in the URL
     #  parameters - the user has the final say over what they see.
-    $local_params->{query}{object_type_id} = $object_type_id if ($object_type_id);
+    push(@{$local_params->{query}{tags}}, @tags);
     $local_params->{query}{page} = $page if ($page);
     $local_params->{query}{limit} = $limit + 1 if ($limit);
-    $local_params->{query}{sort} = $sort if ($sort);
+    $local_params->{query}{sort} = $sort if (defined($sort));
+
+    $local_params->{query}{admin} = $admin if (defined($admin));
+    $local_params->{query}{object_type_id} = $object_type_id if ($object_type_id);
+    $local_params->{query}{public} = $public if (defined($public));
+    $local_params->{query}{search} = $search;
 
     # Anything coming in through here is coming from a user, they 
     #   don't need to search system objects.
@@ -724,22 +739,8 @@ sub search {
     if ($params->{objects}) {
         @objects = @{$params->{objects}};
         $search ||= $collection->searchText() if ($collection);
-    } elsif ($collection || $search) {
-        if ($search) {
-            MinorImpact::log('debug', "\$search='$search'");
-            # Likewise, override any of the previous query settings if they're included
-            #   in the search string - the user who knows how to enter complicated 
-            #   searches has the even final-er say over what they see.
-            $local_params->{query} = { %{$local_params->{query}}, %{MinorImpact::Object::Search::parseSearchString($search)} };
-        } elsif ($collection) {
-            #MinorImpact::log('debug', "\$collection->id()='" . $collection->id() . "'");
-            # Override any of the previous settings with what what was saved in a previous
-            #   search.
-            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
-            $search = $collection->searchText();
-        }
-
-
+    } elsif ($collection){ 
+        $search = $collection->searchText();
 
         # Getting rid of the whole concept of the 'type-tree', for now, it just adds
         # complexity, and I decided that in all the current use cases, I just want to show
@@ -771,9 +772,10 @@ sub search {
         #    MinorImpact::log('debug', 'FOO');
         #    @objects = MinorImpact::Object::Search::search($local_params);
         #}
-        @objects = MinorImpact::Object::Search::search($local_params);
-        $search = $local_params->{query}{text};
     }
+    $local_params->{query}{search} = $search;
+    @objects = MinorImpact::Object::Search::search($local_params);
+    $search = $local_params->{query}{text};
     MinorImpact::debug(0);
 
     my $tab_number = 0;
@@ -835,7 +837,6 @@ sub tablist {
 
     my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user();
-    my $script_name = MinorImpact::scriptName();
 
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit');
@@ -916,25 +917,22 @@ sub tablist {
     });
 }
 
+=head2 tags
+
+Display a list of the current user's tags - or the tags for all public objects
+owned by 'admin' users, if no user is currenly logged in.
+
+=cut
+
 sub tags {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    my $user = $MINORIMPACT->user({ force => 1 });
-    my $CGI = $MINORIMPACT->cgi();
-    my $script_name = MinorImpact::scriptName();
-
     my $local_params = cloneHash($params);
-    $local_params->{query}{user_id} = $user->id();
-    delete($local_params->{query}{tag});
-    my @objects = MinorImpact::Object::Search::search($local_params);
+    delete($local_params->{query}{tag}) if (defined($local_params->{query}));
 
-    my @tags;
     my $tags;
-    foreach my $object (@objects) {
-        push(@tags, $object->tags());
-    }
-    map { $tags->{$_}++; } @tags;
+    map { $tags->{$_}++; } MinorImpact::Object::tags($local_params);
     MinorImpact::tt('tags', { tags => $tags, });
 }
 

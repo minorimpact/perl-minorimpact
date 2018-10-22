@@ -2,5 +2,8 @@
     <h3>[% object.name() %]</h3>
     <small>[% object.get('publish_date') %] - <a href=[% url({ action => 'user', user_id => object.get('user_id')}) %]>[% object.userName() %]</a></small><br />
     [% object.get('content', { markdown => 1}) %]<br />
+    [% FOREACH tag IN object.tags() %]
+        [% INCLUDE tag %]
+    [% END %]
 </div>
 <hr>

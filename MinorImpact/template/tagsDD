@@ -1,4 +1,4 @@
-<!-- TEMPLATE:default.list_menu_tags -->
+<!-- TEMPLATE:default.tagsDD -->
 [% IF tags %]
 <div class="w3-dropdown-click">
     <button class="w3-button" onclick="openTagsDD();">

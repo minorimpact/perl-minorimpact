@@ -8,6 +8,12 @@ MinorImpact::Object::Search
 
 # METHODS
 
+## mergeQuery
+
+- ::mergeQuery(\\%query, \\%params);
+
+Merges the values from %query into $params->{query}.
+
 ## parseSearchString
 
 - parseSearchString($string)
@@ -18,13 +24,17 @@ Parses $string and returns a %query hash pointer.
     $local_params->{query} = MinorImpact::Object::Search::parseSearchString("tag:foo tag:bar dust");
     # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'dust' };
 
-If parseSearchString() is called with a standard \\%params variable, it will look for 
-$params->{query}, parse anything in $params->{query}{search}, and add the results to
-the existing query hash.
+## processQuery
 
-    $local_params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
-    $local_params->{query} = MinorImpact::Object::Search::parseSearchString($local_params);
-    # RESULT: $local_params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
+- ::processQuery(\\%params);
+
+Looks at $params->{query} and converts $params->{query}{search} into
+the proper query hash values, merging whatever it finds with the 
+current $params->{params}{query} values.
+
+    $params->{query} = { page => 2, limit => 10, search => "tag:bar test", tag => "foo" };
+    MinorImpact::Object::Search::parseSearchString($params);
+    # RESULT: $params->{query} = { tag => 'foo,bar', text => 'test', page => 2, limit => 10 };
 
 ## search
 
