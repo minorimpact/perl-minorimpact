@@ -442,7 +442,7 @@ sub redirect {
     my $self = shift;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     if (ref($self) eq 'HASH') {
         $params = $self;
@@ -452,7 +452,7 @@ sub redirect {
         undef($self);
     } 
 
-    if (ref($params) eq 'SCALAR') {
+    if (ref($params) ne 'HASH') {
         my $redirect = $params;
         $params = {};
         $params->{url} = $redirect;
@@ -462,7 +462,7 @@ sub redirect {
     my $url = (defined($params->{url}) && $params->{url})?$params->{url}:MinorImpact::url($params);
     MinorImpact::log('info', "redirecting to $url");
     print "Location:$url\n\n";
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     exit;
 }
 

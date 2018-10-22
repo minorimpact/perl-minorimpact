@@ -230,12 +230,13 @@ sub back {
     my $self = shift || return;
     my $params = shift || {};
     
+    $params->{action} = 'home' unless(defined($params->{action}) && $params->{action});
     #my $CGI = MinorImpact::cgi();
     #my $cid = $CGI->param('cid');
     #my $search = $CGI->param('search');
     #my $sort = $CGI->param('sort');
 
-    return MinorImpact::url({ action => 'home' });
+    return MinorImpact::url($params);
 }
 
 sub churn {
