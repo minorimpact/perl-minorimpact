@@ -693,6 +693,25 @@ sub _isNoun {
     return indexOf($letter, @nouns);
 }
 
+=head2 randomText
+
+=over
+
+=item randomText()
+
+=item randomText($word_count)
+
+=back
+
+Will generate a string $word_count words long of gibberish for testing
+purposes (or a random string of between 3 and 15 words, if 
+$word_count is not specified).
+
+  print randomText(6) . "\n";
+  # OUTPUT: ydvo o fygdbeb aydtl qeaih nyaq
+
+=cut
+
 sub randomText {
     my $word_count = shift;
     $word_count =~s/\D//g;
@@ -775,6 +794,30 @@ sub toMysqlDate {
     return $dates[0];
 }
 
+=head2 trim
+
+=over
+
+=item trim($string)
+
+=item trim(\$string)
+
+=back
+
+Removes white space from the beginning and end of $string.
+
+  $string = "Foo  ";
+  $trimmed_string = trim($string);
+  # RESULT: $trimmed_string = "Foo";
+
+If a reference is passed, $string will be altered directly.
+
+  $string = " Bar ";
+  trim(\$string);
+  # RESULT: $string = "Bar";
+
+=cut
+
 sub trim {
     my $string = shift || return;
     my $text = ref($string)?$$string:$string;
@@ -783,6 +826,37 @@ sub trim {
     $$string = $text if (ref($string));
     return $text;
 }
+
+=head2 trunq
+
+=over
+
+=item trunq($string)
+
+=item trunq($string, $length)
+
+=back
+
+Returns a copy of $string reduced to no more than $length size.  The resulting
+string, if altered, will come with an ellipsis ("...") appended to indicate that 
+the string continues past what's shown (which will count as part of the length to 
+remain under the $length cap).  Some effort will be made to cut the original string
+at a space, which makes the exact length of the returned value unknown.
+
+  $string = "This is a string that's longer than I want it to be."
+  $short_string = trunq($string, 15);
+  # RESULT: $short_string = "This is a...";
+
+If the length of the  original $string is less than $length, uniq() will just
+return $string.
+
+  $string = "This is a string.";
+  $short_string = trunq($string, 50);
+  # RESULT: $short_string = "This is a string.";
+
+If $length is not specified, the default is 50.
+
+=cut
 
 sub trunc {
     my $string = shift || return;
@@ -798,11 +872,27 @@ sub trunc {
     return "$str...";
 }
 
-# returns only the unique values of an array.  But also
-#   MAINTAINS THE ORDER.  I rely on this in places, so
-#   don't fuck around with it.
+=head2 uniq
+
+=over
+
+=item uniq(@array)
+
+=back
+
+Returns only the unique values of an array, while also
+retaining the order.
+
+  @foo = (1, 2, 1, 5, 4, 5, 1);
+  @bar = uniq(@foo);
+  # OUTPUT: @bar = (1, 2, 5, 4);
+
+=cut
+
 sub uniq {
     my %seen;
+    # This also MAINTAINS THE ORDER.  I rely on this in places, so
+    #   don't fuck around with it.
     return grep { !$seen{$_}++ } @_;
 }
 
@@ -811,6 +901,7 @@ sub uniq {
 Patrick Gillan <pgillan@minorimpact.com>
 
 =cut
+
 
 1;
 
