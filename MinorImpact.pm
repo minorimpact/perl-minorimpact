@@ -471,6 +471,32 @@ sub scriptName {
     return $script_name;
 }
 
+=head2 session
+
+=over
+
+=item ::session($name)
+
+=item ::session($name, $value)
+
+=back
+
+Get or set a value for this particular session.  For CGI applications,
+the session is based on a random value set in the cookie, and expires
+after 30 days unless L<clearSession()|MinorImpact/clearSession> is called
+explicitly.  For command line users, the session is based on the IP and
+username.  session() uses L<cache()|MinorImpact/cache> for persistence
+across instances.
+
+  # set the page color for the user
+  $page_color = 'red';
+  MinorImpact::session('page_color', $page_color);
+
+  # retrieve the previously set color
+  $page_color = MinorImpact::session('page_color');
+
+=cut
+
 sub session {
     my $name = shift;
     my $value = shift;

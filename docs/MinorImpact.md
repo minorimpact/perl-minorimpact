@@ -214,6 +214,25 @@ via `Location` http header.
         # send this punk to learn something
         MinorImpact::redirect("http://google.com");
 
+## session
+
+- ::session($name)
+- ::session($name, $value)
+
+Get or set a value for this particular session.  For CGI applications,
+the session is based on a random value set in the cookie, and expires
+after 30 days unless [clearSession()](./MinorImpact.md#clearsession) is called
+explicitly.  For command line users, the session is based on the IP and
+username.  session() uses [cache()](./MinorImpact.md#cache) for persistence
+across instances.
+
+    # set the page color for the user
+    $page_color = 'red';
+    MinorImpact::session('page_color', $page_color);
+
+    # retrieve the previously set color
+    $page_color = MinorImpact::session('page_color');
+
 ## tt
 
 - tt($page)
