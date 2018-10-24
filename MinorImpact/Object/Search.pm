@@ -292,6 +292,36 @@ if ($sort < 0) using the objects' L<cmp()|MinorImpact::Object/cmp> function.
 
 =back
 
+=head4 result
+
+A {result} hash pointer is added to C<$params->{query}> that contains
+information about a successful search.
+
+=over
+
+=item count
+
+The total number of results found.
+
+=item more
+
+A boolean that simply indicates whether or not there are "more" results
+beyond the current set.
+
+  if ($params->{query}{result}{more}) {
+    print "<a href=/more">View more results</a>\n";
+  }
+
+=item objects
+
+A pointer to the array of objects or IDs returned from the search.
+
+=item sql
+
+The exact SQL statement that was executed.
+
+=back
+
 =cut
 
 sub search {
@@ -305,15 +335,34 @@ sub search {
     $params->{query}{debug} .= "MinorImpact::Object::Search::search();";
     processQuery($params);
 
-    my @ids = _search($params);
-    # We'll sort them since someone requested it, but it's kind of
-    #   pointless without the whole object.
-    @ids = sort @ids if ($params->{query}{sort});
+    my $page = $params->{query}{page} || ($params->{query}{limit}?1:0);
+    my $limit = $params->{query}{limit} || ($params->{query}{page}?10:0);
 
-    # There's no pagination or type_trees, since these are just
-    #   IDs.  You need to have access to all the data to get
-    #   fancy options.
-    return @ids if ($params->{query}{id_only});
+    # Set these to the value we actually ended up using so the caller
+    #   is working with matching values.
+    $params->{query}{page} = $page;
+    $params->{query}{limit} = $limit;
+    my @ids = _search($params);
+
+    $params->{query}{result}{count} = scalar(@ids);
+
+    if ($params->{query}{id_only}) {
+        # We'll sort them since someone requested it, but it's kind of
+        #   pointless without the whole object.
+        @ids = sort @ids if ($params->{query}{sort});
+
+        if ($page && $limit) {
+            @ids = splice(@ids, (($page - 1) * $limit), $limit + 1);
+        }
+
+        if ($limit && scalar(@ids) > $limit) {
+            $params->{query}{result}{more} = 1;
+            pop(@ids);
+        }
+        $params->{query}{result}{data} = \@ids;
+
+        return @ids;
+    }
 
     my @objects;
     foreach my $id (@ids) {
@@ -344,13 +393,16 @@ sub search {
             @objects = reverse @objects;
         }
     }
-    MinorImpact::log('debug', 'Paging');
-    my $page = $params->{query}{page} || ($params->{query}{limit}?1:0);
-    my $limit = $params->{query}{limit} || ($params->{query}{page}?10:0);
 
     if ($page && $limit) {
         @objects = splice(@objects, (($page - 1) * $limit), $limit + 1);
     }
+
+    if ($limit && scalar(@objects) > $limit) {
+        $params->{query}{result}{more} = 1;
+        pop(@objects);
+    }
+    $params->{query}{result}{data} = \@objects;
 
     unless ($params->{query}{type_tree}) {
         MinorImpact::log('debug', "ending");
@@ -420,7 +472,7 @@ sub _search {
     #  "what" we're searching for. 
     #MinorImpact::debug(1);
     foreach my $param (keys %$query) {
-        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|search|select|tags|type_tree)$/);
+        next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|result|search|select|tags|type_tree)$/);
         MinorImpact::log('debug', "\$param='$param', \$query->{$param}='" . $query->{$param} . "'");
         next unless (defined($query->{$param}));
         MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
@@ -532,6 +584,8 @@ sub _search {
         $objects = $DB->selectall_arrayref($sql, {Slice=>{}}, @fields);
         MinorImpact::cache("search_$hash", $objects);
     }
+
+    $query->{result}{sql} = $sql;
 
     MinorImpact::log('debug', "ending");
     return map { $_->{id}; } @$objects;

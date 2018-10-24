@@ -356,10 +356,10 @@ sub home {
     my $settings = $user->settings();
 
     my $format = $CGI->param('format') || 'html';
-    my $limit = $CGI->param('limit') || $settings->get('results_per_page') || 25;
+    my $limit = $CGI->param('limit') || $settings->get('results_per_page') || 20;
     my $page = $CGI->param('page') || 1; 
 
-    my $sort = MinorImpact::session('sort');
+    my $sort = $CGI->param('sort') || 1;
     my $tab_id = MinorImpact::session('tab_id');
 
     my $local_params = cloneHash($params);
@@ -374,6 +374,7 @@ sub home {
     $local_params->{query}{readonly} = 0;
     $local_params->{query}{limit} = $limit;
     $local_params->{query}{page} = $page;
+    $local_params->{query}{sort} = $sort;
 
     my @objects = MinorImpact::Object::Search::search($local_params);
 
@@ -384,22 +385,14 @@ sub home {
     #    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object_type_id}));
     #}
 
-    my $url_last;
-    my $url_next;
-    if (scalar(@objects)) {
-        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):'', limit=>$limit})):'';
-        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):'', limit=>$limit}):'';
-        pop(@objects) if ($url_next);
-    }
-
     MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
     MinorImpact::tt('home', {
+                            action              => 'home',
                             objects             => [ @objects ],
+                            query               => $local_params->{query},
                             sort                => $sort,
                             #tab_number          => $tab_number,
                             types               => [ @type_ids ],
-                            url_last            => $url_last,
-                            url_next            => $url_next,
                             });
     MinorImpact::log('debug', "ending");
 }
@@ -423,41 +416,29 @@ sub index {
     MinorImpact::log('debug', "starting");
     
     my $CGI = $MINORIMPACT->cgi();
-    my $sort = MinorImpact::session('sort');
-    my $tab_id = MinorImpact::session('tab_id');
+    my $limit = $CGI->param('limit');
+    my $page = $CGI->param('page');
 
     my $local_params = cloneHash($params);
     my @objects;
-    if (defined($local_params->{query})) {
-        # The caller supplied us with a query they want to use.
-        push(@objects, MinorImpact::Object::Search::search($local_params));
-    } else {
+    unless (defined($local_params->{query})) {
         # Just grab whatever comes up as the default type and hope for
         #   the best.
-        my @types;
-        push(@types, MinorImpact::Object::getTypeID());
-        foreach my $object_type_id (@types) {
-            $local_params->{query}{object_type_id} = $object_type_id;
-            $local_params->{query}{public} = 1;
-        
-            push(@objects, MinorImpact::Object::Search::search($local_params));
-        }
+        $local_params->{query} = {};
+        $local_params->{query}{admin} = 1;
+        $local_params->{query}{object_type_id} = MinorImpact::Object::getTypeID();
+        $local_params->{query}{public} = 1;
     }
 
-    # This is dumb, but the only good way I have right now to determine if there
-    #   are more beyond what we set for 'limit'.  If $over, then you know there's
-    #   at least one more page of data to display, but you have to remember to 
-    #   pull it from the end before you display the page.
-    my $over;
-    if ($local_params->{query}{limit}) {
-        while (scalar(@objects) > $local_params->{query}{limit}) {
-            $over = pop(@objects);
-        }
-    }
+    $local_params->{query}{limit} = $limit if ($limit);
+    $local_params->{query}{page} = $page if ($page);
 
+    push(@objects, MinorImpact::Object::Search::search($local_params));
 
     MinorImpact::tt('index', {
+        action => 'index',
         objects => [ @objects ],
+        query => $local_params->{query},
     });
     MinorImpact::log('debug', 'ending');
 }
@@ -554,10 +535,10 @@ sub object {
 
     @objects = $object->getChildren({ query => { limit => ($limit + 1), page => $page } });
 
-    my $url_last;
+    my $url_prev;
     my $url_next;
     if (scalar(@objects)) {
-        $url_last = ($page>1)?(MinorImpact::url({ action=>'object', object_id=>$object->id(), limit=>$limit, page=> $page?($page - 1):'' })):'';
+        $url_prev = ($page>1)?(MinorImpact::url({ action=>'object', object_id=>$object->id(), limit=>$limit, page=> $page?($page - 1):'' })):'';
         $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ action=>'object', object_id=>$object->id(), limit=>$limit, page=> $page?($page + 1):'' }):'';
         pop(@objects) if ($url_next);
     }
@@ -567,7 +548,7 @@ sub object {
                             objects     => [ @objects ],
                             #tab_number  => $tab_number,
                             types       => [ @types ],
-                            url_last    => $url_last,
+                            url_prev    => $url_prev,
                             url_next    => $url_next,
                             });
 }
@@ -775,6 +756,8 @@ sub search {
     }
     $local_params->{query}{search} = $search;
     @objects = MinorImpact::Object::Search::search($local_params);
+    $page = $local_params->{query}{page};
+    $limit = $local_params->{query}{limit};
     $search = $local_params->{query}{text};
     MinorImpact::debug(0);
 
@@ -786,24 +769,17 @@ sub search {
         $tab_number++;
     }
 
-    my $url_last;
-    my $url_next;
-    if (scalar(@objects)) {
-        $url_last = ($page>1)?(MinorImpact::url({ page=> $page?($page - 1):''})):'';
-        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ page=> $page?($page + 1):''}):'';
-        pop(@objects) if ($url_next);
-    }
-
     my $tt_variables = {
+                        action              => 'search',
                         cid                 => $collection_id,
                         objects             => [ @objects ],
                         list_type           => $list_type,
                         query               => $local_params->{query},
-                        search              => $search,
+                        #search              => $search,
                         search_placeholder  => "$local_params->{search_placeholder}",
                         typeIDs             => sub { MinorImpact::Object::typeIDs(shift); },
-                        url_last            => $url_last,
-                        url_next            => $url_next,
+                        #url_prev            => $url_prev,
+                        #url_next            => $url_next,
                     };
 
     if (defined($params->{tt_variables})) {
@@ -898,10 +874,10 @@ sub tablist {
         return;
     }
 
-    my $url_last;
+    my $url_prev;
     my $url_next;
     if ($limit) {
-        $url_last = ($page > 1)?MinorImpact::url({ action => 'tablist', object_id => $object_id, collection_id => $collection_id, object_type_id => $object_type_id, search => $search, page => ($page - 1) }):'';
+        $url_prev = ($page > 1)?MinorImpact::url({ action => 'tablist', object_id => $object_id, collection_id => $collection_id, object_type_id => $object_type_id, search => $search, page => ($page - 1) }):'';
         if (scalar(@objects) > $limit) {
             $url_next = MinorImpact::url({ action => 'tablist', object_id => $object_id, collection_id => $collection_id, object_type_id => $object_type_id, search => $search, page => ($page + 1) });
             pop(@objects);
@@ -912,7 +888,7 @@ sub tablist {
                             objects        => [ @objects ],
                             #readonly       => MinorImpact::Object::isReadonly($object_type_id),
                             #search         => $search,
-                            url_last       => $url_last,
+                            url_prev       => $url_prev,
                             url_next       => $url_next,
     });
 }
@@ -955,6 +931,10 @@ sub user {
     my $params = shift || {};
 
     my $CGI = MinorImpact::cgi();
+    my $page = $CGI->param('page') || 1;
+    my $limit = $CGI->param('limit') || 5;
+    my $sort = $CGI->param('sort') || 1;
+
     my $current_user = MinorImpact::user();
 
     my $user_id = $CGI->param('user_id') || $CGI->param('id') || $CGI->param('user') || ($current_user?$current_user->id():'') || MinorImpact::redirect();
@@ -967,13 +947,15 @@ sub user {
         $local_params->{query}{sort} = 1;
     }
 
+    $local_params->{query}{limit} = $limit;
+    $local_params->{query}{page} = $page;
     $local_params->{query}{user_id} = $user->id();
     if (!$current_user || ($current_user->id() != $user->id())) {
         $local_params->{query}{public} = 1;
     }
     my @objects = MinorImpact::Object::Search::search($local_params);
 
-    MinorImpact::tt('user', { objects => [ @objects ] });
+    MinorImpact::tt('user', { action => 'user', objects => [ @objects ], query => $local_params->{query} });
 }
 
 =head2 viewHistory

@@ -127,6 +127,32 @@ Search for objects.
 
         @objects = MinorImpact::Object::Search::search({ sort => 1 });
 
+#### result
+
+A {result} hash pointer is added to `$params-`{query}> that contains
+information about a successful search.
+
+- count
+
+    The total number of results found.
+
+- more
+
+    A boolean that simply indicates whether or not there are "more" results
+    beyond the current set.
+
+        if ($params->{query}{result}{more}) {
+          print "<a href=/more">View more results</a>\n";
+        }
+
+- objects
+
+    A pointer to the array of objects or IDs returned from the search.
+
+- sql
+
+    The exact SQL statement that was executed.
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>

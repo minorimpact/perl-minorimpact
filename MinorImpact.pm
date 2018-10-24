@@ -671,8 +671,6 @@ sub tt {
             copyright   => $copyright,
             ENV         => \%ENV,
             home        => $self->{conf}{default}{home_script},
-            limit       => $limit,
-            page        => $page,
             script_name => MinorImpact::scriptName(),
             #search      => $search,
             site_config => $self->{conf}{site},
@@ -1127,7 +1125,9 @@ sub www {
     #  application can just get them from the session and assume
     #  it's up to date.
     #my $collection_id = $CGI->param('cid') || $CGI->param('collection_id');
-    #my $search = $CGI->param('search');
+    my $limit = $CGI->param('limit');
+    my $page = $CGI->param('page');
+    my $search = $CGI->param('search');
     my $sort = $CGI->param('sort');
     my $tab_id = $CGI->param('tab_id');
 
@@ -1138,6 +1138,9 @@ sub www {
     #    MinorImpact::session('collection_id', $collection_id);
     #    MinorImpact::session('search', {} );
     #}
+    MinorImpact::session('limit', $limit ) if (defined($limit));
+    MinorImpact::session('page', $page ) if (defined($page));
+    MinorImpact::session('search', $search ) if (defined($search));
     MinorImpact::session('sort', $sort ) if (defined($sort));
     MinorImpact::session('tab_id', $tab_id ) if (defined($tab_id));
 
