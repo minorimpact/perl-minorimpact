@@ -372,7 +372,7 @@ sub search {
             #   the current user has access to.  We may want to 
             #   override this in the future with an admin flag
             #   and an admin user.
-            next unless ($object->validateUser($params));
+            next unless ($object->validUser($params));
             if (defined($params->{query}{child})) {
                 my @children = $object->getChildren({ query => { %{$params->{query}{child}}, id_only => 1 } });
                 push(@objects, $object) if (scalar(@children));

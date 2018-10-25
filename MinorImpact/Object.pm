@@ -136,7 +136,7 @@ sub new {
     #
     MinorImpact::log('debug', "ending($id)");
 
-    die "permission denied" unless ($object->validateUser() || $params->{admin});
+    die "permission denied" unless ($object->validUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     #MinorImpact::log('debug', "ending");
@@ -1641,11 +1641,11 @@ sub search {
 }
 
 
-=head2 validateUser
+=head2 validUser
 
 =over
 
-=item validateUser( \%options ) 
+=item validUser( \%options ) 
 
 =back
 
@@ -1665,17 +1665,17 @@ in user if one exists.
 
 =cut
 
-sub validateUser {
+sub validUser {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     return 1 if ($self->isSystem() || $self->get('public'));
 
     if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
         my $object = new MinorImpact::Object($params->{proxy_object_id}) || die "Cannot create proxy object for validation.";
-        return $object->validateUser($params);
+        return $object->validUser($params);
     }
 
     my $test_user = $params->{user} || MinorImpact::user($params);
@@ -1685,7 +1685,7 @@ sub validateUser {
 
     my $valid = $test_user->id() && $self->userID() && ($test_user->id() == $self->userID());
     #MinorImpact::log('debug', $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
-    #MinorImpact::log('debug', "ending:$valid");
+    MinorImpact::log('debug', "ending (\$valid='$valid')");
     return $valid;
 }
 

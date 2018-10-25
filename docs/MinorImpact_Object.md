@@ -348,9 +348,9 @@ Please visit the documentation for that function for more information.
         # get just the object IDs of dogs named 'Spot'.
         @object_ids = MinorImpact::Object::search({query => {object_type_id => 'dog', name => "Spot", id_only => 1}});
 
-## validateUser
+## validUser
 
-- validateUser( \\%options ) 
+- validUser( \\%options ) 
 
 Verify that a given user has permission to instantiate this object.  Returns true for "system"
 object types. Options:
