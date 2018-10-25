@@ -312,7 +312,7 @@ beyond the current set.
     print "<a href=/more">View more results</a>\n";
   }
 
-=item objects
+=item data
 
 A pointer to the array of objects or IDs returned from the search.
 
@@ -543,7 +543,7 @@ sub _search {
             my $object_field_id = MinorImpact::Object::fieldID($query->{object_type_id}, $param);
             #MinorImpact::log('debug', "\$object_field_id='$object_field_id'");
             next unless ($object_field_id);
-            $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)";
+            $from .= " JOIN object_data as object_data$object_field_id ON (object.id=object_data$object_field_id.object_id)" unless ($from =~/JOIN object_data$object_field_id /);
             $where .= " AND (object_data$object_field_id.object_field_id = ? AND object_data$object_field_id.value $operator ?)";
             push(@fields, $object_field_id);
             push(@fields, $value);
@@ -570,10 +570,10 @@ sub _search {
         }
     }
 
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     my $sql = "$select $from $where";
     MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
-    MinorImpact::debug(0);
+    #MinorImpact::debug(0);
 
 
     my $objects;

@@ -145,7 +145,7 @@ information about a successful search.
           print "<a href=/more">View more results</a>\n";
         }
 
-- objects
+- data
 
     A pointer to the array of objects or IDs returned from the search.
 
