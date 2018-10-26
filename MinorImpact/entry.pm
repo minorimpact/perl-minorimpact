@@ -59,7 +59,7 @@ sub cmp {
     return $self->get('publish_date');
 }
 
-our $VERSION = 1;
+our $VERSION = 5;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
@@ -70,6 +70,11 @@ sub dbConfig {
 
     MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'content', required => 1, type => 'text', });
     MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'publish_date', required => 1, type => 'datetime', });
+
+    MinorImpact::Object::Type::addField({ object_type_id => 'MinorImpact::settings', name => 'default_tag', type => 'string', default_value => 'new', required => 1});
+    MinorImpact::Object::Type::addField({ object_type_id => 'MinorImpact::settings', name => 'results_per_page', type => 'int', default_value => '50', required => 1});
+    MinorImpact::Object::Type::delField({ object_type_id => 'MinorImpact::settings', name => 'test1', type => 'int', default_value => '1', required => 1});
+    MinorImpact::Object::Type::delField({ object_type_id => 'MinorImpact::settings', name => 'test4', type => 'int', default_value => '4', required => 1});
 
     MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
 

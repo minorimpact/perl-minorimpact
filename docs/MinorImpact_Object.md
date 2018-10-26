@@ -118,7 +118,8 @@ Return the name of the user that owns this object.
 - ->get($field)
 - ->get($field, \\%params)
 
-Return the value of $name.
+Return the value of $name. Will return an @array if $field is 
+defined as an array.  See [MinorImpact::Object::Field::add()](./MinorImpact_Object_Field.md#add).
 
     # get the object's name
     $object_name = $OBJECT->get("name");
@@ -127,9 +128,27 @@ Return the value of $name.
 
 ### params
 
-- markdown
+- markdown => true/false
 
     Treat the field as a markdown field, and convert the data to HTML before returning it.
+
+- one\_line => true/false
+
+    For text fields, only data up to the first CR.
+
+        $OBJECT->update({ decription => "This is\ntwo lines." });
+        # get the description
+        $short_desc = $OBJECT->get('description', { one_line => 1});
+        # RESULT: $sort_desc = "This is";
+
+- truncate => $count
+
+    Only return up to $count characters of data.
+
+        $OBJECT->update({ decription => "This is\ntwo lines." });
+        # get the description
+        $short_desc = $OBJECT->get('description', { truncate => 5});
+        # RESULT: $sort_desc = "This";
 
 ## toString
 

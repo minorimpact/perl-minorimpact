@@ -66,8 +66,6 @@ Search the system application.
         # search for objects tagged with 'test' that contain the word 'poop'.
         /cgi-bin/index.cgi?a=search&search=poop%tag:test
 
-## settings
-
 ## tags
 
 Display a list of the current user's tags - or the tags for all public objects

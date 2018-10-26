@@ -5,6 +5,20 @@ use MinorImpact::Object;
 use MinorImpact::Object::Type;
 use MinorImpact::Util;
 
+=head1 NAME
+
+MinorImpact::settings - Site settings.
+
+=cut
+
+=head1 SYNOPSIS
+
+=cut
+
+=head1 DESCRIPTION
+
+=cut
+
 our @ISA = qw(MinorImpact::Object);
 
 sub new {
@@ -35,4 +49,3 @@ sub dbConfig {
 }
 
 1;
-

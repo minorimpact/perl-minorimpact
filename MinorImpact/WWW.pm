@@ -263,7 +263,7 @@ sub edit {
     #MinorImpact::log('debug', "ending");
 }
 
-sub edit_settings {
+sub settings {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
@@ -290,7 +290,7 @@ sub edit_settings {
     }
     my $form = $settings->form();
 
-    MinorImpact::tt('edit_settings', { 
+    MinorImpact::tt('settings', { 
         errors  => [ @errors ],
         form => $form,
     });
@@ -790,21 +790,6 @@ sub search {
     }
     MinorImpact::tt('search', $tt_variables);
     MinorImpact::log('debug', "ending");
-}
-
-=head2 settings
-
-=cut
-
-sub settings {
-    my $MINORIMPACT = shift || return;
-    my $params = shift || {};
-
-    my $user = $MINORIMPACT->user({ force => 1 });
-
-    my $settings = $user->settings($params);
-
-    MinorImpact::tt('settings', { settings => $settings });
 }
 
 sub tablist {

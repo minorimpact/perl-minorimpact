@@ -1166,8 +1166,6 @@ sub www {
         MinorImpact::WWW::delete_search($self, $local_params);
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $local_params);
-    } elsif ( $action eq 'edit_settings') {
-        MinorImpact::WWW::edit_settings($self, $local_params);
     } elsif ( $action eq 'edit_user') {
         MinorImpact::WWW::edit_user($self, $local_params);
     } elsif ( $action eq 'home') {
@@ -1245,7 +1243,7 @@ sub db {
     return $SELF->{DB};
 }
 
-my $VERSION = 2;
+my $VERSION = 3;
 sub dbConfig {
     #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
@@ -1308,6 +1306,7 @@ sub dbConfig {
             `readonly` tinyint(1) DEFAULT '0',
             `required` tinyint(1) DEFAULT '0',
             `sortby` tinyint(1) DEFAULT '0',
+            `populated` tinyint(1) DEFAULT '0',
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`)
