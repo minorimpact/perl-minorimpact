@@ -502,12 +502,19 @@ sub validateFields {
     #MinorImpact::log('debug', "ending");
 }
 
+=head2 toData
+
+Returns an object as a pure hash.
+
+=cut
+
 sub toData {
     my $self = shift || return;
 
     my $data = {};
     $data->{id} = $self->id();
     $data->{name} = $self->name();
+    $data->{public} = $self->isPublic();
     $data->{type_id} = $self->typeID();
     my $fields = $self->fields();
     foreach my $name (keys %$fields) {
@@ -566,7 +573,8 @@ for replacement later.
 
 =item json
 
-JSON data object.
+Calls L<MinorImpact::Object::toData()|MinorImpact::Object/todata> and returns the
+result as a JSON formatted string.
 
 =item link
 
@@ -782,7 +790,7 @@ sub fields {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $object_type_id;
     if (ref($self) eq "HASH") {
@@ -805,8 +813,14 @@ sub fields {
     $local_params->{object_id} = $self->id() if ($self);
     my $fields = MinorImpact::Object::Type::fields($local_params);
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $fields;
+}
+
+sub type {
+    my $self = shift || return;
+
+    return new MinorImpact::Object::Type($self->typeID());
 }
 
 sub type_id { 
@@ -909,20 +923,43 @@ sub getTypeID {
 
 =head2 typeIDs
 
+=over
+
+=item ::typeIDs()
+
+=item ::typeIDs(\%params)
+
+=back
+
 Returns an array of object type IDs.
 
   foreach $type_id (MinorImpact::Object::typeIDs()) {
     print $type_id . ": " . MinorImpact::Object::typeName($type_id) . "\n";
   }
 
+=head3 params
+
+=over
+
+=item admin => true/false
+
+Only return types that are or are not 'admin' types.
+
+=item system => true/false
+
+Only return types that are or are not 'system' types.
+
+=back
+
 =cut
 
 sub typeIDs {
-    my @type_ids = ();
+    my $params = shift || {};
 
-    my @types = MinorImpact::Object::types();
+    my @type_ids = ();
+    my @types = MinorImpact::Object::types($params);
     foreach my $type (@types) {
-        push(@type_ids, $type->{id});
+        push(@type_ids, $type->id());
     }
 
     return @type_ids;
@@ -930,20 +967,74 @@ sub typeIDs {
 
 =head2 types
 
+=over
+
+=item ::types()
+
+=item ::types(\%params)
+
+=back
+
 Returns an array of object_type records.
 
   foreach my $type (MinorImpact::Object::types()) {
     print  $type->{id} . ": " . $type->{name} . "\n";
   }
 
+=head3 params
+
+=over
+
+=item admin => true/false
+
+Return only types that are or are not 'admin' types.
+
+=item format => $string
+
+=over
+
+=item json
+
+Return the data as a JSON string.
+
+=back
+
+=item system => true/false
+
+Return only types that are or are not 'system' types.
+
+=back
+
 =cut
 
 sub types {
+    my $params = shift || {};
+
     my $DB = MinorImpact::db();
 
     my $select = "SELECT * FROM object_type";
-    my $where = "WHERE id > 0 AND system = 0 AND readonly = 0";
-    return @{$DB->selectall_arrayref("$select $where", {Slice=>{}})};
+    my $where = "WHERE id > 0";
+    if (defined($params->{readonly})) {
+       $where .= " AND readonly = " . isTrue($params->{readonly});
+    }
+    if (defined($params->{system})) {
+       $where .= " AND system = " . isTrue($params->{system});
+    }
+
+    my $data = $DB->selectall_arrayref("$select $where", {Slice=>{}});
+    if ($params->{format} eq 'json') {
+        return to_json($data);
+    }
+
+    my @types = ();
+    foreach my $row (@$data) {
+        push (@types, new MinorImpact::Object::Type($row->{id}));
+        #$row->{fields} = fields($row->{id});
+        #my $fields = fields($row->{id});
+        #dumper($fields);
+    }
+
+    return @types;
 }
 
 sub typeName {
@@ -1263,7 +1354,8 @@ sub stringType {
 sub form {
     my $self = shift || {};
     my $params = shift || {};
-    #MinorImpact::log('debug', "starting");
+
+    MinorImpact::log('debug', "starting");
     
     if (ref($self) eq "HASH") {
         $params = $self;
@@ -1314,7 +1406,7 @@ sub form {
         $public = $self->isPublic($local_params);
     } else {
         #MinorImpact::log('debug', "caching is " . ($local_params->{no_cache}?"off":"on"));
-        $fields = MinorImpact::Object::fields($object_type_id, $local_params);
+        $fields = MinorImpact::Object::Type::fields($local_params);
         $no_name = isNoName($object_type_id, $local_params);
         $no_tags = isNoTags($object_type_id, $local_params);
         $public = isPublic($object_type_id, $local_params);
@@ -1359,7 +1451,7 @@ sub form {
                                     public         => $public,
                                     tags           => $tags,
                                 }, \$form);
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $form;
 }
 

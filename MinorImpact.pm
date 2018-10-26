@@ -366,7 +366,7 @@ sub cache {
 
     $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
     if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
-        #MinorImpact::log('debug', "removing '$name'");
+        MinorImpact::log('debug', "removing '$name'");
         return $cache->remove($name);
     }
     if (!defined($value)) {

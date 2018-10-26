@@ -6,6 +6,86 @@ MinorImpact::Object::Type
 
 # DESCRIPTION
 
+# METHODS
+
+## new
+
+## del
+
+- ->del(\\%params)
+- ::del(\\%params)
+
+Delete a given object type from the system.
+
+    MinorImpact::Object::Type::del({ object_type_id => 'object'});
+
+    $TYPE->del();
+
+### params
+
+- object\_type\_id
+
+    The type ID of the object to the delete. 
+
+## fields
+
+- ->fields(\\%params)
+- ::fields(\\%params);
+
+Return a hash of field objects.
+
+### params
+
+- object\_id
+
+    Pre fill the field values with data from a particular object.
+
+        $fields = $TYPE->fields({ object_id => 445 });
+
+- object\_type\_id
+
+        $fields = MinorImpact::Object::Type::fields({ object_type_id => 'MinorImpact::settings' });
+
+## form
+
+## get
+
+## id
+
+Returns the id of this type.
+
+    $TYPE->id();
+
+## name
+
+Return the name of this $TYPE.
+
+    $TYPE->name();
+
+## toData
+
+Returns $TYPE as a pure hash.
+
+    $type = $TYPE->toData();
+
+## toString
+
+- ->toString(\\%params)
+
+Return $TYPE as a string.
+
+    print $TYPE->toString();
+
+### params
+
+- format
+    - json
+
+        Return [MinorImpact::Object::Type::toData()](./MinorImpact_Object_Type.md#todata) as a 
+        JSON formatted string.
+
+            print $TYPE->toString({ format => 'json' });
+
 # SUBROUTINES
 
 ## add
@@ -77,20 +157,6 @@ Adds a field to the database
 - type
 
     The type of field.
-
-## del
-
-- ::del(\\%params)
-
-Delete a given object type from the system.
-
-    MinorImpact::Object::Type::del({ object_type_id => 'object'});
-
-### params
-
-- object\_type\_id
-
-    The type ID of the object to the delete.  REQUIRED.
 
 ## setVersion
 

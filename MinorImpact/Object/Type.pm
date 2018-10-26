@@ -2,8 +2,10 @@ package MinorImpact::Object::Type;
 
 use strict;
 
+use JSON;
 use MinorImpact;
 use MinorImpact::Object;
+use MinorImpact::Object::Field;
 use MinorImpact::Util;
 
 =head1 NAME
@@ -19,6 +21,292 @@ MinorImpact::Object::Type
 =head1 DESCRIPTION
 
 =cut
+
+=head1 METHODS
+
+=cut
+
+=head2 new
+
+=cut
+
+sub new {
+    my $package = shift;
+    my $options = shift || {};
+
+    my $self = {};
+    if (ref($options) eq "HASH") {
+    } elsif ($options) {
+        my $DB = MinorImpact::db();
+        my $sql = "SELECT * FROM object_type WHERE id=?";
+        $self->{data} = $DB->selectrow_hashref($sql, undef, ($options)) || die $DB->errstr;
+    }
+
+    bless ($self, $package);
+}
+
+=head2 del
+
+=over
+
+=item ->del(\%params)
+
+=item ::del(\%params)
+
+=back
+
+Delete a given object type from the system.
+
+  MinorImpact::Object::Type::del({ object_type_id => 'object'});
+
+  $TYPE->del();
+
+=head3 params
+
+=over
+
+=item object_type_id
+
+The type ID of the object to the delete. 
+
+=back
+
+=cut
+
+sub del {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    $params->{object_type_id} = $self->id() if ($self && !defined($params->{object_type_id}));
+    my $DB = MinorImpact::db();
+    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id} || $params->{type_id} || $params->{name});
+    die "No object type" unless ($object_type_id);
+    MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_id", {});
+
+    my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+    foreach my $row (@$data) {
+        my $object_id = $row->{id};
+        MinorImpact::cache("object_data_$object_id", {});
+        $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+        $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+        $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    }
+    $DB->do("DELETE FROM object_field WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
+}
+
+=head2 fields
+
+=over
+
+=item ->fields(\%params)
+
+=item ::fields(\%params);
+
+=back
+
+Return a hash of field objects.
+
+=head3 params
+
+=over
+
+=item object_id
+
+Pre fill the field values with data from a particular object.
+
+  $fields = $TYPE->fields({ object_id => 445 });
+
+=item object_type_id
+
+  $fields = MinorImpact::Object::Type::fields({ object_type_id => 'MinorImpact::settings' });
+
+=back
+
+=cut
+
+sub fields {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        MinorImpact::log('debug', "FOO");
+        $params = $self;
+        undef($self);
+    }
+
+    if ($self) {
+        MinorImpact::log('debug', "\$self->name()='" . $self->name() . "'");
+    } else {
+        MinorImpact::log('debug', "\$params->{object_type_id}='" . $params->{object_type_id} . "'");
+    }
+    $params->{object_type_id} = $self->id() if ($self && !defined($params->{object_type_id}));
+    my $object_type_id = $params->{object_type_id} ||  die "No object type id defined\n";
+    my $object_id = $params->{object_id};
+
+    my $fields;
+    my $DB = MinorImpact::db();
+    my $data = MinorImpact::cache("object_field_$object_type_id") unless ($params->{no_cache});
+    unless ($data) {
+        #MinorImpact::log('debug', "collecting field data for '$object_type_id' from database");
+        $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+        MinorImpact::cache("object_field_$object_type_id", $data);
+    }
+    foreach my $row (@$data) {
+        #MinorImpact::log('debug', $row->{name});
+        $row->{object_id} = $object_id if ($object_id);
+        $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
+    }
+
+    MinorImpact::log('debug', "ending");
+    return $fields;
+}
+
+=head2 form
+
+=cut
+
+sub form {
+    my $self = shift|| return;
+    my $params = shift|| {};
+    MinorImpact::log('debug', "starting");
+
+    my $type_name = $self->name();
+    my $form = $type_name->form($params);
+
+    MinorImpact::log('debug', "ending");
+    return $form;
+}
+
+=head2 get
+
+=cut
+
+sub get {
+    my $self = shift || return;
+    my $field = shift || return;
+    my $params = shift || {};
+
+    return $self->{data}{$field};
+}
+
+=head2 id
+
+Returns the id of this type.
+
+  $TYPE->id();
+
+=cut
+
+sub id {
+    my $self = shift || return;
+
+    return $self->{data}{id};
+}
+
+sub isNoName { return shift->{data}{no_name}; }
+sub isNoTags { return shift->{data}{no_tags}; }
+sub plural { return shift->{data}{plural}; }
+sub isPublic { return shift->{data}{public}; }
+sub isReadonly { return shift->{data}{readonly}; }
+sub isSystem { return shift->{data}{system}; }
+
+=head2 name
+
+Return the name of this $TYPE.
+
+  $TYPE->name();
+
+=cut
+
+sub name {
+    my $self = shift || return;
+
+    return $self->{data}{name}
+}
+
+=head2 toData
+
+Returns $TYPE as a pure hash.
+
+  $type = $TYPE->toData();
+
+=cut
+
+sub toData {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $data = {};
+
+    $data->{id} = $self->id();
+    $data->{name} = $self->name();
+    $data->{no_name} = $self->get('no_name');
+    $data->{no_tags} = $self->get('no_tags');
+    $data->{plural} = $self->get('plural');
+    $data->{public} = $self->get('public');
+    $data->{readonly} = $self->isReadonly();
+    $data->{system} = $self->isSystem();
+
+    return $data;
+}
+
+=head2 toString
+
+=over
+
+=item ->toString(\%params)
+
+=back
+
+Return $TYPE as a string.
+
+  print $TYPE->toString();
+
+=head3 params
+
+=over
+
+=item format
+
+=over
+
+=item json
+
+Return L<MinorImpact::Object::Type::toData()|MinorImpact::Object::Type/todata> as a 
+JSON formatted string.
+
+  print $TYPE->toString({ format => 'json' });
+
+=back
+
+=back
+
+=cut
+
+sub toString {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $string = "";
+
+    if ($params->{format} eq 'json') {
+        $string = to_json($self->toData());
+    } else {
+        $string = $self->name();
+    }
+
+    return $string;
+}
 
 =head1 SUBROUTINES
 
@@ -159,51 +447,6 @@ sub addField {
     return MinorImpact::Object::Field::add(@_); 
 } 
 
-=head2 del
-
-=over
-
-=item ::del(\%params)
-
-=back
-
-Delete a given object type from the system.
-
-  MinorImpact::Object::Type::del({ object_type_id => 'object'});
-
-=head3 params
-
-=over
-
-=item object_type_id
-
-The type ID of the object to the delete.  REQUIRED.
-
-=back
-
-=cut
-
-sub del {
-    my $params = shift || return;
-
-    my $DB = MinorImpact::db();
-    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id} || $params->{type_id} || $params->{name});
-    die "No object type" unless ($object_type_id);
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
-
-    my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
-    foreach my $row (@$data) {
-        my $object_id = $row->{id};
-        MinorImpact::cache("object_data_$object_id", {});
-        $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
-        $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
-        $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
-    }
-    $DB->do("DELETE FROM object_field WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
-    $DB->do("DELETE FROM object WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
-    $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
-}
 
 sub deleteField { 
     return MinorImpact::Object::Field::del(@_); 
@@ -211,32 +454,6 @@ sub deleteField {
 
 sub delField { 
     return MinorImpact::Object::Field::del(@_); 
-}
-
-sub fields {
-    my $params = shift || return;
-
-    #MinorImpact::log('debug', "starting");
-
-    my $object_type_id = $params->{object_type_id} || die "No object type id defined\n";
-    my $object_id = $params->{object_id};
-
-    my $fields;
-    my $DB = MinorImpact::db();
-    my $data = MinorImpact::cache("object_field_$object_type_id") unless ($params->{no_cache});
-    unless ($data) {
-        #MinorImpact::log('debug', "collecting field data for '$object_type_id' from database");
-        $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
-        MinorImpact::cache("object_field_$object_type_id", $data);
-    }
-    foreach my $row (@$data) {
-        #MinorImpact::log('debug', $row->{name});
-        $row->{object_id} = $object_id if ($object_id);
-        $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
-    }
-
-    #MinorImpact::log('debug', "ending");
-    return $fields;
 }
 
 =head2 setVersion
@@ -250,22 +467,22 @@ sub fields {
 =cut
 
 sub setVersion {
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
     my $object_type_id = shift || die "No object type id";
     my $version = shift || die "No version number specified";
 
     $object_type_id = MinorImpact::Object::typeID($object_type_id);
     die "Invalid version number" unless ($version =~/^\d+$/);
     die "Invalid object type" unless ($object_type_id =~/^\d+$/);
-    #MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$version='$version'");
+    MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$version='$version'");
 
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
     my $DB = MinorImpact::db();
     my $sql = "UPDATE object_type SET version=? WHERE id=?";
-    #MinorImpact::log('debug', "sql='$sql' \@fields='$version', '$object_type_id'");
+    MinorImpact::log('debug', "sql='$sql' \@fields='$version', '$object_type_id'");
     $DB->do($sql, undef, ($version, $object_type_id)) || die $DB->errstr;
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
 }
 
 =head1 AUTHOR

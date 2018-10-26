@@ -2,6 +2,7 @@ package MinorImpact::User;
 
 use strict;
 
+use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 
@@ -78,6 +79,7 @@ sub dbConfig {
         $DB->do("CREATE TABLE `user` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `name` varchar(50) NOT NULL,
+                `email` varchar(255) NOT NULL,
                 `password` varchar(255) NOT NULL,
                 `test` varchar(255) DEFAULT NULL,
                 `admin` tinyint(1) DEFAULT NULL,
@@ -196,17 +198,7 @@ sub getCollections {
 }
 
 sub getObjects {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    my @objects = $self->searchObjects({ query => { 
-                                            %{$params->{query}
-                                         },
-                                         debug => 'MinorImpact::User::getObjects();', 
-                                         user => $self->id() 
-                                       } 
-                                   });
-    return @objects;
+    return searchObjects(@_);
 }
 
 =head2 id
@@ -267,9 +259,9 @@ sub name {
 A shortcut to L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search> that
 adds the current user_id to the parameter list.
 
-  @objects = $USER->searchObjects({name => '%panda% });
+  @objects = $USER->searchObjects({query => {name => '%panda% }});
   # ... is equivalent to:
-  @objects = MinorImpact::Object::Search::search({ name => '%panda%', user_id=>$USER->id() });
+  @objects = MinorImpact::Object::Search::search({ query => { name => '%panda%', user_id=>$USER->id() }});
 
 =cut
 
@@ -277,7 +269,7 @@ sub searchObjects {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     my $local_params = cloneHash($params);
 
@@ -287,7 +279,7 @@ sub searchObjects {
 
     my @results = MinorImpact::Object::Search::search($local_params);
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return @results;
 }
 
@@ -382,6 +374,77 @@ sub update {
     $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password});
 
     MinorImpact::log('debug', "ending");
+}
+
+=head2 toData
+
+=over
+
+=item ->toData()
+
+=back
+
+Returns the user data as a hash.
+
+=cut
+
+sub toData {
+    my $self = shift || return;
+
+    my $data = {};
+
+    $data->{admin} = $self->isAdmin();
+    $data->{create_date} = $self->get('create_date');
+    $data->{email} = $self->get('email');
+    $data->{id} = $self->id();
+    $data->{mod_date} = $self->get('mod_date');
+    $data->{name} = $self->name();
+    $data->{password} = $self->get('password');
+
+    return $data;
+}
+
+=head2 toString
+
+=over
+
+=item ->toString(\%params)
+
+=back
+
+Returns a string representation of the user.
+
+=head3 params
+
+=over
+
+=item format
+
+=over
+
+=item json
+
+Calls L<MinorImpact::User::toData()|MinorImpact::User/todata> and returns
+the hash formated as a JSON string.
+
+=back
+
+=back
+
+=cut
+
+sub toString {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $string = '';
+    if ($params->{format} eq 'json') {
+        $string = to_json($self->toData());
+    } else {
+        $string = $self->name();
+    }
+
+    return $string;
 }
 
 =head2 validateUser

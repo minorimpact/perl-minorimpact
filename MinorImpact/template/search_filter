@@ -30,7 +30,7 @@
         <small>Object type</small><br />
         <select name='object_type_id'>
             <option value=''>All</option>
-            [% FOREACH object_type_id IN typeIDs() -%]
+            [% FOREACH object_type_id IN typeIDs({ system => 0, readonly => 0 }) -%]
                 <option value='[% object_type_id %]'[% IF query.object_type_id == object_type_id %] selected[% END -%]>[% typeName({object_type_id=>object_type_id, plural=>1}) %]</option>
             [% END -%]
         </select>

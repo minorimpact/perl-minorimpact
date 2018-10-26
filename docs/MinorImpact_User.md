@@ -68,9 +68,9 @@ Returns the user's 'name' field.  A shortcut to get('name').
 A shortcut to [MinorImpact::Object::Search::search()](./MinorImpact_Object_Search.md#search) that
 adds the current user\_id to the parameter list.
 
-    @objects = $USER->searchObjects({name => '%panda% });
+    @objects = $USER->searchObjects({query => {name => '%panda% }});
     # ... is equivalent to:
-    @objects = MinorImpact::Object::Search::search({ name => '%panda%', user_id=>$USER->id() });
+    @objects = MinorImpact::Object::Search::search({ query => { name => '%panda%', user_id=>$USER->id() }});
 
 ## settings
 
@@ -106,6 +106,26 @@ Updates can only be made by the user themself or an admin user.
 - password 
 
     Sets a new password.
+
+## toData
+
+- ->toData()
+
+Returns the user data as a hash.
+
+## toString
+
+- ->toString(\\%params)
+
+Returns a string representation of the user.
+
+### params
+
+- format
+    - json
+
+        Calls [MinorImpact::User::toData()](./MinorImpact_User.md#todata) and returns
+        the hash formated as a JSON string.
 
 ## validateUser
 

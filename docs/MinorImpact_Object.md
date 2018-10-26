@@ -131,6 +131,10 @@ Return the value of $name.
 
     Treat the field as a markdown field, and convert the data to HTML before returning it.
 
+## toData
+
+Returns an object as a pure hash.
+
 ## toString
 
 - toString(\\%params)
@@ -166,7 +170,8 @@ of either of:
 
     - json
 
-        JSON data object.
+        Calls [MinorImpact::Object::toData()](./MinorImpact_Object.md#todata) and returns the
+        result as a JSON formatted string.
 
     - link
 
@@ -234,19 +239,49 @@ object type that's not designated as 'system' or 'readonly'.
 
 ## typeIDs
 
+- ::typeIDs()
+- ::typeIDs(\\%params)
+
 Returns an array of object type IDs.
 
     foreach $type_id (MinorImpact::Object::typeIDs()) {
       print $type_id . ": " . MinorImpact::Object::typeName($type_id) . "\n";
     }
 
+### params
+
+- admin => true/false
+
+    Only return types that are or are not 'admin' types.
+
+- system => true/false
+
+    Only return types that are or are not 'system' types.
+
 ## types
+
+- ::types()
+- ::types(\\%params)
 
 Returns an array of object\_type records.
 
     foreach my $type (MinorImpact::Object::types()) {
       print  $type->{id} . ": " . $type->{name} . "\n";
     }
+
+### params
+
+- admin => true/false
+
+    Return only types that are or are not 'admin' types.
+
+- format => $string
+    - json
+
+        Return the data as a JSON string.
+- system => true/false
+
+    Return only types that are or are not 'system' types.
 
 ## tags
 

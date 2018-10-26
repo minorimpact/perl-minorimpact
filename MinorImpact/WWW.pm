@@ -43,7 +43,8 @@ sub add {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::debug(1);
+    MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user({ force => 1 });
@@ -51,8 +52,10 @@ sub add {
     my $script_name = MinorImpact::scriptName();
     my $action = $CGI->param('action') || $CGI->param('a') || $MINORIMPACT->redirect();
     my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $CGI->param('id') || $MINORIMPACT->redirect();
-    $object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
-    $MINORIMPACT->redirect() if (MinorImpact::Object::isReadonly($object_type_id));
+    my $type = new MinorImpact::Object::Type($object_type_id);
+    MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
+    #$object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
+    $MINORIMPACT->redirect() if ($type->isReadonly());
 
     my $object;
     my @errors;
@@ -61,11 +64,11 @@ sub add {
         if ($action eq 'add') {
             #MinorImpact::log('debug', "submitted action eq 'add'");
             $params->{user_id} = $user->id();
-            $params->{object_type_id} = $object_type_id;
+            $params->{object_type_id} = $type->id();
 
             # Add the booleans manually, since unchecked values don't get 
             #   submitted.
-            my $fields = MinorImpact::Object::fields($object_type_id);
+            my $fields = $type->fields();
             foreach my $name (keys %$fields) {
                 if ($fields->{$name}->type() eq 'boolean' && !defined($params->{$name})) {
                     $params->{$name} = 0;
@@ -82,22 +85,22 @@ sub add {
         }
     }
 
-    my $type_name = MinorImpact::Object::typeName({ object_type_id => $object_type_id });
-    my $local_params = { object_type_id=>$object_type_id, no_cache => 1 };
+    #my $type_name = $type->name();
+    #my $local_params = { object_type_id=>$type->id(), no_cache => 1 };
     #MinorImpact::log('debug', "\$type_name='$type_name'");
     my $form;
     eval {
-        $form = $type_name->form($local_params);
+        $form = $type->form({no_cache => 1}); #$local_params);
     };
     if ($@) {
-        $form = MinorImpact::Object::form($local_params);
+        $form = MinorImpact::Object::form({ object_type_id=>$type->id(), no_cache => 1 }); #$local_params);
     }
 
     MinorImpact::tt('add', {
                         errors           => [ @errors ],
                         form             => $form,
-                        object_type_name => $type_name,
-                        object_type_id   => $object_type_id,
+                        object_type_name => $type->name(),
+                        object_type_id   => $type->id(),
                     });
 }
 
@@ -356,7 +359,7 @@ sub home {
     my $settings = $user->settings();
 
     my $format = $CGI->param('format') || 'html';
-    my $limit = $CGI->param('limit') || $settings->get('results_per_page') || 20;
+    my $limit = $CGI->param('limit') || ($settings?$settings->get('results_per_page'):20);
     my $page = $CGI->param('page') || 1; 
 
     my $sort = $CGI->param('sort') || 1;
@@ -380,7 +383,7 @@ sub home {
 
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
-    my @type_ids = MinorImpact::Object::typeIDs();
+    my @type_ids = MinorImpact::Object::typeIDs({readonly => 0, system => 0});
     #foreach my $object_type_id (MinorImpact::Object::getTypeID()) {
     #    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object_type_id}));
     #}
@@ -558,8 +561,8 @@ sub object_types {
 
     print "Content-type: text/plain\n\n";
     my @json;
-    foreach my $object_type (MinorImpact::Object::types()) {
-        push(@json, {id=>$object_type->{id}, name=>$object_type->{name}});
+    foreach my $object_type (MinorImpact::Object::types({readonly => 0, system => 0})) {
+        push(@json, {id=>$object_type->id(), name=>$object_type->name()});
     }
     print to_json(\@json);
 }
