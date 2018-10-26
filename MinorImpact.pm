@@ -896,9 +896,13 @@ to enter one.
 
 =over
 
-=item force
+=item admin => true/false
 
-Redirect to a login page if a valid user is not found in a CGI context.  Results are 
+Redirect to a login page (or die) if the user is not an 'admin' user.
+
+=item force => true/false
+
+Redirect to a login page (or die) if a valid user is not found.
 currently undefined on the command line.
 
   # Don't return unless the current user is valid.
@@ -1020,6 +1024,7 @@ sub user {
         #   some yahoo using the library for a simple command line script and doesn't care
         #   about users or security.
         if ($user) {
+            die "$username is not an admin user\n" if ($params->{admin} && !$user->isAdmin());
             MinorImpact::log('debug', "Trying out a blank password");
             if ($user->validateUser('')) {
                 $self->{USER} = $user;
@@ -1033,6 +1038,7 @@ sub user {
                 return $user;
             }
         }
+        die "Unable to validate $username\n" if ($params->{force});
     }
     MinorImpact::log('debug', "no user found");
     MinorImpact::redirect({action => 'login' }) if ($params->{force});
