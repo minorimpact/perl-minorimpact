@@ -1702,7 +1702,7 @@ sub validUser {
     #MinorImpact::log('debug', "\$test_user->id()='" . $test_user->id() . "'");
     #MinorImpact::log('debug', "\$self->userID()='" . $self->userID() . "'");
 
-    my $valid = $test_user->id() && $self->userID() && ($test_user->id() == $self->userID());
+    my $valid = $test_user->isAdmin() || ($test_user->id() && $self->userID() && ($test_user->id() == $self->userID()));
     #MinorImpact::log('debug', $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
     MinorImpact::log('debug', "ending (\$valid='$valid')");
     return $valid;
