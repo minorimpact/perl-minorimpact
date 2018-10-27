@@ -44,20 +44,20 @@ sub new {
 
 our $VERSION = 3;
 sub dbConfig {
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, readonly => 1, system => 0, });
-    die "Could not add object_type record\n" unless ($object_type_id);
+    my $type = MinorImpact::Object::Type::add({ name => $name, readonly => 1, system => 0, });
+    die "Could not add object_type record\n" unless ($type);
 
-    MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'tag', type => '@string', });
-    MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'text', type => '@string', });
-    MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'search_filter', type => 'text', });
+    $type->addField({ name => 'tag', type => '@string', });
+    $type->addField({ name => 'text', type => '@string', });
+    $type->addField({ name => 'search_filter', type => 'text', });
 
-    MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
+    $type->setVersion($VERSION);
 
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return;
 }
 

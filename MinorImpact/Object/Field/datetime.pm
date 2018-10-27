@@ -12,15 +12,14 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
 
-    my $local_data = cloneHash($data);
-    $local_data->{attributes}{default_value} = '0000-00-00 00:00:00';
-    $local_data->{attributes}{maxlength} = 20;
+    $data->{attributes}{default_value} = '0000-00-00 00:00:00';
+    $data->{attributes}{maxlength} = 19;
 
-    my $self = $package->SUPER::_new($local_data);
+    my $self = $package->SUPER::_new($data);
     bless($self, $package);
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return $self;
 }
 

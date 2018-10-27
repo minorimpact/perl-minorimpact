@@ -43,7 +43,7 @@ sub add {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
@@ -80,7 +80,7 @@ sub add {
             push(@errors, $@) if ($@);
         }
         if ($object && !scalar(@errors)) {
-            my $back = $object->back() || "$script_name?a=home&id=" . $object->id();
+            my $back = $object->back() || "$script_name?a=object&object_id=" . $object->id();
             $MINORIMPACT->redirect($back);
         }
     }
@@ -669,7 +669,7 @@ sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
@@ -762,7 +762,7 @@ sub search {
     $page = $local_params->{query}{page};
     $limit = $local_params->{query}{limit};
     $search = $local_params->{query}{text};
-    MinorImpact::debug(0);
+    #MinorImpact::debug(0);
 
     my $tab_number = 0;
     # TODO: figure out some way for these to be alphabetized

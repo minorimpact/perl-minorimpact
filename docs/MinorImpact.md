@@ -438,6 +438,12 @@ Returns the global cgi object.
 
     my $CGI = MinorImpact::cgi();
 
+## addSetting
+
+## cgi
+
+Return the global [CGI](http://perldoc.perl.org/CGI.html.md) object.
+
 ## clearSession
 
 Clears the current session.

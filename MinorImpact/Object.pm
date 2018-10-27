@@ -744,7 +744,7 @@ sub update {
     my $data = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $object_id = $self->id();
 
     unless ($self->name() || $data->{name}) {
@@ -763,7 +763,7 @@ sub update {
     validateFields($fields, $data);
 
     foreach my $field_name (keys %$data) {
-        #MinorImpact::log('debug', "updating \$field_name='$field_name'");
+        MinorImpact::log('debug', "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
         $field->update($data->{$field_name});
@@ -782,7 +782,7 @@ sub update {
         }
     }
     $self->_reload();
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return;
 }
 
@@ -793,6 +793,7 @@ sub fields {
     MinorImpact::log('debug', "starting");
 
     my $object_type_id;
+    my $object_id;
     if (ref($self) eq "HASH") {
         $object_type_id = $self->{object_type_id};
         undef($self);
@@ -800,6 +801,7 @@ sub fields {
         #MinorImpact::log('info', "returning \$self->{object_data}") if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         return $self->{object_data} if (defined($self->{object_data}) && scalar(keys %{$self->{object_data}}));
         $object_type_id = $self->typeID();
+        $object_id = $self->id();
     } else {
         $object_type_id = $self;
         undef($self);
@@ -808,10 +810,8 @@ sub fields {
 
     die "No type_id defined\n" unless ($object_type_id);
 
-    my $local_params = cloneHash($params);
-    $local_params->{object_type_id} = $object_type_id;
-    $local_params->{object_id} = $self->id() if ($self);
-    my $fields = MinorImpact::Object::Type::fields($local_params);
+    my $type = new MinorImpact::Object::Type($object_type_id);
+    my $fields = $type->fields({object_id=>$object_id});
 
     MinorImpact::log('debug', "ending");
     return $fields;
@@ -1365,7 +1365,7 @@ sub form {
     }
 
     my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::user() || die "Invalid user.";
+    my $user = MinorImpact::user({ force => 1 });
     my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
@@ -1377,6 +1377,9 @@ sub form {
         die "Can't create a form with no object_type_id.\n";
     }
     my $object_type_id = $local_params->{object_type_id} || $local_params->{type_id};
+    MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
+    my $type = new MinorImpact::Object::Type($object_type_id);
+    MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
 
     my $form;
  
@@ -1400,23 +1403,21 @@ sub form {
     my $public;
     my $no_tags;
     if ($self) {
-        $fields = $self->{object_data};
-        $no_name = $self->isNoName($local_params);
-        $no_tags = $self->isNoTags($local_params);
-        $public = $self->isPublic($local_params);
+        $fields = $self->fields(); #{object_data};
     } else {
         #MinorImpact::log('debug', "caching is " . ($local_params->{no_cache}?"off":"on"));
-        $fields = MinorImpact::Object::Type::fields($local_params);
-        $no_name = isNoName($object_type_id, $local_params);
-        $no_tags = isNoTags($object_type_id, $local_params);
-        $public = isPublic($object_type_id, $local_params);
+        #$fields = MinorImpact::Object::Type::fields($local_params);
+        $fields = $type->fields();
     }
+    $no_name = $type->isNoName();
+    $no_tags = $type->isNoTags();
+    $public = $type->isPublic();
     my $script;
     my $form_fields;
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
+        MinorImpact::log('debug', "\$field->name()='" . $field->name() . "'");
         my $field_type = $field->type();
-        #MinorImpact::log('debug', "\$field->{name}='$field->{name}'");
         next if ($field->get('hidden') || $field->get('readonly'));
         my @params = $CGI->param($name);
         my @values;

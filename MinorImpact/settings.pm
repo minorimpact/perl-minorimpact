@@ -19,16 +19,21 @@ sub new {
     return $self;
 }
 
-our $VERSION = 6;
+our $VERSION = 10;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 1, no_name => 1, no_tags => 1 });
-    die "Could not add object_type record\n" unless ($object_type_id);
+    my $type = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 1, no_name => 1, no_tags => 1 });
+    die "Could not add object_type record\n" unless ($type);
 
-    MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
+    $type->addField({name => 'results_per_page', default_value => 20, type=>'int', required => 1});
+    $type->deleteField({name => 'test7', default_value => 7, type=>'string', required => 1});
+    $type->deleteField({name => 'test8', default_value => 8, type=>'string', required => 1});
+    $type->deleteField({name => 'test9', default_value => 9, type=>'string', required => 1});
+
+    $type->setVersion($VERSION);
 
     MinorImpact::log('debug', "ending");
     return;

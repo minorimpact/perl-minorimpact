@@ -14,12 +14,11 @@ sub new {
 
     #MinorImpact::log('info', "starting");
 
-    my $local_data = cloneHash($data);
-    $local_data->{attributes}{maxlength} = 16777215;
-    $local_data->{attributes}{markdown} = 1;
-    $local_data->{attributes}{is_text} = 1;
+    $data->{attributes}{maxlength} = 16777215;
+    $data->{attributes}{markdown} = 1;
+    $data->{attributes}{is_text} = 1;
 
-    my $self = $package->SUPER::_new($local_data);
+    my $self = $package->SUPER::_new($data);
     bless($self, $package);
 
     #MinorImpact::log('info', "ending");

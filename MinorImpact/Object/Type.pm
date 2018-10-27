@@ -35,12 +35,23 @@ sub new {
     my $options = shift || {};
 
     my $self = {};
-    if (ref($options) eq "HASH") {
+    my $object_type_id;
+    if (ref($options) eq 'HASH') {
+        $object_type_id = $options->{object_type_id};
     } elsif ($options) {
-        my $DB = MinorImpact::db();
-        my $sql = "SELECT * FROM object_type WHERE id=?";
-        $self->{data} = $DB->selectrow_hashref($sql, undef, ($options)) || die $DB->errstr;
+        $object_type_id = $options;
     }
+    die "no object_type_id specified\n" unless ($object_type_id);
+
+    my $DB = MinorImpact::db();
+    my $sql;
+    if ($object_type_id =~/^\d+$/) {
+        $sql = "SELECT * FROM object_type WHERE id=?";
+    } else {
+        $sql = "SELECT * from object_type WHERE name=?";
+    }
+    MinorImpact::log('debug', "\$sql='$sql',\$object_type_id='$object_type_id'");
+    $self->{db} = $DB->selectrow_hashref($sql, undef, ($options)) || die $DB->errstr;
 
     bless ($self, $package);
 }
@@ -139,7 +150,6 @@ sub fields {
     MinorImpact::log('debug', "starting");
 
     if (ref($self) eq 'HASH') {
-        MinorImpact::log('debug', "FOO");
         $params = $self;
         undef($self);
     }
@@ -157,14 +167,14 @@ sub fields {
     my $DB = MinorImpact::db();
     my $data = MinorImpact::cache("object_field_$object_type_id") unless ($params->{no_cache});
     unless ($data) {
-        #MinorImpact::log('debug', "collecting field data for '$object_type_id' from database");
+        MinorImpact::log('debug', "collecting field data for '$object_type_id' from database");
         $data = $DB->selectall_arrayref("select * from object_field where object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
         MinorImpact::cache("object_field_$object_type_id", $data);
     }
     foreach my $row (@$data) {
-        #MinorImpact::log('debug', $row->{name});
-        $row->{object_id} = $object_id if ($object_id);
-        $fields->{$row->{name}} = new MinorImpact::Object::Field($row);
+        MinorImpact::log('debug', "\$row->{name}='" . $row->{name} . "'");
+        #$row->{object_id} = $object_id if ($object_id);
+        $fields->{$row->{name}} = new MinorImpact::Object::Field({ db => $row, object_id => $object_id });
     }
 
     MinorImpact::log('debug', "ending");
@@ -196,7 +206,7 @@ sub get {
     my $field = shift || return;
     my $params = shift || {};
 
-    return $self->{data}{$field};
+    return $self->{db}{$field};
 }
 
 =head2 id
@@ -210,15 +220,15 @@ Returns the id of this type.
 sub id {
     my $self = shift || return;
 
-    return $self->{data}{id};
+    return $self->{db}{id};
 }
 
-sub isNoName { return shift->{data}{no_name}; }
-sub isNoTags { return shift->{data}{no_tags}; }
-sub plural { return shift->{data}{plural}; }
-sub isPublic { return shift->{data}{public}; }
-sub isReadonly { return shift->{data}{readonly}; }
-sub isSystem { return shift->{data}{system}; }
+sub isNoName { return shift->{db}{no_name}; }
+sub isNoTags { return shift->{db}{no_tags}; }
+sub plural { return shift->{db}{plural}; }
+sub isPublic { return shift->{db}{public}; }
+sub isReadonly { return shift->{db}{readonly}; }
+sub isSystem { return shift->{db}{system}; }
 
 =head2 name
 
@@ -231,7 +241,7 @@ Return the name of this $TYPE.
 sub name {
     my $self = shift || return;
 
-    return $self->{data}{name}
+    return $self->{db}{name}
 }
 
 =head2 toData
@@ -377,7 +387,7 @@ Default: FALSE
 sub add {
     my $params = shift || return;
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $MI = new MinorImpact();
     my $DB = $MI->db();
@@ -389,6 +399,7 @@ sub add {
     my $public = ($params->{public}?1:0);
     my $readonly = ($params->{readonly}?1:0);
     my $system = ($params->{system}?1:0);
+    my $version = $params->{version};
 
     #MinorImpact::log('debug', "\$name='$name'");
     my $object_type_id = MinorImpact::Object::typeID($name);
@@ -404,15 +415,16 @@ sub add {
         $DB->do("UPDATE object_type SET public=? WHERE id=?", undef, ($public, $object_type_id)) || die $DB->errstr unless ($data->{public} eq $public);
         $DB->do("UPDATE object_type SET readonly=? WHERE id=?", undef, ($readonly, $object_type_id)) || die $DB->errstr unless ($data->{readonly} eq $readonly);
         $DB->do("UPDATE object_type SET system=? WHERE id=?", undef, ($system, $object_type_id)) || die $DB->errstr unless ($data->{system} eq $system);
-        return $object_type_id;
+        $DB->do("UPDATE object_type SET version=? WHERE id=?", undef, ($version, $object_type_id)) || die $DB->errstr unless ($data->{version} eq $version);
+        return new MinorImpact::Object::Type($object_type_id);
     }
 
     die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
 
     $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural)) || die $DB->errstr;
 
-    #MinorImpact::log('debug', "ending");
-    return $DB->{mysql_insertid};
+    MinorImpact::log('debug', "ending");
+    return new MinorImpact::Object::Type($DB->{mysql_insertid});
 }
 
 =head2 addField
@@ -444,31 +456,61 @@ The type of field.
 =cut
 
 sub addField { 
-    return MinorImpact::Object::Field::add(@_); 
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    if ($self) {
+        $params->{object_type_id} = $self->id();
+    }
+    
+    return MinorImpact::Object::Field::add($params); 
 } 
 
-
 sub deleteField { 
-    return MinorImpact::Object::Field::del(@_); 
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    if ($self) {
+        $params->{object_type_id} = $self->id();
+    }
+    
+    return MinorImpact::Object::Field::delete($params); 
 }
 
 sub delField { 
-    return MinorImpact::Object::Field::del(@_); 
+    return MinorImpact::Object::Type::deleteField(@_); 
 }
 
 =head2 setVersion
 
 =over
 
-=item setVersion
+=item ->setVersion($version)
 
 =back
 
 =cut
 
 sub setVersion {
-    MinorImpact::log('debug', "starting");
     my $object_type_id = shift || die "No object type id";
+
+    MinorImpact::log('debug', "starting");
+    if (ref($object_type_id) eq 'MinorImpact::Object::Type') {
+        $object_type_id = $object_type_id->id();
+    } elsif (ref($object_type_id) eq 'HASH') {
+        $object_type_id = $object_type_id->{object_type_id};
+    }
+
     my $version = shift || die "No version number specified";
 
     $object_type_id = MinorImpact::Object::typeID($object_type_id);

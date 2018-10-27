@@ -59,19 +59,22 @@ sub cmp {
     return $self->get('publish_date');
 }
 
-our $VERSION = 1;
+our $VERSION = 4;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $object_type_id = MinorImpact::Object::Type::add({ name => $name, plural=>'entries', public=>1 });
-    die "Could not add object_type record\n" unless ($object_type_id);
+    my $type = MinorImpact::Object::Type::add({ name => $name, plural=>'entries', public=>1 });
+    die "Could not add object_type record\n" unless ($type);
 
-    MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'content', required => 1, type => 'text', });
-    MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name => 'publish_date', required => 1, type => 'datetime', });
+    $type->addField({ name => 'content', required => 1, type => 'text', });
+    $type->addField({ name => 'publish_date', required => 1, type => 'datetime', });
 
-    MinorImpact::Object::Type::setVersion($object_type_id, $VERSION);
+    MinorImpact::addSetting({name => 'default_tag', type=>'string', default_value=>'new'});
+    MinorImpact::addSetting({name => 'setting4', type=>'string', default_value=>'4', required=>1});
+
+    $type->setVersion($VERSION);
 
     MinorImpact::log('debug', "ending");
     return;

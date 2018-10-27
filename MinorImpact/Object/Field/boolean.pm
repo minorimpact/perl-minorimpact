@@ -10,15 +10,14 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('info', "starting");
 
-    my $local_data = cloneHash($data);
-    $local_data->{attributes}{default_value} = 0;
+    $data->{attributes}{default_value} = 0;
 
-    my $self = $package->SUPER::_new($local_data);
+    my $self = $package->SUPER::_new($data);
 
     bless($self, $package);
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('info', "ending");
     return $self;
 }
 

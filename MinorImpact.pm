@@ -1214,6 +1214,30 @@ Returns the global cgi object.
 
 =cut
 
+=head2 addSetting
+
+=cut
+
+sub addSetting {
+    my $params = shift || return;
+
+    MinorImpact::log('debug', "starting");
+
+    die "No name\n" unless ($params->{name});
+    die "No type\n" unless ($params->{type});
+
+    my $settings = new MinorImpact::Object::Type('MinorImpact::settings');
+    $settings->addField($params);
+    MinorImpact::log('debug', "ending");
+    return
+}
+
+=head2 cgi
+
+Return the global L<CGI|http://perldoc.perl.org/CGI.html> object.
+
+=cut
+
 sub cgi { 
     return $SELF->{CGI}; 
 }
@@ -1374,8 +1398,8 @@ sub dbConfig {
             )") || die $DB->errstr;
     }
 
-    MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
+    MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::entry::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::entry"));
 
     my $admin = new MinorImpact::User('admin');

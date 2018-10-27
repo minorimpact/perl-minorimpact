@@ -29,13 +29,23 @@ our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 
 
 sub new {
     my $package = shift || return;
-    my $data = shift || return;
+    my $id = shift || return;
 
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
+
+    my $DB = MinorImpact::db();
+    my $data;
+    if (ref($id) eq 'HASH') {
+        $data = $id;
+        $id = $data->{db}{id};
+    } else {
+        $data->{db} = $DB->selectrow_hashref("SELECT * from object_field where id = ?", undef, ($id));
+    }
+
     my $self;
     eval {
-        my $field_type = $data->{type};
-        #MinorImpact::log('info', "\$field_type=$field_type");
+        my $field_type = $data->{db}{type};
+        MinorImpact::log('debug', "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
     if ($@ && $@ !~/Can't locate object method "new" via package/) {
@@ -51,7 +61,7 @@ sub new {
         bless($self, $package);
     }
 
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return $self;
 }
 
@@ -59,7 +69,10 @@ sub _new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log('info', "starting");
+    die "No {db} data defined\n" unless (defined($data->{db}));
+    $data->{attributes} = {} unless (defined($data->{attributes}));
+
+    MinorImpact::log('debug', "starting");
 
     my $self = {};
 
@@ -67,51 +80,45 @@ sub _new {
     $self->{attributes}{isText} = 0;
     $self->{attributes}{maxlength} = 255;
 
-    my $local_data = cloneHash($data);
-
     # Override the default field attributes with anything added by an
     #   inherited class.
-    $local_data->{attributes} ||= {};
-    $self->{attributes} = { %{$self->{attributes}}, %{$local_data->{attributes}} };
-    $self->{attributes}{default_value} = $data->{default_value} if ($data->{default_value});
-    delete($local_data->{attributes});
+    $self->{attributes} = { %{$self->{attributes}}, %{$data->{attributes}} };
+    $self->{db} = cloneHash($data->{db});
+    $self->{attributes}{default_value} = $self->{db}{default_value} if ($self->{db}{default_value});
 
-    $self->{data} = $local_data;
-    #MinorImpact::log('debug', "\$name='" . $self->{data}{name} . "'");
-    if (defined($self->{data}{value}) && !ref($self->{data}{value})) {
-        # We want the value to be an array, not a scalar, so duplicate
-        #   it and rewrite it as an array.
-        my $value = $self->{data}{value};
-        #MinorImpact::log('debug', "\$value='$value'");
-        $self->{data}{value} = [];
-        push(@{$self->{data}{value}}, split(/\0/, $value)) if ($value);
-    } elsif (!defined($self->{data}{value})) {
-        $self->{data}{value} = [];
+    $self->{object_id} = $data->{object_id};
+    $self->{value} = [];
+    if (defined($data->{value}) && ref($data->{value}) eq 'ARRAY') {
+        foreach my $value (@{$data->{value}}) {
+            push(@{$self->{value}}, split(/\0/, $value));
+        }
+    } elsif (defined($data->{value})) {
+        push(@{$self->{value}}, split(/\0/, $data->{value}));
     }
 
-    if ($self->{data}{id} && $self->{data}{object_id}) {
-        #MinorImpact::log('debug', "\$self->{data}{id}='" . $self->{data}{id} . "'");
-        #MinorImpact::log('debug', "\$self->{data}{object_id}='" . $self->{data}{object_id} . "'");
+    if ($self->{db}{id} && $self->{object_id}) {
+        #MinorImpact::log('debug', "\$self->{db}{id}='" . $self->{db}{id} . "'");
+        #MinorImpact::log('debug', "\$self->{object_id}='" . $self->{object_id} . "'");
         my $DB = MinorImpact::db();
         if ($self->{attributes}{is_text}) {
-            my $data = $DB->selectall_arrayref("select value from object_text where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
+            my $data = $DB->selectall_arrayref("select value from object_text where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
             foreach my $row (@$data) {
-                #MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
-                push(@{$self->{data}{value}}, $row->{value});
+                MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
+                push(@{$self->{value}}, $row->{value});
             }
         } else {
-            my $data = $DB->selectall_arrayref("select value from object_data where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{data}{id}, $self->{data}{object_id}));
+            my $data = $DB->selectall_arrayref("select value from object_data where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
             foreach my $row (@$data) {
-                #MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
-                push(@{$self->{data}{value}}, $row->{value});
+                MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
+                push(@{$self->{value}}, $row->{value});
             }
         }
     }
-    if (scalar(@{$self->{data}{value}}) == 0 && defined($self->{attributes}{default_value})) {
-        push(@{$self->{data}{value}}, $self->{attributes}{default_value});
+    if (scalar(@{$self->{value}}) == 0 && defined($self->{attributes}{default_value})) {
+        push(@{$self->{value}}, $self->{attributes}{default_value});
     }
 
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return $self;
 }
 
@@ -153,9 +160,9 @@ sub update {
             $DB->do($sql, undef, ($object_id, $self->id(), $split_value)) || die $DB->errstr;
         }
     }
-    $self->{data}{value} = [];
+    $self->{value} = [];
     foreach my $split_value (map { split(/\0/, $_); } @values) {
-        push(@{$self->{data}{value}}, $split_value);
+        push(@{$self->{value}}, $split_value);
     }
     #MinorImpact::log("ending");
 }
@@ -163,7 +170,7 @@ sub update {
 sub validate {
     my $self = shift || return;
     my $value = shift;
-    #MinorImpact::log('info', "starting");
+    MinorImpact::log('debug', "starting");
 
     my $field_type = $self->type();
     #MinorImpact::log('debug', "$field_type,'$value'");
@@ -172,7 +179,7 @@ sub validate {
     }
     die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $value;
 }
 
@@ -181,7 +188,7 @@ sub value {
     my $params = shift || {};
 
     my @values = ();
-    @values = @{$self->{data}{value}} if (defined($self->{data}{value}));
+    @values = @{$self->{value}} if (defined($self->{value}));
     return @values;
 }
 
@@ -210,19 +217,19 @@ sub get {
     if ($field eq 'object_field_id') {
         $data_field = 'id';
     }
-    return $self->{data}{$data_field};
+    return $self->{db}{$data_field};
 }
 
 sub id { 
-    return shift->{data}{id}; 
+    return shift->{db}{id}; 
 }
 
 sub name { 
-    return shift->{data}{name}; 
+    return shift->{db}{name}; 
 }
 
 sub object_id { 
-    return shift->{data}{object_id}; 
+    return shift->{object_id}; 
 }
 
 sub toString { 
@@ -234,7 +241,7 @@ sub toString {
         # I don't understand why this exists.
         $string = $value;
     } else {
-        foreach my $value (@{$self->{data}{value}}) {
+        foreach my $value (@{$self->{value}}) {
             if ($self->{attributes}{markdown}) {
                 $value = markdown($value);
             }
@@ -248,7 +255,7 @@ sub toString {
 sub type {
     my $self = shift || return;
 
-    return $self->{data}{type};
+    return $self->{db}{type};
 }
 
 # Returns a row in a table that contains the field name and the input field.
@@ -380,7 +387,7 @@ sub add {
     } else {
         $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
-        my $field = new MinorImpact::Object::Field($local_params);
+        my $field = new MinorImpact::Object::Field($object_field_id);
         my $isText = $field->isText();
         my $data = $DB->selectall_arrayref("SELECT id FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
         foreach my $row (@$data) {
@@ -396,21 +403,38 @@ sub add {
 
 
 # Delete a field from an object.
-sub del {
-    my $params = shift || return;
+sub delete {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    if ($self) {
+        $params->{object_type_id} = $self->get('object_type_id');
+        $params->{object_field_id} = $self->id();
+        $params->{name} = $self->name();
+    }
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
     my $object_type_id = $params->{object_type_id} || die "No object type id";
-    my $name = $params->{name} || die "Field name can't be blank.";
+    my $object_field_id = $params->{object_field_id};
+    my $name = $params->{name};
 
-    my $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || return; # Do we really want do die on this hill? die $DB->errstr;
+    if ($name && !$object_field_id) {
+        $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || return; # Do we really want do die on this hill? die $DB->errstr;
+    }
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
     MinorImpact::cache("object_field_$object_type_id", {});
     MinorImpact::cache("object_type_$object_type_id", {});
 }
+
+sub del { MinorImpact::Object::Field::delete(@_); }
 sub deleteField { del(@_); }
 sub delField { del(@_); }
 

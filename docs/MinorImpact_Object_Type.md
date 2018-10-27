@@ -160,7 +160,7 @@ Adds a field to the database
 
 ## setVersion
 
-- setVersion
+- ->setVersion($version)
 
 # AUTHOR
 
