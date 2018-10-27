@@ -1216,6 +1216,40 @@ Returns the global cgi object.
 
 =head2 addSetting
 
+=over
+
+=item ::addSetting(\%params)
+
+=back
+
+Add a setting to the global L<MinorImpact::settings|MinorImpact::settings> object.  Takes
+the same parameters as L<MinorImpact::Object::Type::Field::add()|MinorImpact::Object::Type::Field/add>, 
+aside from C<object_type_id>.
+
+  MinorImpact::addSetting({ name => 'lines_per_page', type => 'int', default_value => 20, required => 1 });
+
+=head3 params
+
+=over
+
+=item default_value => $string
+
+The default value for this setting.
+
+=item name => $string
+
+Setting name.
+
+=item required => yes/no
+
+Whether or not this a required field.
+
+=item type => $string
+
+Setting type.
+
+=back
+
 =cut
 
 sub addSetting {
@@ -1229,7 +1263,7 @@ sub addSetting {
     my $settings = new MinorImpact::Object::Type('MinorImpact::settings');
     $settings->addField($params);
     MinorImpact::log('debug', "ending");
-    return
+    return;
 }
 
 =head2 cgi
@@ -1437,6 +1471,45 @@ sub debug {
     $sub .= "()";
 
     $MinorImpact::debug = isTrue($toggle)?$sub:0;
+}
+
+=head2 deleteSetting
+
+=over
+
+=item ::deleteSetting(\%params)
+
+=back
+
+Delete a setting from the global L<MinorImpact::settings|MinorImpact::settings> object.
+See L<MinorImpact::Object::Field::delete()|MinorImpact::Object::Field/delete>.
+
+  MinorImpact::deleteSetting({ name => 'lines_per_page' });
+
+=head3 params
+
+=over
+
+=item name => $string
+
+The setting name.
+
+=back
+
+=cut
+
+sub deleteSetting {
+    my $params = shift || return;
+
+    MinorImpact::log('debug', "starting");
+
+    die "No name\n" unless ($params->{name});
+    die "No type\n" unless ($params->{type});
+
+    my $settings = new MinorImpact::Object::Type('MinorImpact::settings');
+    $settings->deleteField($params);
+    MinorImpact::log('debug', "ending");
+    return;
 }
 
 =head2 log

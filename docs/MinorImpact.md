@@ -440,6 +440,32 @@ Returns the global cgi object.
 
 ## addSetting
 
+- ::addSetting(\\%params)
+
+Add a setting to the global [MinorImpact::settings](./MinorImpact_settings.md) object.  Takes
+the same parameters as [MinorImpact::Object::Type::Field::add()](./MinorImpact_Object_Type_Field.md#add), 
+aside from `object_type_id`.
+
+    MinorImpact::addSetting({ name => 'lines_per_page', type => 'int', default_value => 20, required => 1 });
+
+### params
+
+- default\_value => $string
+
+    The default value for this setting.
+
+- name => $string
+
+    Setting name.
+
+- required => yes/no
+
+    Whether or not this a required field.
+
+- type => $string
+
+    Setting type.
+
 ## cgi
 
 Return the global [CGI](http://perldoc.perl.org/CGI.html.md) object.
@@ -466,6 +492,21 @@ Turn debugging on or off by setting `$switch` to true or false.
     MinorImpact::log("debug", "This message will get logged.");
     MinorImpact::debug(0);
     MinorImpact::log("debug", "This message will not get logged.");
+
+## deleteSetting
+
+- ::deleteSetting(\\%params)
+
+Delete a setting from the global [MinorImpact::settings](./MinorImpact_settings.md) object.
+See [MinorImpact::Object::Field::delete()](./MinorImpact_Object_Field.md#delete).
+
+    MinorImpact::deleteSetting({ name => 'lines_per_page' });
+
+### params
+
+- name => $string
+
+    The setting name.
 
 ## log
 
