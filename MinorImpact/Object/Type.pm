@@ -97,13 +97,12 @@ sub del {
     my $DB = MinorImpact::db();
     my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id} || $params->{type_id} || $params->{name});
     die "No object type" unless ($object_type_id);
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
+    clearCache($object_type_id);
 
     my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
     foreach my $row (@$data) {
         my $object_id = $row->{id};
-        MinorImpact::cache("object_data_$object_id", {});
+        MinorImpact::Object::clearCache($object_id);
         $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
         $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
         $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
@@ -389,8 +388,7 @@ sub add {
 
     MinorImpact::log('debug', "starting");
 
-    my $MI = new MinorImpact();
-    my $DB = $MI->db();
+    my $DB = MinorImpact::db();
 
     my $name = $params->{name};
     my $no_name = ($params->{no_name}?1:0);
@@ -403,11 +401,10 @@ sub add {
 
     #MinorImpact::log('debug', "\$name='$name'");
     my $object_type_id = MinorImpact::Object::typeID($name);
+    clearCache($object_type_id);
     #MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
     
     if ($object_type_id) {
-        MinorImpact::cache("object_field_$object_type_id", {});
-        MinorImpact::cache("object_type_$object_type_id", {});
         my $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr();
         $DB->do("UPDATE object_type SET no_name=? WHERE id=?", undef, ($no_name, $object_type_id)) || die $DB->errstr unless ($data->{no_name} eq $no_name);
         $DB->do("UPDATE object_type SET no_tags=? WHERE id=?", undef, ($no_tags, $object_type_id)) || die $DB->errstr unless ($data->{no_tags} eq $no_tags);
@@ -471,6 +468,37 @@ sub addField {
     return MinorImpact::Object::Field::add($params); 
 } 
 
+=head2 clearCache
+
+Clear TYPE related caches.
+
+=cut
+
+sub clearCache {
+    my $self = shift || return;
+
+    my $object_type_id;
+
+    if (ref($self)) {
+        $object_type_id = $self->id();
+    } else {
+        $object_type_id = $self;
+        undef($self);
+    }
+
+    MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_id", {});
+
+    my $DB = MinorImpact::db();
+    my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+    foreach my $row (@$data) {
+        my $object_id = $row->{id};
+        MinorImpact::Object::clearCache($object_id);
+    }
+
+    return;
+}
+
 sub deleteField { 
     my $self = shift || return;
     my $params = shift || {};
@@ -518,8 +546,7 @@ sub setVersion {
     die "Invalid object type" unless ($object_type_id =~/^\d+$/);
     MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$version='$version'");
 
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
+    clearCache($object_type_id);
     my $DB = MinorImpact::db();
     my $sql = "UPDATE object_type SET version=? WHERE id=?";
     MinorImpact::log('debug', "sql='$sql' \@fields='$version', '$object_type_id'");

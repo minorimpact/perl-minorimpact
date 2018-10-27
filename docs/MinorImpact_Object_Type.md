@@ -158,6 +158,10 @@ Adds a field to the database
 
     The type of field.
 
+## clearCache
+
+Clear TYPE related caches.
+
 ## setVersion
 
 - ->setVersion($version)

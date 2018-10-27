@@ -82,6 +82,7 @@ sub new {
     my $params = shift || {};
 
     MinorImpact::log('debug', "starting(" . $id . ")");
+
     my $DB = MinorImpact::db();
     my $object;
 
@@ -92,15 +93,17 @@ sub new {
     eval {
         my $data;
         if (ref($id) eq "HASH") {
+            MinorImpact::log('debug', "HASH");
             die "Can't create a new object without an object type id." unless ($id->{object_type_id});
             MinorImpact::log('debug', "getting type_id for $id->{object_type_id}");
             my $object_type_id = typeID($id->{object_type_id});
             $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
             unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
+                $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
                 MinorImpact::cache("object_type_$object_type_id", $data);
             }
         } else {
+            MinorImpact::log('debug', "NO HASH");
             $data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
             unless ($data) {
                 $data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
@@ -108,7 +111,9 @@ sub new {
             }
         }
         my $type_name = $data->{name}; 
+        MinorImpact::log('debug', "\$data->{name}='" . $data->{name} . "'");
         my $version = $data->{version};
+        MinorImpact::log('debug', "\$data->{version}='" . $data->{version} . "'");
         my $package_version = version($type_name);
 
         if ($version < $package_version) {
@@ -139,7 +144,7 @@ sub new {
     die "permission denied" unless ($object->validUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $object;
 }
 
@@ -240,6 +245,31 @@ sub back {
 }
 
 sub churn {
+    return;
+}
+
+=head2 clearCache
+
+Clear the cache of items related to $OBJECT.
+
+  $OBJECT->clearCache();
+
+=cut
+
+sub clearCache {
+    my $self = shift || return;
+
+    my $object_id;
+
+    if (ref($self)) {
+        $object_id = $self->id();
+    } else {
+        $object_id = $self;
+        undef($self);
+    }
+
+    MinorImpact::cache("object_data_$object_id", {});
+    MinorImpact::cache("object_id_type_$object_id", {});
     return;
 }
 
@@ -756,7 +786,7 @@ sub update {
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
     $self->log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
 
-    MinorImpact::cache("object_data_$object_id", {});
+    $self->clearCache();
 
     my $fields = $self->fields();
     #MinorImpact::log('info', "validating parameters");
@@ -819,8 +849,22 @@ sub fields {
 
 sub type {
     my $self = shift || return;
+    MinorImpact::log('debug', "starting");
 
-    return new MinorImpact::Object::Type($self->typeID());
+    my $object_type_id;
+    if (ref($self)) {
+        $object_type_id = $self->typeID();
+    } else {
+        $object_type_id = $self;
+        undef($self);
+    }
+
+    MinorImpact::log('debug', "\$object_type_id='" . $object_type_id . "'");
+    my $type = new MinorImpact::Object::Type($object_type_id);
+    MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
+
+    MinorImpact::log('debug', "ending");
+    return $type;
 }
 
 sub type_id { 
@@ -848,11 +892,14 @@ sub typeID {
             unless ($object_type_id) {
                 my $singular = $self;
                 $singular =~s/s$//;
+                my $sql = "select id from object_type where name=? or name=? or plural=?";
+                MinorImpact::log('debug', "\$sql='$sql', ($self, $singular, $self)");
                 $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
                 MinorImpact::cache("object_type_id_$self", $object_type_id);
             }
         }
     }
+
     MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
     MinorImpact::log('debug', "ending");
     return $object_type_id;
@@ -1160,7 +1207,7 @@ sub delete {
     $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id)) || die $DB->errstr;
 
-    MinorImpact::cache("object_data_$object_id", {});
+    $self->clearCache();
     MinorImpact::log('debug', "ending");
 }
 
@@ -1800,7 +1847,7 @@ sub version {
     no strict 'refs';
     my $class = ref($self) || $self;
     my $version = ${$class . "::VERSION"} || 0;
-    #MinorImpact::log('debug', "${class}::VERSION='$version'");
+    MinorImpact::log('debug', "${class}::VERSION='$version'");
     return $version;
 }
 

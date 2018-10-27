@@ -55,6 +55,12 @@ object.
 
     Additional url parameters that you want to be included in the link.
 
+## clearCache
+
+Clear the cache of items related to $OBJECT.
+
+    $OBJECT->clearCache();
+
 ## id
 
 - id() 

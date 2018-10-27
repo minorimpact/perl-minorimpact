@@ -1,12 +1,11 @@
-[% INCLUDE header %]
+[% INCLUDE header title='Edit Settings' %]
 
-<div class='w3-card w3-margin-top'>
-    <div class='w3-row w3-margin w3-padding'>
-        <a href='[% INCLUDE url_index action='edit_settings' reset=1 %]' title='Edit Settings' class='w3-baritem'><i class='fa fa-edit fa-2x'></i></a>
-    </div>
-    [% FOREACH key IN settings.fields().keys %]
-        [% INCLUDE row_column name=key value=settings.get(key) %]
-    [% END %]
-</div>
+
+<form method=POST class='w3-card w3-padding w3-margin-top'>
+    <h3>Edit Settings</h3>
+    <input type='hidden' name='a' value='edit_settings'>
+    <input type='hidden' name='hidden_submit' value='1'>
+    [% form %]
+</form>
 
 [% INCLUDE footer %]

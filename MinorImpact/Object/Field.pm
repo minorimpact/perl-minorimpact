@@ -23,9 +23,55 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
 our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 'object_type_id', 'public', 'user_id' );
 
-# TODO: This object doesn't know shit about the database, which is pretty dumb.  It should pull values automatically if
-#   it's attached to a particular object, should be able to create new fields, and when values are added or changes, they
-#   should be written back to the database.  It's really weak as is.
+=head2 new
+
+=over
+
+=item new MinorImpact::Object::Field($object_field_id)
+
+=item new MinorImpact::Object::Field(\%data)
+
+=back
+
+Create a new field object.
+
+=head3 data
+
+=over
+
+=item attributes => \%hash
+
+=over
+
+=item max_length => $int
+
+The max length of the field.
+
+=item is_text => yes/no
+
+Is the field a text field (y) or a normal length data field (n)?
+
+=back
+
+=item db => \%hash
+
+=over
+
+=item id => $int
+
+=back
+
+=item object_id => $int
+
+The id of the $OBJECT this field belongs to, if applicable.
+
+=item value => \@array
+
+A pointer to an array of values for this field.
+
+=back
+
+=cut
 
 sub new {
     my $package = shift || return;
@@ -123,7 +169,7 @@ sub _new {
 }
 
 sub defaultValue {
-    return shift->{attribute}{default_value};
+    return shift->{db}{default_value};
 }
 
 sub update {
@@ -344,7 +390,9 @@ sub add {
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
     my $local_params = cloneHash($params);
-    my $object_type_id = MinorImpact::Object::typeID($local_params->{object_type_id}) || die "No object type id";
+    my $object_type = new MinorImpact::Object::Type($local_params->{object_type_id}) || die "No object type id";
+    my $object_type_id = $object_type->id();
+
     $local_params->{name} || die "Field name can't be blank.";
     $local_params->{type} || die "Field type can't be blank.";
     $local_params->{required} = $local_params->{required}?1:0;
@@ -370,11 +418,11 @@ sub add {
         $type = lc($type);
     }
 
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
+    $object_type->clearCache();
     MinorImpact::log('debug', "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
     my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
     if ($data) {
+        MinorImpact::log('debug', "This already fucking exists?!");
         my $object_field_id = $data->{id};
         $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
         $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
@@ -387,12 +435,14 @@ sub add {
     } else {
         $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
+        MinorImpact::log('debug', "new object_field_id='$object_field_id'");
         my $field = new MinorImpact::Object::Field($object_field_id);
-        my $isText = $field->isText();
+        MinorImpact::log('debug', "\$field->defaultValue()='" . $field->defaultValue() . "'");
         my $data = $DB->selectall_arrayref("SELECT id FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
         foreach my $row (@$data) {
             my $object_id = $row->{id};
-            if ($isText) {
+            MinorImpact::Object::clearCache($object_id);
+            if ($field->isText()) {
                 $DB->do("INSERT INTO object_text (object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_id, $object_field_id, $field->defaultValue())) || die $DB->errstr;
             } else {
                 $DB->do("INSERT INTO object_data (object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_id, $object_field_id, $field->defaultValue())) || die $DB->errstr;
@@ -401,8 +451,62 @@ sub add {
     }
 }
 
+=head2 clearCache
 
-# Delete a field from an object.
+=over
+
+=item ->clearCache()
+
+=back
+
+Clear the cache of anything related to $TYPE.
+
+  $TYPE->clearCache();
+
+=cut
+
+sub clearCache {
+    my $self = shift || return;
+
+    my $object_type_id;
+
+    my $object_type_id = $self->typeID();
+    MinorImpact::Object::Type::clearCache($object_type_id);
+
+    return;
+}
+
+=head2 delete
+
+=over
+
+=item ->delete(\%params)
+
+=item ::delete(\%params)
+
+=back
+
+Delete a field.
+
+=head3 params
+
+=over
+
+=item object_field_id => $int
+
+Only requried if called as a package subroutine, rather than a $FIELD object
+method.
+
+  MinorImpact::Object::Field::delete({ object_field_id => 3 });
+
+=item object_type_id => $int
+
+=item name => $string
+
+=back
+
+=cut
+
 sub delete {
     my $self = shift || return;
     my $params = shift || {};
@@ -413,7 +517,7 @@ sub delete {
     }
 
     if ($self) {
-        $params->{object_type_id} = $self->get('object_type_id');
+        $params->{object_type_id} = $self->typeID();
         $params->{object_field_id} = $self->id();
         $params->{name} = $self->name();
     }
@@ -439,6 +543,10 @@ sub deleteField { del(@_); }
 sub delField { del(@_); }
 
 sub isText { return shift->{attributes}{is_text}; }
+
+sub typeID {
+    return shift->{db}{object_type_id};
+}
 
 =head1 AUTHOR
 
