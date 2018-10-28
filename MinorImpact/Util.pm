@@ -26,7 +26,7 @@ use Data::Dumper;
 use Time::Local;
 use Exporter 'import';
 our @EXPORT = ( 
-    "cloneArray",
+    "clone",
     "cloneHash",
     "commonRoot",
     "convertCronTimeItemToList",
@@ -49,6 +49,21 @@ our @EXPORT = (
     "uniq", 
 );
 
+sub clone {
+    my $original = shift || return;
+    my $copy;
+
+    if (ref($original) eq "HASH") {
+        $copy = cloneHash($original);
+    } elsif (ref($original) eq "ARRAY") {
+        $copy = cloneArray($original);
+    } else {
+        $copy = $original;
+    }
+
+    return $copy;
+}
+
 =head2 cloneArray
 
 Returns a deep copy of an array pointer.
@@ -59,15 +74,9 @@ sub cloneArray {
     my $array = shift || return;
     my $new_array = shift || [];
 
-    return unless (ref($array) eq "ARRAY");
+    die "not an array reference" unless (ref($array) eq "ARRAY");
     foreach my $value (@$array) {
-        if (ref($value) eq "HASH") {
-            push(@$new_array, cloneHash($value));
-        } elsif (ref($value) eq "ARRAY") {
-            push(@$new_array, cloneArray($value));
-        } else {
-            push(@$new_array, $value);
-        }
+        push(@$new_array, clone($value));
     }
     return $new_array;
 }
@@ -94,15 +103,16 @@ sub cloneHash {
     my $hash = shift || return;
     my $new_hash = shift || {};
 
-    return unless (ref($hash) eq "HASH");
+    die "not a hash reference\n"  unless (ref($hash) eq "HASH");
     foreach my $key (keys %$hash) {
-        if (ref($hash->{$key}) eq "HASH") {
-            $new_hash->{$key} = cloneHash($hash->{$key});
-        } elsif (ref($hash->{$key}) eq "ARRAY") {
-            $new_hash->{$key} = cloneArray($hash->{$key});
-        } else {
-            $new_hash->{$key} = $hash->{$key};
-        }
+        #if (ref($hash->{$key}) eq "HASH") {
+        #    $new_hash->{$key} = cloneHash($hash->{$key});
+        #} elsif (ref($hash->{$key}) eq "ARRAY") {
+        #    $new_hash->{$key} = cloneArray($hash->{$key});
+        #} else {
+        #    $new_hash->{$key} = $hash->{$key};
+        #}
+        $new_hash->{$key} = clone($hash->{$key});
     }
     return $new_hash;
 }

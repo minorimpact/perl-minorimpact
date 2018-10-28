@@ -58,6 +58,10 @@ Delete a field.
 - object\_type\_id => $int
 - name => $string
 
+## toData
+
+Return the object as a pure hash.
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>

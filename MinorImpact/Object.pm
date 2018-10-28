@@ -569,15 +569,17 @@ sub toData {
     my $fields = $self->fields();
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
-        my @values = $field->value();
-        if ($field->isArray()) {
-            $data->{fields}{$name} = cloneArray(\@values);
-        } else {
-            $data->{fields}{$name} = $values[0];
-        }
+        #my @values = $field->value();
+        #if ($field->isArray()) {
+        #    $data->{fields}{$name} = cloneArray(\@values);
+        #} else {
+        #    $data->{fields}{$name} = $values[0];
+        #}
         #$data->{fields}{$name} = $fields->{$name}->toData();
+        $data->{fields}{$name} = clone($field->value());
     }
     @{$data->{tags}} = ($self->tags());
+    $data->{references} = $self->getReferences();
     return $data;
 }
 

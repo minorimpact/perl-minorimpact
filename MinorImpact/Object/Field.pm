@@ -129,7 +129,7 @@ sub _new {
     # Override the default field attributes with anything added by an
     #   inherited class.
     $self->{attributes} = { %{$self->{attributes}}, %{$data->{attributes}} };
-    $self->{db} = cloneHash($data->{db});
+    $self->{db} = clone($data->{db});
     $self->{attributes}{default_value} = $self->{db}{default_value} if ($self->{db}{default_value});
 
     $self->{object_id} = $data->{object_id};
@@ -233,7 +233,8 @@ sub value {
     my $self = shift || return; 
     my $params = shift || {};
 
-    my $values = cloneArray($self->{value}) if (defined($self->{value}));
+    my $values = [];
+    $values = clone($self->{value}) if (defined($self->{value}));
     return @$values;
 }
 
@@ -312,7 +313,7 @@ sub rowForm {
     #MinorImpact::log('info', "start");
 
     my $name = $self->name()|| return;
-    my $local_params = cloneHash($params);
+    my $local_params = clone($params);
 
     my @values;
     @values = @{$local_params->{value}} if (defined($local_params->{value}));
@@ -349,7 +350,7 @@ sub _input {
     my $row;
     if ($self->type() =~/object\[(\d+)\]$/) {
         my $object_type_id = $1;
-        my $local_params = cloneHash($params);
+        my $local_params = clone($params);
         $local_params->{query}{debug} .= "Object::Field::_input();";
         $local_params->{query}{object_type_id} = $object_type_id;
         $local_params->{fieldname} = $name;
@@ -389,7 +390,7 @@ sub add {
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
-    my $local_params = cloneHash($params);
+    my $local_params = clone($params);
     my $object_type = new MinorImpact::Object::Type($local_params->{object_type_id}) || die "No object type id";
     my $object_type_id = $object_type->id();
 
@@ -539,8 +540,8 @@ sub delete {
 }
 
 sub del { MinorImpact::Object::Field::delete(@_); }
-sub deleteField { del(@_); }
-sub delField { del(@_); }
+sub deleteField { MinorImpact::Object::Field::delete(@_); }
+sub delField { MinorImpact::Object::Field::delete(@_); }
 
 sub isText { return shift->{attributes}{is_text}; }
 
@@ -555,9 +556,8 @@ sub toData {
 
     my $data = {};
 
-    $data->{db} = cloneHash($self->{db});
-    #$data->{value} = $self->{value};
-    #
+    $data->{db} = clone($self->{db});
+
     return $data;
 }
 

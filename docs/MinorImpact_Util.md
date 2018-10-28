@@ -15,6 +15,10 @@ Contains a set of basic utility functions.
 
 # SUBROUTINES
 
+## cloneArray
+
+Returns a deep copy of an array pointer.
+
 ## cloneHash
 
 - cloneHash(\\%hash, \[\\%new\_hash\])

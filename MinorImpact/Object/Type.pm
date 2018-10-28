@@ -266,6 +266,11 @@ sub toData {
     $data->{readonly} = $self->isReadonly();
     $data->{system} = $self->isSystem();
 
+    my $fields = $self->fields();
+    foreach my $field_name (keys %{$fields}) {
+        $data->{fields}->{$field_name} = $fields->{$field_name}->toData();
+    }
+
     return $data;
 }
 
