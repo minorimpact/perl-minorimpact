@@ -367,9 +367,13 @@ to enter one.
 
 ### Parameters
 
-- force
+- admin => true/false
 
-    Redirect to a login page if a valid user is not found in a CGI context.  Results are 
+    Redirect to a login page (or die) if the user is not an 'admin' user.
+
+- force => true/false
+
+    Redirect to a login page (or die) if a valid user is not found.
     currently undefined on the command line.
 
         # Don't return unless the current user is valid.

@@ -293,7 +293,7 @@ sub settings {
     }
     my $form = $settings->form();
 
-    MinorImpact::tt('edit_settings', { 
+    MinorImpact::tt('settings', { 
         errors  => [ @errors ],
         form => $form,
     });

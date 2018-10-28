@@ -455,7 +455,8 @@ sub selectList {
 
 =back
 
-Return the value of $name.
+Return the value of $name. Will return an @array if $field is 
+defined as an array.  See L<MinorImpact::Object::Field::add()|MinorImpact::Object::Field/add>.
 
   # get the object's name
   $object_name = $OBJECT->get("name");
@@ -466,9 +467,27 @@ Return the value of $name.
 
 =over
 
-=item markdown
+=item markdown => true/false
 
 Treat the field as a markdown field, and convert the data to HTML before returning it.
+
+=item one_line => true/false
+
+For text fields, only data up to the first CR.
+
+  $OBJECT->update({ decription => "This is\ntwo lines." });
+  # get the description
+  $short_desc = $OBJECT->get('description', { one_line => 1});
+  # RESULT: $sort_desc = "This is";
+
+=item truncate => $count
+
+Only return up to $count characters of data.
+
+  $OBJECT->update({ decription => "This is\ntwo lines." });
+  # get the description
+  $short_desc = $OBJECT->get('description', { truncate => 5});
+  # RESULT: $sort_desc = "This";
 
 =back
 
@@ -1824,7 +1843,7 @@ sub validUser {
     #MinorImpact::log('debug', "\$test_user->id()='" . $test_user->id() . "'");
     #MinorImpact::log('debug', "\$self->userID()='" . $self->userID() . "'");
 
-    my $valid = $test_user->id() && $self->userID() && ($test_user->id() == $self->userID());
+    my $valid = $test_user->isAdmin() || ($test_user->id() && $self->userID() && ($test_user->id() == $self->userID()));
     #MinorImpact::log('debug', $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
     MinorImpact::log('debug', "ending (\$valid='$valid')");
     return $valid;

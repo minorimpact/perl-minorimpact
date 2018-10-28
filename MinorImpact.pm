@@ -896,9 +896,13 @@ to enter one.
 
 =over
 
-=item force
+=item admin => true/false
 
-Redirect to a login page if a valid user is not found in a CGI context.  Results are 
+Redirect to a login page (or die) if the user is not an 'admin' user.
+
+=item force => true/false
+
+Redirect to a login page (or die) if a valid user is not found.
 currently undefined on the command line.
 
   # Don't return unless the current user is valid.
@@ -1019,7 +1023,8 @@ sub user {
         # Check to see if the user has a blank password, the assumption being that this is
         #   some yahoo using the library for a simple command line script and doesn't care
         #   about users or security.
-        if ($user && (isTrue($params->{admin}) == $user->isAdmin())) {
+        if ($user) {
+            die "$username is not an admin user\n" if ($params->{admin} && !$user->isAdmin());
             MinorImpact::log('debug', "Trying out a blank password");
             if ($user->validateUser('')) {
                 $self->{USER} = $user;
@@ -1033,6 +1038,7 @@ sub user {
                 return $user;
             }
         }
+        die "Unable to validate $username\n" if ($params->{force});
     }
     MinorImpact::log('debug', "no user found");
     MinorImpact::redirect({action => 'login' }) if ($params->{force});
@@ -1166,8 +1172,6 @@ sub www {
         MinorImpact::WWW::delete_search($self, $local_params);
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $local_params);
-    } elsif ( $action eq 'edit_settings') {
-        MinorImpact::WWW::edit_settings($self, $local_params);
     } elsif ( $action eq 'edit_user') {
         MinorImpact::WWW::edit_user($self, $local_params);
     } elsif ( $action eq 'home') {
@@ -1303,7 +1307,7 @@ sub db {
     return $SELF->{DB};
 }
 
-my $VERSION = 2;
+my $VERSION = 3;
 sub dbConfig {
     #MinorImpact::log('debug', "starting");
     my $DB = shift || return;
@@ -1366,6 +1370,7 @@ sub dbConfig {
             `readonly` tinyint(1) DEFAULT '0',
             `required` tinyint(1) DEFAULT '0',
             `sortby` tinyint(1) DEFAULT '0',
+            `populated` tinyint(1) DEFAULT '0',
             `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `create_date` datetime NOT NULL,
             PRIMARY KEY (`id`)
