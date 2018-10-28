@@ -1008,18 +1008,18 @@ sub user {
     #
     if ($ENV{'USER'}) {
         my $user = new MinorImpact::User($ENV{'USER'});
-        if (!$user) {
+        if (!$user && !$params->{admin}) {
             # TODO: Make this a configuration option, so the developer can prevent
             #   new users from getting created randomly.
             # TODO: Add a 'shell' or 'local' parameter so we can queury all the accounts
             #   created using this method (I'm holding off on adding it because I still
             #   dan't have a mechanism for automating database updates).
-            $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '' });
+            $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '', email => '' });
         }
         # Check to see if the user has a blank password, the assumption being that this is
         #   some yahoo using the library for a simple command line script and doesn't care
         #   about users or security.
-        if ($user) {
+        if ($user && (isTrue($params->{admin}) == $user->isAdmin())) {
             MinorImpact::log('debug', "Trying out a blank password");
             if ($user->validateUser('')) {
                 $self->{USER} = $user;
