@@ -546,6 +546,7 @@ sub toData {
     $data->{name} = $self->name();
     $data->{public} = $self->isPublic();
     $data->{type_id} = $self->typeID();
+    $data->{user_id} = $self->userID();
     my $fields = $self->fields();
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};

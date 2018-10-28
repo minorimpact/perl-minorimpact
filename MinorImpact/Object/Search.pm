@@ -445,10 +445,12 @@ sub _search {
     # owned by the current user. "security".
     unless ($query->{public}) {
         my $user = MinorImpact::user();
-        if ($user) {
-            $query->{user_id} = $user->id();
-        } else {
-            $query->{public} = 1;
+        unless ($user->isAdmin()) {
+            if ($user) {
+                $query->{user_id} = $user->id();
+            } else {
+                $query->{public} = 1;
+            }
         }
     }
 

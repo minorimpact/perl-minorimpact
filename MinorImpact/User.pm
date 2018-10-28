@@ -271,13 +271,12 @@ sub searchObjects {
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
-    my $local_params = cloneHash($params);
 
-    $local_params->{query} ||= {};
-    $local_params->{query}{user_id} = $self->id();
-    $local_params->{query}{debug} .= "MinorImpact::User::searchObjects();";
+    $params->{query} ||= {};
+    $params->{query}{user_id} = $self->id();
+    $params->{query}{debug} .= "MinorImpact::User::searchObjects();";
 
-    my @results = MinorImpact::Object::Search::search($local_params);
+    my @results = MinorImpact::Object::Search::search($params);
 
     MinorImpact::log('debug', "ending");
     return @results;
