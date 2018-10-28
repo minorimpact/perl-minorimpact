@@ -571,10 +571,11 @@ sub toData {
         my $field = $fields->{$name};
         my @values = $field->value();
         if ($field->isArray()) {
-            $data->{$name} = \@values;
+            $data->{fields}{$name} = cloneArray(\@values);
         } else {
-            $data->{$name} = $values[0];
+            $data->{fields}{$name} = $values[0];
         }
+        #$data->{fields}{$name} = $fields->{$name}->toData();
     }
     @{$data->{tags}} = ($self->tags());
     return $data;

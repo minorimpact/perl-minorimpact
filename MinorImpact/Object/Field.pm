@@ -3,14 +3,14 @@ package MinorImpact::Object::Field;
 use strict;
 
 use Data::Dumper;
-use Text::Markdown 'markdown';
-
+use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field::boolean;
 use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::url;
+use Text::Markdown 'markdown';
 
 =head1 NAME
 
@@ -233,9 +233,8 @@ sub value {
     my $self = shift || return; 
     my $params = shift || {};
 
-    my @values = ();
-    @values = @{$self->{value}} if (defined($self->{value}));
-    return @values;
+    my $values = cloneArray($self->{value}) if (defined($self->{value}));
+    return @$values;
 }
 
 sub fieldName {
@@ -280,12 +279,12 @@ sub object_id {
 
 sub toString { 
     my $self = shift || return; 
-    my $value = shift;
+    my $params = shift || {};
     
     my $string;
-    if ($value) {
-        # I don't understand why this exists.
-        $string = $value;
+
+    if ($params->{format} eq 'json') {
+        $string = to_json($self->toData());
     } else {
         foreach my $value (@{$self->{value}}) {
             if ($self->{attributes}{markdown}) {
@@ -295,6 +294,7 @@ sub toString {
         }
         $string =~s/,$//;
     }
+
     return $string;
 }
 
@@ -543,6 +543,23 @@ sub deleteField { del(@_); }
 sub delField { del(@_); }
 
 sub isText { return shift->{attributes}{is_text}; }
+
+=head2 toData
+
+Return the object as a pure hash.
+
+=cut
+
+sub toData {
+    my $self = shift || return;
+
+    my $data = {};
+
+    $data->{db} = cloneHash($self->{db});
+    #$data->{value} = $self->{value};
+    #
+    return $data;
+}
 
 sub typeID {
     return shift->{db}{object_type_id};

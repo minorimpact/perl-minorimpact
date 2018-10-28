@@ -26,6 +26,7 @@ use Data::Dumper;
 use Time::Local;
 use Exporter 'import';
 our @EXPORT = ( 
+    "cloneArray",
     "cloneHash",
     "commonRoot",
     "convertCronTimeItemToList",
@@ -47,6 +48,29 @@ our @EXPORT = (
     "trunc",
     "uniq", 
 );
+
+=head2 cloneArray
+
+Returns a deep copy of an array pointer.
+
+=cut
+
+sub cloneArray {
+    my $array = shift || return;
+    my $new_array = shift || [];
+
+    return unless (ref($array) eq "ARRAY");
+    foreach my $value (@$array) {
+        if (ref($value) eq "HASH") {
+            push(@$new_array, cloneHash($value));
+        } elsif (ref($value) eq "ARRAY") {
+            push(@$new_array, cloneArray($value));
+        } else {
+            push(@$new_array, $value);
+        }
+    }
+    return $new_array;
+}
 
 =head2 cloneHash
 
@@ -74,6 +98,8 @@ sub cloneHash {
     foreach my $key (keys %$hash) {
         if (ref($hash->{$key}) eq "HASH") {
             $new_hash->{$key} = cloneHash($hash->{$key});
+        } elsif (ref($hash->{$key}) eq "ARRAY") {
+            $new_hash->{$key} = cloneArray($hash->{$key});
         } else {
             $new_hash->{$key} = $hash->{$key};
         }
