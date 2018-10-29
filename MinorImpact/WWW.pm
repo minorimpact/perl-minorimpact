@@ -938,9 +938,7 @@ sub user {
     $local_params->{query}{limit} = $limit;
     $local_params->{query}{page} = $page;
     $local_params->{query}{user_id} = $user->id();
-    if (!$current_user || ($current_user->id() != $user->id())) {
-        $local_params->{query}{public} = 1;
-    }
+    $local_params->{query}{public} = 1;
     my @objects = MinorImpact::Object::Search::search($local_params);
 
     MinorImpact::tt('user', { action => 'user', objects => [ @objects ], query => $local_params->{query} });

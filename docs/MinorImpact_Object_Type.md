@@ -10,22 +10,22 @@ MinorImpact::Object::Type
 
 ## new
 
-## del
+## delete
 
-- ->del(\\%params)
-- ::del(\\%params)
+- ->delete(\\%params)
+- ::delete(\\%params)
 
 Delete a given object type from the system.
 
-    MinorImpact::Object::Type::del({ object_type_id => 'object'});
+    MinorImpact::Object::Type::delete({ object_type_id => 'object'});
 
-    $TYPE->del();
+    $TYPE->delete();
 
 ### params
 
 - object\_type\_id
 
-    The type ID of the object to the delete. 
+    The type ID of the object to delete. 
 
 ## fields
 
@@ -142,7 +142,8 @@ Add a new object type to the MinorImpact application.
 
 ## addField
 
-- addField(\\%options)
+- ::addField(\\%options)
+=item ->addField(\\%options)
 
 Adds a field to the database
 

@@ -43,9 +43,6 @@ sub dbConfig {
     die "Could not add object_type record\n" unless ($type);
 
     $type->addField({name => 'results_per_page', default_value => 20, type=>'int', required => 1});
-    $type->deleteField({name => 'test7', default_value => 7, type=>'string', required => 1});
-    $type->deleteField({name => 'test8', default_value => 8, type=>'string', required => 1});
-    $type->deleteField({name => 'test9', default_value => 9, type=>'string', required => 1});
 
     $type->setVersion($VERSION);
 

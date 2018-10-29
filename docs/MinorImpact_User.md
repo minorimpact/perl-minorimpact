@@ -140,13 +140,13 @@ Returns TRUE if $password is valid.
 
 # SUBROUTINES
 
-## addUser
+## add
 
-- ::addUser(\\%params)
+- ::add(\\%params)
 
 Add a MinorImpact user.
 
-    $new_user = MinorImpact::User::AddUser({
+    $new_user = MinorImpact::User::add({
       password => 'bar',
       username => 'foo', 
       email => 'foo@bar.com",
@@ -162,11 +162,15 @@ Add a MinorImpact user.
 
     Set the user's email to $string.
 
+- encrypted => 0/1
+
+    Set to 1 if the password has already been encrypted.
+
 - password => $string
 
     The new user's password.
 
-- username => $string
+- name => $string
 
     The new user's login name.
 

@@ -93,7 +93,6 @@ sub new {
     eval {
         my $data;
         if (ref($id) eq "HASH") {
-            MinorImpact::log('debug', "HASH");
             die "Can't create a new object without an object type id." unless ($id->{object_type_id});
             MinorImpact::log('debug', "getting type_id for $id->{object_type_id}");
             my $object_type_id = typeID($id->{object_type_id});
@@ -103,7 +102,6 @@ sub new {
                 MinorImpact::cache("object_type_$object_type_id", $data);
             }
         } else {
-            MinorImpact::log('debug', "NO HASH");
             $data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
             unless ($data) {
                 $data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
@@ -132,13 +130,17 @@ sub new {
     if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
-        MinorImpact::log('crit', "id='$id',$error");
+        my $i = $id;
+        if (ref($id) eq "HASH") {
+            $i = $id->{object_type_id};
+        } 
+        MinorImpact::log('crit', "133,id='$i',$error");
         die $error;
     }
     unless ($object) {
         $object = MinorImpact::Object::_new($package, $id, $params);
     }
-    #
+
     MinorImpact::log('debug', "ending($id)");
 
     die "permission denied" unless ($object->validUser() || $params->{admin});
@@ -159,25 +161,27 @@ sub _new {
     MinorImpact::log('debug', "starting(" . $id . ")");
     #MinorImpact::log('debug', "package='$package'");
     #MinorImpact::log('debug', "caching=" . ($params->{no_cache}?'off':'on'));
-    $self->{DB} = MinorImpact::db() || die;
-    $self->{CGI} = MinorImpact::cgi() || die;
+    $self->{DB} = MinorImpact::db() || die "can't get DB object\n";
+    $self->{CGI} = MinorImpact::cgi() || die "can't get CGI object\n";
 
     my $object_id;
     my $object_type_id;
     if (ref($id) eq 'HASH') {
         #MinorImpact::log('debug', "ref(\$id)='" . ref($id) . "'");
 
-        $object_type_id = $id->{object_type_id} || $id->{type_id} || lc($package) || die "No object_type_id specified\n";
+        # TODO: Why in the hell was I looking for lc($package) here?! Was that there for some kind of other 
+        #   reason?!
+        $object_type_id = $id->{object_type_id} || $id->{type_id} || $package || die "No object_type_id specified\n";
         MinorImpact::log('debug', "getting type_id for '$object_type_id'");
         $object_type_id = typeID($object_type_id);
         MinorImpact::log('debug', "got object_type_id='$object_type_id'");
 
-        my $user_id = $id->{'user_id'} || MinorImpact::userID();
+        my $user = new MinorImpact::User($id->{user_id}) || MinorImpact::user();
         die "invalid name" unless ($id->{name});
-        die "invalid user id" unless ($user_id);
+        die "invalid user id" unless ($user);
         die "invalid type id" unless ($object_type_id);
 
-        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user_id, $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
+        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
             MinorImpact::log('notice', "Couldn't insert new object record");
@@ -268,6 +272,7 @@ sub clearCache {
         undef($self);
     }
 
+    delete($OBJECT_CACHE->{$object_id});
     MinorImpact::cache("object_data_$object_id", {});
     MinorImpact::cache("object_id_type_$object_id", {});
     return;
@@ -564,8 +569,8 @@ sub toData {
     $data->{id} = $self->id();
     $data->{name} = $self->name();
     $data->{public} = $self->isPublic();
-    $data->{type_id} = $self->typeID();
-    $data->{user_id} = $self->userID();
+    $data->{object_type_id} = $self->type()->name();
+    $data->{user_id} = $self->user()->name();
     my $fields = $self->fields();
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
@@ -576,9 +581,10 @@ sub toData {
         #    $data->{fields}{$name} = $values[0];
         #}
         #$data->{fields}{$name} = $fields->{$name}->toData();
-        $data->{fields}{$name} = clone($field->value());
+        #$data->{fields}{$name} = clone($field->value());
+        $data->{$name} = clone($field->value());
     }
-    @{$data->{tags}} = ($self->tags());
+    $data->{tags} = join("\0", $self->tags());
     $data->{references} = $self->getReferences();
     return $data;
 }
@@ -825,7 +831,7 @@ sub update {
     foreach my $param (keys %$data) {
         if ($param =~/^tags$/) {
             $self->{DB}->do("DELETE FROM object_tag WHERE object_id=?", undef, ($self->id()));
-            MinorImpact::log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
+            MinorImpact::log('crit', "tags:" . $self->{DB}->errstr) if ($self->{DB}->errstr);
             foreach my $tag (split(/\0/, $data->{$param})) {
                 foreach my $tag (parseTags($tag)) {
                     next unless ($tag);
@@ -912,13 +918,15 @@ sub typeID {
             $object_type_id = $self;
         } else {
             $object_type_id = MinorImpact::cache("object_type_id_$self");
-            unless ($object_type_id) {
+            if ($object_type_id) {
+                MinorImpact::log('debug', "from cache: \$object_type_id='$object_type_id'");
+            } else {
                 my $singular = $self;
                 $singular =~s/s$//;
                 my $sql = "select id from object_type where name=? or name=? or plural=?";
                 MinorImpact::log('debug', "\$sql='$sql', ($self, $singular, $self)");
                 $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
-                MinorImpact::cache("object_type_id_$self", $object_type_id);
+                MinorImpact::cache("object_type_id_$self", $object_type_id) if ($object_type_id);
             }
         }
     }

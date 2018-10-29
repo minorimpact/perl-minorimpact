@@ -444,7 +444,7 @@ sub _search {
     # If I'm not looking for objects marked 'public', then I can only look for objects
     # owned by the current user. "security".
     my $user = MinorImpact::user();
-    unless ($query->{public} || $user->isAdmin()) {
+    unless ($query->{public} || ($user && $user->isAdmin())) {
         if ($user) {
             $query->{user_id} = $user->id();
         } else {

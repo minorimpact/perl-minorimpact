@@ -56,21 +56,25 @@ sub new {
     bless ($self, $package);
 }
 
-=head2 del
+sub del {
+    MinorImpact::Object::Type::delete(@_);
+}
+
+=head2 delete
 
 =over
 
-=item ->del(\%params)
+=item ->delete(\%params)
 
-=item ::del(\%params)
+=item ::delete(\%params)
 
 =back
 
 Delete a given object type from the system.
 
-  MinorImpact::Object::Type::del({ object_type_id => 'object'});
+  MinorImpact::Object::Type::delete({ object_type_id => 'object'});
 
-  $TYPE->del();
+  $TYPE->delete();
 
 =head3 params
 
@@ -78,13 +82,13 @@ Delete a given object type from the system.
 
 =item object_type_id
 
-The type ID of the object to the delete. 
+The type ID of the object to delete. 
 
 =back
 
 =cut
 
-sub del {
+sub delete {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -97,7 +101,6 @@ sub del {
     my $DB = MinorImpact::db();
     my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id} || $params->{type_id} || $params->{name});
     die "No object type" unless ($object_type_id);
-    clearCache($object_type_id);
 
     my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
     foreach my $row (@$data) {
@@ -110,6 +113,7 @@ sub del {
     $DB->do("DELETE FROM object_field WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
+    $self->clearCache();
 }
 
 =head2 fields
@@ -265,6 +269,7 @@ sub toData {
     $data->{public} = $self->get('public');
     $data->{readonly} = $self->isReadonly();
     $data->{system} = $self->isSystem();
+    $data->{version} = $self->get('version');
 
     my $fields = $self->fields();
     foreach my $field_name (keys %{$fields}) {
@@ -418,22 +423,30 @@ sub add {
         $DB->do("UPDATE object_type SET readonly=? WHERE id=?", undef, ($readonly, $object_type_id)) || die $DB->errstr unless ($data->{readonly} eq $readonly);
         $DB->do("UPDATE object_type SET system=? WHERE id=?", undef, ($system, $object_type_id)) || die $DB->errstr unless ($data->{system} eq $system);
         $DB->do("UPDATE object_type SET version=? WHERE id=?", undef, ($version, $object_type_id)) || die $DB->errstr unless ($data->{version} eq $version);
-        return new MinorImpact::Object::Type($object_type_id);
+    } else {
+        die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
+
+        $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, version, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural, $version)) || die $DB->errstr;
+        $object_type_id = $DB->{mysql_insertid};
+    }
+    my $type = new MinorImpact::Object::Type($object_type_id);
+
+    if (defined($params->{fields})) {
+        foreach my $field_name (keys %{$params->{fields}}) {
+            $type->addField($params->{fields}{$field_name});
+        }
     }
 
-    die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
-
-    $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural)) || die $DB->errstr;
-
     MinorImpact::log('debug', "ending");
-    return new MinorImpact::Object::Type($DB->{mysql_insertid});
+    return $type;
 }
 
 =head2 addField
 
 =over
 
-=item addField(\%options)
+=item ::addField(\%options)
+=item ->addField(\%options)
 
 =back
 
@@ -483,16 +496,21 @@ sub clearCache {
     my $self = shift || return;
 
     my $object_type_id;
+    my $object_type_name;
 
-    if (ref($self)) {
-        $object_type_id = $self->id();
-    } else {
-        $object_type_id = $self;
-        undef($self);
+    unless (ref($self)) {
+        $self = new MinorImpact::Object::Type($self);
     }
 
+    $object_type_id = $self->id();
+    $object_type_name = $self->name();
+
     MinorImpact::cache("object_field_$object_type_id", {});
+    MinorImpact::cache("object_field_$object_type_name", {});
     MinorImpact::cache("object_type_$object_type_id", {});
+    MinorImpact::cache("object_type_$object_type_name", {});
+    MinorImpact::cache("object_type_id_$object_type_id", {});
+    MinorImpact::cache("object_type_id_$object_type_name", {});
 
     my $DB = MinorImpact::db();
     my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;

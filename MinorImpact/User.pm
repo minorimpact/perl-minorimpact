@@ -294,7 +294,7 @@ sub settings {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
     my $local_params = {};
     $local_params->{query} ||= {};
@@ -304,12 +304,12 @@ sub settings {
     my $settings = $settings[0];
     unless ($settings) {
         eval {
-            $settings = new MinorImpact::settings({ name => $self->name(), user_id => $self->id() }) || die "Can't create settings object.";
+            $settings = new MinorImpact::settings({ name => "$self->name() settings", user_id => $self->id() }) || die "Can't create settings object.";
         };
         MinorImpact::log('notice', $@) if ($@);
     }
 
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $settings;
 }
 
@@ -399,6 +399,7 @@ sub toData {
     $data->{mod_date} = $self->get('mod_date');
     $data->{name} = $self->name();
     $data->{password} = $self->get('password');
+    $data->{encrypted} = 1;
 
     return $data;
 }
@@ -480,17 +481,17 @@ sub validateUser {
 
 =cut
 
-=head2 addUser
+=head2 add
 
 =over
 
-=item ::addUser(\%params)
+=item ::add(\%params)
 
 =back
 
 Add a MinorImpact user.
 
-  $new_user = MinorImpact::User::AddUser({
+  $new_user = MinorImpact::User::add({
     password => 'bar',
     username => 'foo', 
     email => 'foo@bar.com",
@@ -508,11 +509,15 @@ Make the user an admin.
 
 Set the user's email to $string.
 
+=item encrypted => 0/1
+
+Set to 1 if the password has already been encrypted.
+
 =item password => $string
 
 The new user's password.
 
-=item username => $string
+=item name => $string
 
 The new user's login name.
 
@@ -520,22 +525,30 @@ The new user's login name.
 
 =cut
 
-sub addUser {
+sub add {
     my $params = shift || return;
     
     MinorImpact::log('debug', "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
-    if ($DB && $params->{username}) {
+    if ($DB && ($params->{name} || $params->{username})) {
+        $params->{name} = $params->{username} unless ($params->{name});
         $params->{admin} ||= 0;
-        # Only the first 8 characters matter to crypt(); disturbing and weird.
+        my $password;
+        if (isTrue($params->{encrypted})) {
+            $password = $params->{password};
+        } else {
+            # Only the first 8 characters matter to crypt(); disturbing and weird.
+            $password = crypt($params->{password}||"", $$);
+        }
+
         if ($params->{admin}) {
             my $user = MinorImpact::user();
             unless ($user && $user->isAdmin()) {
                 die "Only an admin user can add an admin user\n";
             }
         }
-        $DB->do("INSERT INTO user (name, password, admin, email, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{'username'}, crypt($params->{'password'}||"", $$), isTrue($params->{admin}), $params->{email})) || die $DB->errstr;
+        $DB->do("INSERT INTO user (name, password, admin, email, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email})) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
@@ -544,6 +557,10 @@ sub addUser {
 
     MinorImpact::log('debug', "ending");
     return;
+}
+
+sub addUser {
+    MinorImpact::User::add(@_);
 }
 
 =head2 count

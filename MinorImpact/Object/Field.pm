@@ -134,32 +134,34 @@ sub _new {
 
     $self->{object_id} = $data->{object_id};
     $self->{value} = [];
-    if (defined($data->{value}) && ref($data->{value}) eq 'ARRAY') {
-        foreach my $value (@{$data->{value}}) {
-            push(@{$self->{value}}, split(/\0/, $value));
-        }
-    } elsif (defined($data->{value})) {
-        push(@{$self->{value}}, split(/\0/, $data->{value}));
-    }
 
-    if ($self->{db}{id} && $self->{object_id}) {
-        #MinorImpact::log('debug', "\$self->{db}{id}='" . $self->{db}{id} . "'");
-        #MinorImpact::log('debug', "\$self->{object_id}='" . $self->{object_id} . "'");
-        my $DB = MinorImpact::db();
-        if ($self->{attributes}{is_text}) {
-            my $data = $DB->selectall_arrayref("select value from object_text where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
-            foreach my $row (@$data) {
-                MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
-                push(@{$self->{value}}, $row->{value});
+    if (defined($data->{value})) {
+        # We're being manually assigned a value when the field object is being
+        #   created.  Just use that.
+        if (ref($data->{value}) eq 'ARRAY') {
+            foreach my $value (@{$data->{value}}) {
+                push(@{$self->{value}}, split(/\0/, $value));
             }
         } else {
-            my $data = $DB->selectall_arrayref("select value from object_data where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
-            foreach my $row (@$data) {
-                MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
-                push(@{$self->{value}}, $row->{value});
-            }
+            push(@{$self->{value}}, split(/\0/, $data->{value}));
+        }
+    } elsif ($self->{db}{id} && $self->{object_id}) {
+        # We're a field that exists in the database and we're assinged to a 
+        #   particular object.  Load the values from the the database.
+        my $DB = MinorImpact::db();
+        my $data_table = "object_data";
+        if ($self->{attributes}{is_text}) {
+            $data_table = "object_text";
+        }
+        my $data = $DB->selectall_arrayref("select value from $data_table where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
+        foreach my $row (@$data) {
+            MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
+            push(@{$self->{value}}, $row->{value});
         }
     }
+
+    # We didn't get any values from either of those other two places, so just use the default,
+    #  if one is set.
     if (scalar(@{$self->{value}}) == 0 && defined($self->{attributes}{default_value})) {
         push(@{$self->{value}}, $self->{attributes}{default_value});
     }
@@ -535,8 +537,7 @@ sub delete {
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
+    $self->clearCache();
 }
 
 sub del { MinorImpact::Object::Field::delete(@_); }
@@ -556,7 +557,14 @@ sub toData {
 
     my $data = {};
 
-    $data->{db} = clone($self->{db});
+    $data->{name} = $self->{db}{name};
+    $data->{type} = $self->{db}{type};
+    $data->{required} = $self->{db}{required};
+    $data->{hidden} = $self->{db}{hidden};
+    $data->{sortby} = $self->{db}{sortby};
+    $data->{readonly} = $self->{db}{readonly};
+    $data->{description} = $self->{db}{description};
+    $data->{default_value} = $self->{db}{default_value};
 
     return $data;
 }

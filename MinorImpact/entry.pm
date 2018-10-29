@@ -59,7 +59,7 @@ sub cmp {
     return $self->get('publish_date');
 }
 
-our $VERSION = 14;
+our $VERSION = 15;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
@@ -71,9 +71,7 @@ sub dbConfig {
     $type->addField({ name => 'content', required => 1, type => 'text', });
     $type->addField({ name => 'publish_date', required => 1, type => 'datetime', });
 
-    MinorImpact::addSetting({name => 'default_tag', type=>'string', default_value=>'new'});
-    MinorImpact::deleteSetting({name => 'setting' . ($VERSION-1), type=>'string', default_value=>($VERSION - 1), required=>1});
-    #MinorImpact::addSetting({name => "setting$VERSION", type=>'string', default_value=>$VERSION, required=>1});
+    MinorImpact::addSetting({name => 'default_tag', type=>'string', default_value=>'' });
 
     $type->setVersion($VERSION);
     $type->clearCache();
