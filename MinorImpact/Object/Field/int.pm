@@ -32,7 +32,7 @@ sub new {
 
 sub validate {
     my $self = shift || return;
-    my $value;
+    my $value = shift;
 
     $value = $self->SUPER::validate($value);
     die 'Invalid characters.' unless  ($value =~/^-?\d*$/);

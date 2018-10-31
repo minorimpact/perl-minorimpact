@@ -1,8 +1,8 @@
-package MinorImpact::Object::Field::float;
+package MinorImpact::Object::Field::password;
 
 =head1 NAME
 
-MinorImpact::Object::Field::float
+MinorImpact::Object::Field::password
 
 =head1 METHODS
 
@@ -20,14 +20,25 @@ sub new {
     my $data = shift || return;
 
     #MinorImpact::log('info', "starting");
-    $data->{attributes}{maxlength} = 15;
-    $data->{attributes}{default_value} = '0.0';
+
+    $data->{attributes}{maxlength} = 16;
 
     my $self = $package->SUPER::_new($data);
     bless($self, $package);
-
     #MinorImpact::log('info', "ending");
     return $self;
+}
+
+sub _input {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    my $name = $self->name() || return;
+    #my $value = $params->{row_value};
+
+    my $row = "<input class='w3-input w3-border' type=password name='$name' id='$name'>";
+
+    return $row;
 }
 
 sub validate {
@@ -35,7 +46,8 @@ sub validate {
     my $value = shift;
 
     $value = $self->SUPER::validate($value);
-    die 'Invalid characters.' unless ($value =~/^-?[\d]*\.?[\d]*$/);
+    #die 'Invalid characters.' unless  ($value =~/^-?\d*$/);
+    die 'Too short' unless (length($value) > 7);
 
     return $value;
 }
