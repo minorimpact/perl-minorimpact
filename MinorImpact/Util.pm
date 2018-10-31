@@ -24,6 +24,8 @@ use strict;
 
 use Data::Dumper;
 use Time::Local;
+use Data::UUID;
+
 use Exporter 'import';
 our @EXPORT = ( 
     "clone",
@@ -47,7 +49,11 @@ our @EXPORT = (
     "trim",
     "trunc",
     "uniq", 
+    "uuid",
 );
+
+
+our $SELF;
 
 sub clone {
     my $original = shift || return;
@@ -951,6 +957,26 @@ sub uniq {
     # This also MAINTAINS THE ORDER.  I rely on this in places, so
     #   don't fuck around with it.
     return grep { !$seen{$_}++ } @_;
+}
+
+=head2 uuid
+
+=over
+
+=item uuid()
+
+=back
+
+Return a UUID string.
+
+  print uuid() . "\n";
+
+=cut
+
+sub uuid {
+    $SELF->{UG} = new Data::UUID unless (defined($SELF->{UG}) && $SELF->{UG});
+
+    return $SELF->{UG}->create_str();
 }
 
 =head1 AUTHOR

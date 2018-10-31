@@ -288,6 +288,14 @@ retaining the order.
     @bar = uniq(@foo);
     # OUTPUT: @bar = (1, 2, 5, 4);
 
+## uuid
+
+- uuid()
+
+Return a UUID string.
+
+    print uuid() . "\n";
+
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
