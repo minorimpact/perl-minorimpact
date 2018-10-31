@@ -116,6 +116,34 @@ sub delete {
     $self->clearCache();
 }
 
+=head2 displayName
+
+=over
+
+=item ->displayName()
+
+=back
+
+Returns a "nicer" version of L<name()|MinorImpact::Object::Type/name>.
+
+  $type = new MinorImpact::Object::Type("MinorImpact::entry");
+  print $type->name() . "\n";
+  # OUTPUT: MinorImpact::entry
+  print $type->displayName() . "\n";
+  # OUTPUT: Entry
+
+=cut
+
+sub displayName {
+    my $self = shift || return;
+
+    my $display_name = $self->name();
+    $display_name =~s/^MinorImpact:://;
+    $display_name = ucfirst($display_name);
+
+    return $display_name;
+}
+
 =head2 fields
 
 =over

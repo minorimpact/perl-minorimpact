@@ -27,6 +27,18 @@ Delete a given object type from the system.
 
     The type ID of the object to delete. 
 
+## displayName
+
+- ->displayName()
+
+Returns a "nicer" version of [name()](./MinorImpact_Object_Type.md#name).
+
+    $type = new MinorImpact::Object::Type("MinorImpact::entry");
+    print $type->name() . "\n";
+    # OUTPUT: MinorImpact::entry
+    print $type->displayName() . "\n";
+    # OUTPUT: Entry
+
 ## fields
 
 - ->fields(\\%params)
