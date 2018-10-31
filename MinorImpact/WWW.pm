@@ -212,7 +212,7 @@ sub edit {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{no_cache} = 1;
@@ -262,7 +262,7 @@ sub edit {
                         object   =>$object,
                     });
     MinorImpact::log('debug', "ending");
-    MinorImpact::debug(0);
+    #MinorImpact::debug(0);
 }
 
 sub settings {

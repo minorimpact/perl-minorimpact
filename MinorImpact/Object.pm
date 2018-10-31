@@ -93,7 +93,7 @@ sub new {
     my $id = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
+    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $id . ")");
 
     my $DB = MinorImpact::db();
@@ -169,7 +169,7 @@ sub new {
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     MinorImpact::log('debug', "ending");
-    MinorImpact::debug(0);
+    #MinorImpact::debug(0);
     return $object;
 }
 
@@ -1894,10 +1894,13 @@ sub validUser {
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
-    $params->{mode} eq 'read' unless (defined($params->{mode}) && $params->{mode});
+    $params->{mode} = 'read' unless (defined($params->{mode}) && $params->{mode});
 
     if ($params->{mode} eq 'read') {
-        return 1 if ($self->isSystem() || $self->get('public'));
+        if ($self->isSystem() || $self->get('public')) {
+            MinorImpact::log('debug', "Read access granted to " . $self->name() . ": system or public object");
+            return 1;
+        }
     }
 
     if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
@@ -1906,14 +1909,22 @@ sub validUser {
     }
 
     my $test_user = $params->{user} || MinorImpact::user($params);
-    return unless ($test_user && ref($test_user) eq 'MinorImpact::User');
-    #MinorImpact::log('debug', "\$test_user->id()='" . $test_user->id() . "'");
-    #MinorImpact::log('debug', "\$self->userID()='" . $self->userID() . "'");
+    unless ($test_user && ref($test_user) eq 'MinorImpact::User') {
+        MinorImpact::log('debug', "Access denied to " . $self->name() . ": no test user");
+        return 0;
+    }
 
-    my $valid = $test_user->isAdmin() || ($test_user->id() && $self->userID() && ($test_user->id() == $self->userID()));
-    #MinorImpact::log('debug', $test_user->name() . " is " . ($valid?"valid":"invalid") . " for " . $self->name());
-    MinorImpact::log('debug', "ending (\$valid='$valid')");
-    return $valid;
+    if ($test_user->isAdmin()) {
+        MinorImpact::log('debug', "Access granted to " . $self->name() . ": admin user");
+        return 1;
+    }
+
+    if ($test_user->id() && $self->userID() && ($test_user->id() == $self->userID())) {
+        MinorImpact::log('debug', "Access granted to " . $self->name() . ": owner");
+        return 1;
+    }
+    MinorImpact::log('debug', "Access denied to " . $self->name() . ": no particular reason");
+    return 0;
 }
 
 =head2 version
