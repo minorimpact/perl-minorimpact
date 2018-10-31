@@ -1131,9 +1131,6 @@ sub types {
     my @types = ();
     foreach my $row (@$data) {
         push (@types, new MinorImpact::Object::Type($row->{id}));
-        #$row->{fields} = fields($row->{id});
-        #my $fields = fields($row->{id});
-        #dumper($fields);
     }
 
     return @types;

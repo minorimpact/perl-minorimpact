@@ -358,8 +358,8 @@ sub home {
 
     MinorImpact::log('debug', "starting");
 
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user({ force => 1 });
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user({ force => 1 });
     my $settings = $user->settings();
 
     my $format = $CGI->param('format') || 'html';
@@ -387,7 +387,8 @@ sub home {
 
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
-    my @type_ids = MinorImpact::Object::typeIDs({readonly => 0, system => 0});
+    my @types = MinorImpact::Object::types({ readonly => 0, system => 0 });
+
     #foreach my $object_type_id (MinorImpact::Object::getTypeID()) {
     #    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object_type_id}));
     #}
@@ -399,7 +400,7 @@ sub home {
                             query               => $local_params->{query},
                             sort                => $sort,
                             #tab_number          => $tab_number,
-                            types               => [ @type_ids ],
+                            types               => [ @types ],
                             });
     MinorImpact::log('debug', "ending");
 }
