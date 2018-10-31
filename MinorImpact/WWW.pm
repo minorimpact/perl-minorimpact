@@ -147,17 +147,25 @@ sub collections {
 }
 
 sub del {
+    MinorImpact::WWW::delete(@_);
+}
+
+sub delete {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user({ force => 1 });
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user({ force => 1 });
 
-    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $MINORIMPACT->redirect();
-    my $object = new MinorImpact::Object($object_id) || $MINORIMPACT->redirect();
+    my $object_id = $CGI->param('id') || $CGI->param('object_id') || $MINORIMPACT->redirect({ action => 'home' });
+    my $object;
+    eval {
+       $object = new MinorImpact::Object($object_id);
+    };
+    $MINORIMPACT->redirect({ action => 'home' }) unless ($object);
     my $back = $object->back();
 
-    $object->delete();
+    $object->delete() ;
     $MINORIMPACT->redirect($back);
 }
 
@@ -491,10 +499,10 @@ sub object {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user();
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user();
     my $settings;
     if ($user) {
         $settings = $user->settings();
@@ -507,7 +515,7 @@ sub object {
     my $tab_id = $CGI->param('tab_id') || 0;
 
     my $object;
-    if ($params->{object}) {
+    if (defined($params->{object}) && $params->{object}) {
         $object = $params->{object};
     } elsif ($object_id) {
         eval {
@@ -559,6 +567,7 @@ sub object {
                             url_prev    => $url_prev,
                             url_next    => $url_next,
                             });
+    MinorImpact::log('debug', "ending");
 }
 
 sub object_types {

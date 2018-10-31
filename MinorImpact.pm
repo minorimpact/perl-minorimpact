@@ -815,7 +815,7 @@ sub url {
     } elsif (($action eq 'delete_search' || $action eq 'search') && $collection_id) {
         $id = $collection_id;
         undef($collection_id);
-    } elsif (($action eq 'object' || $action eq 'edit') && $object_id) {
+    } elsif (($action eq 'object' || $action eq 'delete' || $action eq 'edit') && $object_id) {
         $id = $object_id;
         undef($object_id);
     } elsif ($action eq 'user' && $user_id) {
@@ -1166,7 +1166,7 @@ sub www {
     } elsif ( $action eq 'collections') {
         MinorImpact::WWW::collections($self, $local_params);
     } elsif ( $action eq 'delete') {
-        MinorImpact::WWW::del($self, $local_params);
+        MinorImpact::WWW::delete($self, $local_params);
     } elsif ( $action eq 'delete_search') {
         MinorImpact::WWW::delete_search($self, $local_params);
     } elsif ( $action eq 'edit') {
