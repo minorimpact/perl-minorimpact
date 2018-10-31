@@ -19,13 +19,11 @@ sub new {
     my $package = shift || return;
     my $data = shift || return;
 
-    #MinorImpact::log('info', "starting");
 
     $data->{attributes}{maxlength} = 16;
 
     my $self = $package->SUPER::_new($data);
     bless($self, $package);
-    #MinorImpact::log('info', "ending");
     return $self;
 }
 
@@ -34,7 +32,6 @@ sub _input {
     my $params = shift || {};
 
     my $name = $self->name() || return;
-    #my $value = $params->{row_value};
 
     my $row = "<input class='w3-input w3-border' type=password name='$name' id='$name'>";
 
@@ -46,7 +43,6 @@ sub validate {
     my $value = shift;
 
     $value = $self->SUPER::validate($value);
-    #die 'Invalid characters.' unless  ($value =~/^-?\d*$/);
     die 'Too short' unless (length($value) > 7);
 
     return $value;
