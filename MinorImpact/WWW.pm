@@ -43,19 +43,16 @@ sub add {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user({ force => 1 });
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user({ force => 1 });
 
-    my $script_name = MinorImpact::scriptName();
     my $action = $CGI->param('action') || $CGI->param('a') || $MINORIMPACT->redirect();
     my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $CGI->param('id') || $MINORIMPACT->redirect();
-    my $type = new MinorImpact::Object::Type($object_type_id);
+    my $type = new MinorImpact::Object::Type($object_type_id) || $MINORIMPACT->redirect();
     MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
-    #$object_type_id = MinorImpact::Object::typeID($object_type_id) if ($object_type_id);
-    $MINORIMPACT->redirect() if ($type->isReadonly());
+    $MINORIMPACT->redirect() if ($type->isReadonly() || $type->isSystem());
 
     my $object;
     my @errors;
@@ -80,7 +77,7 @@ sub add {
             push(@errors, $@) if ($@);
         }
         if ($object && !scalar(@errors)) {
-            my $back = $object->back() || "$script_name?a=object&object_id=" . $object->id();
+            my $back = $object->back() || MinorImpact::url({ action => 'object', object_id => $object->id() });
             $MINORIMPACT->redirect($back);
         }
     }
@@ -102,6 +99,7 @@ sub add {
                         object_type_name => $type->name(),
                         object_type_id   => $type->id(),
                     });
+    MinorImpact::log('debug', "ending");
 }
 
 sub add_reference {
@@ -214,16 +212,16 @@ sub edit {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::debug(1);
+    MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{no_cache} = 1;
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user({ force => 1 });
-    my $script_name = MinorImpact::scriptName();
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user({ force => 1 });
 
     my $object_id = $CGI->param('id') || $CGI->param('object_id') || $MINORIMPACT->redirect();
     my $object = new MinorImpact::Object($object_id, $local_params) || $MINORIMPACT->redirect();
-    $MINORIMPACT->redirect($object->back()) if ($object->isReadonly());
+    $MINORIMPACT->redirect($object->back()) if ($object->isReadonly() || $object->isSystem());
 
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
@@ -252,7 +250,7 @@ sub edit {
         }
 
         if ($object && scalar(@errors) == 0) {
-            my $back = $object->back() || "$script_name?a=object&id=" . $object->id();
+            my $back = $object->back() || MinorImpact::url({ action => 'object', object_id => $object->id() });
             $MINORIMPACT->redirect($back);
         }
     }
@@ -263,15 +261,16 @@ sub edit {
                         form    => $form,
                         object   =>$object,
                     });
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
+    MinorImpact::debug(0);
 }
 
 sub settings {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    my $CGI = $MINORIMPACT->cgi();
-    my $user = $MINORIMPACT->user({ force => 1 });
+    my $CGI = MinorImpact::cgi();
+    my $user = MinorImpact::user({ force => 1 });
     my $settings = $user->settings();
 
     my @errors;
@@ -279,6 +278,14 @@ sub settings {
         my $cgi_params = $CGI->Vars;
         eval {
             $settings->update($cgi_params);
+
+            if ($cgi_params->{password} && $cgi_params->{new_password} && $cgi_params->{new_password2}) {
+                $cgi_params->{password} = $cgi_params->{new_password} if ($cgi_params->{new_password} eq $cgi_params->{new_password2});
+            } else {
+                delete($cgi_params->{password});
+            }
+
+            $user->update($cgi_params);
         };
         if ($@) {
             my $error = $@;
@@ -286,12 +293,9 @@ sub settings {
             $error =~s/ at .+ line \d+.*$//;
             push(@errors, $error) if ($error);
         }
-
-        if (scalar(@errors) == 0) {
-            $MINORIMPACT->redirect({ action => 'settings' });
-        }
     }
-    my $form = $settings->form();
+    my $form = "<h3>Site Settings</h3>\n" . $settings->form({action => 'settings'});
+    $form .= "<h3>User Settings</h3>\n" . $user->form();
 
     MinorImpact::tt('settings', { 
         errors  => [ @errors ],
@@ -597,8 +601,7 @@ sub register {
         if (!scalar(@errors)) {
             my $user;
             eval {
-                #MinorImpact::log('debug', "FUCK");
-                $user = MinorImpact::User::addUser({ email=>$email, password=>$password, username=>$username });
+                $user = MinorImpact::User::add({ email=>$email, password=>$password, username=>$username });
             };
             if ($@) {
                 my $error = $@;

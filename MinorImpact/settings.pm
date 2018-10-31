@@ -33,13 +33,13 @@ sub new {
     return $self;
 }
 
-our $VERSION = 10;
+our $VERSION = 11;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $type = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 1, no_name => 1, no_tags => 1 });
+    my $type = MinorImpact::Object::Type::add({ name => $name, plural => "settings", readonly => 1, system => 0, no_name => 1, no_tags => 1 });
     die "Could not add object_type record\n" unless ($type);
 
     $type->addField({name => 'results_per_page', default_value => 20, type=>'int', required => 1});
@@ -50,4 +50,11 @@ sub dbConfig {
     return;
 }
 
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
+
 1;
+

@@ -23,7 +23,6 @@ use Time::HiRes qw(tv_interval gettimeofday);
 use Time::Local;
 use URI::Escape;
 
-
 our $SELF;
 
 =head1 NAME
@@ -1263,6 +1262,7 @@ sub addSetting {
 
     die "No name\n" unless ($params->{name});
     die "No type\n" unless ($params->{type});
+    die "Invalid setting name (reserved)" if ($params->{name} =~/^(email|password|new_password|new_password2)$/);
 
     my $settings = new MinorImpact::Object::Type('MinorImpact::settings');
     $settings->addField($params);

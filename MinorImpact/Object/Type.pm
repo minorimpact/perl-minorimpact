@@ -56,6 +56,23 @@ sub new {
     bless ($self, $package);
 }
 
+
+=head2 dbConfig
+
+=cut
+
+sub dbConfig {
+    my $self = shift|| return;
+    my $params = shift|| {};
+    MinorImpact::log('debug', "starting");
+
+    my $type_name = $self->name();
+    my $form = $type_name->dbConfig($params);
+
+    MinorImpact::log('debug', "ending");
+    return $form;
+}
+
 sub del {
     MinorImpact::Object::Type::delete(@_);
 }
@@ -384,17 +401,17 @@ The name of the object.  This must also be how it's accessed in code:
 If TRUE, this object will not include a "Name" field in input/edit forms. If
 developer doesn't add a name value programatically during the 'new' or 
 'update' functions of the inherited object class, 
-'$object->type()->name() . "-" . $obect-id()' will be used instead.
+'$object->type()->name() . "-" . $object-id()' will be used instead.
 
 Default: FALSE
 
-=item no_tags => BOOLEAN
+=item no_tags => TRUE/FALSE
 
 If TRUE, this type will no longer support tagging.
 
 DEFAULT: FALSE
 
-=item public => BOOLEAN
+=item public => TRUE/FALSE
 
 This option does **not** make the objects public.  If TRUE, the user will have
 the *option* of designating the type a public.  Essentially controls whether or
@@ -402,7 +419,7 @@ the the 'public' checkbox appears on object input/edit forms.
 
 Default: FALSE
 
-=item readonly => BOOLEAN
+=item readonly => TRUE/FALSE
 
 'readonly' objects are not editable by the user, and they will never be given 
 option from the standard library.  These differ from 'sytem' objects by virtue
@@ -410,11 +427,12 @@ of having and owners and containing information that's relevant to said user.
 
 Default: FALSE
 
-=item system => BOOLEAN
+=item system => TRUE/FALSE
 
 Objects marked 'system' are meant to be core parts of the application - think
 dropdowns or statuses.  They can be instantiated by any user, but only an 
 admin user can add or edit them.
+
 Default: FALSE
 
 =back

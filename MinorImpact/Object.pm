@@ -68,11 +68,23 @@ my $OBJECT_CACHE;
 
 =item MinorImpact::Object::new( $id )
 
-=item MinorImpact::Object::new( { field => value[, ...] })
+=item MinorImpact::Object::new( \%params )
 
 =back
 
 Create a new MinorImpact::Object.
+
+=head3 params
+
+=over
+
+=item name => $string
+
+=item object_type_id => $int
+
+=item $field => $value
+
+=back
 
 =cut
 
@@ -81,37 +93,41 @@ sub new {
     my $id = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $id . ")");
 
     my $DB = MinorImpact::db();
     my $object;
+    my $object_data;
 
     # If we've created this object before, just return the cached version
     #   NOTE: This is local process cache, not a persistent external cache.
     return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id} && $id =~/^\d+$/);
 
     eval {
-        my $data;
+        my $type_data;
         if (ref($id) eq "HASH") {
-            die "Can't create a new object without an object type id." unless ($id->{object_type_id});
-            MinorImpact::log('debug', "getting type_id for $id->{object_type_id}");
-            my $object_type_id = typeID($id->{object_type_id});
-            $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
-            unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
-                MinorImpact::cache("object_type_$object_type_id", $data);
+            $object_data = $id;
+            undef($id);
+            die "Can't create a new object without an object type id." unless ($object_data->{object_type_id});
+            MinorImpact::log('debug', "getting type_id for $object_data->{object_type_id}");
+            my $object_type_id = typeID($object_data->{object_type_id});
+            $type_data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
+            unless ($type_data) {
+                $type_data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
+                MinorImpact::cache("object_type_$object_type_id", $type_data);
             }
         } else {
-            $data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
-            unless ($data) {
-                $data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
-                MinorImpact::cache("object_id_type_$id", $data);
+            $type_data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
+            unless ($type_data) {
+                $type_data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+                MinorImpact::cache("object_id_type_$id", $type_data);
             }
         }
-        my $type_name = $data->{name}; 
-        MinorImpact::log('debug', "\$data->{name}='" . $data->{name} . "'");
-        my $version = $data->{version};
-        MinorImpact::log('debug', "\$data->{version}='" . $data->{version} . "'");
+        my $type_name = $type_data->{name}; 
+        MinorImpact::log('debug', "\$type_data->{name}='" . $type_data->{name} . "'");
+        my $version = $type_data->{version};
+        MinorImpact::log('debug', "\$type_data->{version}='" . $type_data->{version} . "'");
         my $package_version = version($type_name);
 
         if ($version < $package_version) {
@@ -123,22 +139,28 @@ sub new {
                 MinorImpact::log('err', $@);
             }
         }   
-        #MinorImpact::log('info', "trying to create new '$type_name' with id='$id' (v$package_version)");
-        $object = $type_name->new($id, $params) if ($type_name);
+        # Check to make sure this data works with our fields before we add the new type.
+        if (ref($object_data) eq "HASH") {
+            my $fields = fields($type_name);
+            validateFields($fields, $object_data);
+        }
+
+        $object = $type_name->new($id || $object_data, $params) if ($type_name);
     };
     my $error = $@;
     if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
         $error =~s/ at \/.*$//;
         $error =~s/^error://;
         my $i = $id;
-        if (ref($id) eq "HASH") {
-            $i = $id->{object_type_id};
+        if (ref($object_data) eq "HASH") {
+            $i = $object_data->{object_type_id};
         } 
         MinorImpact::log('crit', "133,id='$i',$error");
         die $error;
     }
+
     unless ($object) {
-        $object = MinorImpact::Object::_new($package, $id, $params);
+        $object = MinorImpact::Object::_new($package, $id||$object_data, $params);
     }
 
     MinorImpact::log('debug', "ending($id)");
@@ -147,6 +169,7 @@ sub new {
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     MinorImpact::log('debug', "ending");
+    MinorImpact::debug(0);
     return $object;
 }
 
@@ -804,7 +827,8 @@ sub update {
     my $params = shift || {};
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
-    my $object_id = $self->id();
+
+    die "Invalid user" unless ($self->validUser({mode => 'write'}));
 
     unless ($self->name() || $data->{name}) {
         # Every object needs a name, even if it's not user editable or visible.
@@ -1429,6 +1453,39 @@ sub stringType {
     return;
 }
 
+=head2 form
+
+=over
+
+=item ::form(\%params)
+
+=item ->form(\%params)
+
+=back
+
+Depending on whether or not it's called as a package sub or an object method, 
+form() returns a string containing a blank HTML form (for adding a new object), or a 
+competed form (for editing an existing object);
+
+  if ($entry) {
+      $form = $entry->form();
+  } else {
+      $form = MinorImpact::entry::form();
+  }
+  print "<html><body>$form</body></html>\n";
+
+=head3 params
+
+=over
+
+=item action => $string
+
+Input will be handled by MinorImapct::WWW::$string(), instead of the default add() or edit(). 
+
+=back
+
+=cut
+
 sub form {
     my $self = shift || {};
     my $params = shift || {};
@@ -1477,9 +1534,6 @@ sub form {
     }
 
     my $fields;
-    my $no_name;
-    my $public;
-    my $no_tags;
     if ($self) {
         $fields = $self->fields(); #{object_data};
     } else {
@@ -1487,9 +1541,9 @@ sub form {
         #$fields = MinorImpact::Object::Type::fields($local_params);
         $fields = $type->fields();
     }
-    $no_name = $type->isNoName();
-    $no_tags = $type->isNoTags();
-    $public = $type->isPublic();
+
+    my $action = (defined($params->{action}) && $params->{action})?$params->{action}:($self?"edit":"add");
+
     my $script;
     my $form_fields;
     foreach my $name (keys %$fields) {
@@ -1520,14 +1574,12 @@ sub form {
     my $search = $CGI->param('search');
     my $tags = $CGI->param('tags') || ($self && join(' ', $self->tags()));
     MinorImpact::tt('form_object', {
+                                    action         => $action,
                                     form_fields    => $form_fields,
                                     javascript     => $script,
                                     object         => $self,
-                                    object_type_id => $object_type_id,
                                     name           => $name,
-                                    no_name        => $no_name,
-                                    no_tags        => $no_tags,
-                                    public         => $public,
+                                    type           => $type,
                                     tags           => $tags,
                                 }, \$form);
     MinorImpact::log('debug', "ending");
@@ -1842,7 +1894,11 @@ sub validUser {
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
 
-    return 1 if ($self->isSystem() || $self->get('public'));
+    $params->{mode} eq 'read' unless (defined($params->{mode}) && $params->{mode});
+
+    if ($params->{mode} eq 'read') {
+        return 1 if ($self->isSystem() || $self->get('public'));
+    }
 
     if ($params->{proxy_object_id} && $params->{proxy_object_id} =~/^\d+$/ && $params->{proxy_object_id} != $self->id()) {
         my $object = new MinorImpact::Object($params->{proxy_object_id}) || die "Cannot create proxy object for validation.";

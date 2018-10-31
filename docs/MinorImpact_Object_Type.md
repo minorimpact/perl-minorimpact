@@ -10,6 +10,8 @@ MinorImpact::Object::Type
 
 ## new
 
+## dbConfig
+
 ## delete
 
 - ->delete(\\%params)
@@ -119,17 +121,17 @@ Add a new object type to the MinorImpact application.
     If TRUE, this object will not include a "Name" field in input/edit forms. If
     developer doesn't add a name value programatically during the 'new' or 
     'update' functions of the inherited object class, 
-    '$object->type()->name() . "-" . $obect-id()' will be used instead.
+    '$object->type()->name() . "-" . $object-id()' will be used instead.
 
     Default: FALSE
 
-- no\_tags => BOOLEAN
+- no\_tags => TRUE/FALSE
 
     If TRUE, this type will no longer support tagging.
 
     DEFAULT: FALSE
 
-- public => BOOLEAN
+- public => TRUE/FALSE
 
     This option does \*\*not\*\* make the objects public.  If TRUE, the user will have
     the \*option\* of designating the type a public.  Essentially controls whether or
@@ -137,7 +139,7 @@ Add a new object type to the MinorImpact application.
 
     Default: FALSE
 
-- readonly => BOOLEAN
+- readonly => TRUE/FALSE
 
     'readonly' objects are not editable by the user, and they will never be given 
     option from the standard library.  These differ from 'sytem' objects by virtue
@@ -145,11 +147,12 @@ Add a new object type to the MinorImpact application.
 
     Default: FALSE
 
-- system => BOOLEAN
+- system => TRUE/FALSE
 
     Objects marked 'system' are meant to be core parts of the application - think
     dropdowns or statuses.  They can be instantiated by any user, but only an 
     admin user can add or edit them.
+
     Default: FALSE
 
 ## addField

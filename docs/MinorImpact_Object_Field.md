@@ -31,6 +31,43 @@ Create a new field object.
 
     A pointer to an array of values for this field.
 
+## validate
+
+- ->validate($value)
+
+Verify that $value satisfies the conditions of the current field, or
+die.
+
+    eval {
+        $FIELD->validate($value);
+    };
+    print "Unable to use $value: $@" if ($@);
+
+## value
+
+- ->value()
+
+Returns a pointer to an array of values.
+
+    $values = $FIELD->value();
+    if ($FIELD->isArray()) {
+      foreach my $value (@$values) {
+        print "$value\n";
+      }
+    } else {
+      print $values[0] . "\n";
+    }
+
+NOTE: This returns an array pointer because sometimes fields are arrays, and
+it's just easier to always return an array - even if it's just one value - than
+it is to have to make the decision every time.
+
+## displayName
+
+- ->displayName()
+
+Returns a "nicer" version of name.
+
 ## clearCache
 
 - ->clearCache()

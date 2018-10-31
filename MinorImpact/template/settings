@@ -1,10 +1,5 @@
-[% INCLUDE header title='Settings'%]
+[% INCLUDE header title='Settings' %]
 
-<form method=POST class='w3-card w3-padding w3-margin-top'>
-    <h3>Site Settings</h3>
-    <input type='hidden' name='a' value='settings'>
-    <input type='hidden' name='hidden_submit' value='1'>
-    [% form %]
-</form>
+[% form %]
 
 [% INCLUDE footer %]

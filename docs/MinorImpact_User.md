@@ -20,6 +20,14 @@ The object representing application users.
 
 # METHODS
 
+## clearCache
+
+- ->clearCache()
+
+Clear all caches related to this user object.
+
+    $USER->clearCache();
+
 ## delete
 
 - delete(\\%params)
@@ -98,6 +106,13 @@ Updates can only be made by the user themself or an admin user.
 - email
 
     Update the user's email address.
+
+- encrypted
+
+    Not a field, but if set to TRUE the `password` field will not be
+    encrypted before being added to the database.
+
+        $USER->update({ password => '4543jksdshjkHUIYUIr', encrypted => 1 });
 
 - name
 

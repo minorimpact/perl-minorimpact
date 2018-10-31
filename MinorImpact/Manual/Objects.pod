@@ -1,0 +1,30 @@
+=head1 NAME
+
+MinorImpact::Manual::Objects
+
+=head1 DESCRIPTION
+
+=head2 Types
+
+Make a new object type:
+
+  $type = MinorImpact:Object:Type::add({name => "vehicle" });
+  $type->addField({ name => "door_count", type => "int" });
+
+  MinorImpact::Object::Type("MinorImpact::entry");
+
+=head2 Fields
+
+Creating a standalone field with a preset value:
+
+  $field = new MinorImpact::Object::Field({ db=> { name => 'balloon_count', type=>'int' }, value => 5});
+
+Including that field on on a form:
+
+  $form .= $field->rowForm();
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut

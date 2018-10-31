@@ -16,24 +16,24 @@ sub new {
 
     if (ref($params) eq "HASH") {
         if (!$params->{name}) {
-            $params->{name} = substr($params->{detail}, 0, 15) ."-". int(rand(10000) + 1);
+            $params->{name} = trunc($params->{content}, 0, 15) ."-". int(rand(10000) + 1);
         }
 
         my @tags;
-        if ($params->{detail}) {
-            my $detail = $params->{detail};
+        if ($params->{content}) {
+            my $content = $params->{content};
 
             # Pullinline tags and convert them to object tags.
-            $detail =~s/\r\n/\n/g;
-            @tags = extractTags(\$detail);
-            $detail = trim($detail);
+            $content =~s/\r\n/\n/g;
+            @tags = extractTags(\$content);
+            $content = trim($content);
 
             # Change links to markdown formatted links.
-            foreach my $url ($detail =~/(?<![\[\(])(https?:\/\/[^\s]+)/) {
+            foreach my $url ($content =~/(?<![\[\(])(https?:\/\/[^\s]+)/) {
                 my $md_url = "[$url]($url)";
-                $detail =~s/(?<![\[\(])$url/$md_url/;
+                $content =~s/(?<![\[\(])$url/$md_url/;
             }
-            $params->{detail} = $detail;
+            $params->{content} = $content;
         }
 
         my $user = MinorImpact::user({ force => 1 });

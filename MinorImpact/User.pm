@@ -68,6 +68,29 @@ sub new {
     return $self;
 }
 
+=head2 clearCache
+
+=over
+
+=item ->clearCache()
+
+=back
+
+Clear all caches related to this user object.
+
+  $USER->clearCache();
+
+=cut
+
+sub clearCache {
+    my $self = shift || return;
+
+    MinorImpact::cache("user_data_" . $self->id(), {});
+    MinorImpact::cache("user_data_" . $self->name(), {});
+
+    return;
+}
+
 sub dbConfig {
     my $DB = shift || return;
 
@@ -136,21 +159,36 @@ sub delete {
         die "object_count:$object_count does not match deleted count:$deleted";
     }
 
-    MinorImpact::cache("user_data_$user_id", {});
-    MinorImpact::cache("user_data_$username", {});
+    $self->clearCache();
+
     MinorImpact::log('debug', "ending");
     return 1;
 }
 
 sub form {
     my $self = shift || return;
+    MinorImpact::log('debug', "starting");
 
     my $field;
-    my $form;
+    my $form = "<form method=POST class='w3-container w3-padding'>\n";
+    $form .= "<input type=hidden name=a value='settings'>\n";
+    $form .= "<input type=hidden name=id value='" . $self->id() . "'>\n";
    
-    #MinorImpact::log('debug', "\$self->get('email')='" . $self->get('email') . "'");
-    $field = new MinorImpact::Object::Field({ name => 'email', type => 'string', value => $self->get('email') });
+    $field = new MinorImpact::Object::Field({db => { name => 'email', type => 'string'}, value => $self->get('email') });
     $form .= $field->rowForm();
+
+    $field = new MinorImpact::Object::Field({db => { name => 'password', type => 'password'}});
+    $form .= $field->rowForm();
+
+    $field = new MinorImpact::Object::Field({db => { name => 'new_password', type => 'password' }});
+    $form .= $field->rowForm();
+
+    $field = new MinorImpact::Object::Field({db => { name => 'new_password2', type => 'password' }});
+    $form .= $field->rowForm();
+    $form .= "<div class='w3-row' style='margin-top:8px'>\n<input type=submit name=submit class='w3-input w3-border'>\n</div>\n";
+    $form .= "</form>\n";
+
+    MinorImpact::log('debug', "ending");
     return $form;
 }
 
@@ -304,7 +342,7 @@ sub settings {
     my $settings = $settings[0];
     unless ($settings) {
         eval {
-            $settings = new MinorImpact::settings({ name => "$self->name() settings", user_id => $self->id() }) || die "Can't create settings object.";
+            $settings = new MinorImpact::settings({ name => $self->name() . " settings", user_id => $self->id() }) || die "Can't create settings object.";
         };
         MinorImpact::log('notice', $@) if ($@);
     }
@@ -340,6 +378,13 @@ Can only be set by another admin user.
 
 Update the user's email address.
 
+=item encrypted
+
+Not a field, but if set to TRUE the C<password> field will not be
+encrypted before being added to the database.
+
+  $USER->update({ password => '4543jksdshjkHUIYUIr', encrypted => 1 });
+
 =item name
 
 Update the user's login name.
@@ -357,8 +402,6 @@ sub update {
     my $params = shift || return;
 
     MinorImpact::log('debug', "starting");
-    MinorImpact::cache("user_data_" . $self->id(), {});
-    MinorImpact::cache("user_data_" . $self->name(), {});
 
     my $user = MinorImpact::user();
     die "Unable to verify current user\n" unless ($user);
@@ -367,11 +410,21 @@ sub update {
         MinorImpact::log('debug', "Updating admin priviledges");
         die "Not an admin user\n" unless ($user->isAdmin());
         $self->{DB}->do("UPDATE user SET admin=? WHERE id=?", undef, (isTrue($params->{admin}), $self->id())) || die $self->{DB}->errstr;
+        $self->{data}{admin} = isTrue($params->{admin});
     }
-    $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstr if ($params->{email});
-    $self->{DB}->do("UPDATE user SET name=?, password=? WHERE id=?", undef, ($params->{name}, $self->id())) || die $self->{DB}->errstr if ($params->{name});
-    $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, (crypt($params->{password}, $$), $self->id())) || die $self->{DB}->errstr if ($params->{password});
+    if (defined($params->{email})) {
+        MinorImpact::log('debug',"setting email to '" . $params->{email} . "'");
+        $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstra;
+        $self->{data}{email} = $params->{email};
+    }
+    if (defined($params->{password})) {
+        my $password = $params->{password} || '';
+        $password = crypt($password, $$) unless (defined($params->{encrypted}) && isTrue($params->{encrpted}));
+        $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, ($password, $self->id())) || die $self->{DB}->errstr;
+        $self->{data}{password} = $password;
+    }
 
+    $self->clearCache();
     MinorImpact::log('debug', "ending");
 }
 

@@ -38,9 +38,15 @@ its definition.
 ## new
 
 - MinorImpact::Object::new( $id )
-- MinorImpact::Object::new( { field => value\[, ...\] })
+- MinorImpact::Object::new( \\%params )
 
 Create a new MinorImpact::Object.
+
+### params
+
+- name => $string
+- object\_type\_id => $int
+- $field => $value
 
 ## back
 
@@ -353,6 +359,28 @@ If called as an object method, uses that object's type\_id.
 
     Get a list of types that reference this type of object.
     REQUIRED
+
+## form
+
+- ::form(\\%params)
+- ->form(\\%params)
+
+Depending on whether or not it's called as a package sub or an object method, 
+form() returns a string containing a blank HTML form (for adding a new object), or a 
+competed form (for editing an existing object);
+
+    if ($entry) {
+        $form = $entry->form();
+    } else {
+        $form = MinorImpact::entry::form();
+    }
+    print "<html><body>$form</body></html>\n";
+
+### params
+
+- action => $string
+
+    Input will be handled by MinorImapct::WWW::$string(), instead of the default add() or edit(). 
 
 ## cmp
 

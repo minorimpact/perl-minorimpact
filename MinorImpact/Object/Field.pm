@@ -7,8 +7,11 @@ use JSON;
 use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field::boolean;
-use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::datetime;
+use MinorImpact::Object::Field::float;
+use MinorImpact::Object::Field::int;
+use MinorImpact::Object::Field::password;
+use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::url;
 use Text::Markdown 'markdown';
 
@@ -20,7 +23,7 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 
 =cut
 
-our @valid_types = ('boolean', 'datetime', 'float', 'int', 'string', 'text', 'url');
+our @valid_types = ('boolean', 'datetime', 'float', 'int', 'password', 'string', 'text', 'url');
 our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 'object_type_id', 'public', 'user_id' );
 
 =head2 new
@@ -187,6 +190,12 @@ sub update {
         }
     }
 
+    my @split_values = ();
+    foreach my $split_value (map { split(/\0/, $_); } @values) {
+        $self->validate($split_value);
+        push(@split_values, $split_value);
+    }
+
     if ($self->id() && $self->object_id()) {
         my $object_id = $self->object_id();
         MinorImpact::cache("object_data_$object_id", {});
@@ -196,7 +205,7 @@ sub update {
         } else {
             $DB->do("delete from object_data where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
         }
-        foreach my $split_value (map { split(/\0/, $_); } @values) {
+        foreach my $split_value (@split_values) {
             my $sql;
             if ($self->isText()) {
                 $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
@@ -208,20 +217,34 @@ sub update {
             $DB->do($sql, undef, ($object_id, $self->id(), $split_value)) || die $DB->errstr;
         }
     }
-    $self->{value} = [];
-    foreach my $split_value (map { split(/\0/, $_); } @values) {
-        push(@{$self->{value}}, $split_value);
-    }
-    #MinorImpact::log("ending");
+
+    $self->{value} = \@split_values;
+    MinorImpact::log('debug', "ending");
 }
+
+=head2 validate
+
+=over
+
+=item ->validate($value)
+
+=back
+
+Verify that $value satisfies the conditions of the current field, or
+die.
+
+  eval {
+      $FIELD->validate($value);
+  };
+  print "Unable to use $value: $@" if ($@);
+
+=cut
 
 sub validate {
     my $self = shift || return;
     my $value = shift;
     MinorImpact::log('debug', "starting");
 
-    my $field_type = $self->type();
-    #MinorImpact::log('debug', "$field_type,'$value'");
     if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
         die $self->name() . " cannot be blank";
     }
@@ -230,6 +253,31 @@ sub validate {
     MinorImpact::log('debug', "ending");
     return $value;
 }
+
+=head2 value
+
+=over
+
+=item ->value()
+
+=back
+
+Returns a pointer to an array of values.
+
+  $values = $FIELD->value();
+  if ($FIELD->isArray()) {
+    foreach my $value (@$values) {
+      print "$value\n";
+    }
+  } else {
+    print $values[0] . "\n";
+  }
+
+NOTE: This returns an array pointer because sometimes fields are arrays, and
+it's just easier to always return an array - even if it's just one value - than
+it is to have to make the decision every time.
+
+=cut
 
 sub value { 
     my $self = shift || return; 
@@ -246,6 +294,18 @@ sub fieldName {
     return $self->name();
 }
 
+=head2 displayName
+
+=over
+
+=item ->displayName()
+
+=back
+
+Returns a "nicer" version of name.
+
+=cut
+
 sub displayName {
     my $self = shift || return;
 
@@ -253,7 +313,9 @@ sub displayName {
     $display_name =~s/_id$//;
     $display_name =~s/_date$//;
     $display_name =~s/_/ /g;
+    $display_name =~s/^MinorImpact:://;
     $display_name = ucfirst($display_name);
+
     return $display_name;
 }
 
