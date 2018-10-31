@@ -52,4 +52,18 @@ sub toString {
     return $string;
 }
 
+sub validate {
+    my $self = shift || return;
+    my $value = shift;
+
+    $value = '' if ($value eq '0000-00-00 00:00:00');
+
+    if ($value =~/[^\d -:]+/) {
+        die $self->name() . " contains invalid character";
+    }
+    $value = $self->SUPER::validate($value);
+
+    return $value;
+}
+
 1;
