@@ -16,25 +16,25 @@ sub new {
 
     if (ref($params) eq "HASH") {
         if (!$params->{name}) {
-            $params->{name} = trunc($params->{content}, 0, 15) ."-". int(rand(10000) + 1);
+            $params->{name} = trunc($params->{content}, 0, 30);
         }
 
         my @tags;
-        if ($params->{content}) {
-            my $content = $params->{content};
-
-            # Pullinline tags and convert them to object tags.
-            $content =~s/\r\n/\n/g;
-            @tags = extractTags(\$content);
-            $content = trim($content);
-
-            # Change links to markdown formatted links.
-            foreach my $url ($content =~/(?<![\[\(])(https?:\/\/[^\s]+)/) {
-                my $md_url = "[$url]($url)";
-                $content =~s/(?<![\[\(])$url/$md_url/;
-            }
-            $params->{content} = $content;
-        }
+        #if ($params->{content}) {
+        #    my $content = $params->{content};
+        #
+        #    # Pullinline tags and convert them to object tags.
+        #    $content =~s/\r\n/\n/g;
+        #    @tags = extractTags(\$content);
+        #    $content = trim($content);
+        #
+        #    # Change links to markdown formatted links.
+        #    foreach my $url ($content =~/(?<![\[\(])(https?:\/\/[^\s]+)/) {
+        #        my $md_url = "[$url]($url)";
+        #        $content =~s/(?<![\[\(])$url/$md_url/;
+        #    }
+        #    $params->{content} = $content;
+        #}
 
         my $user = MinorImpact::user({ force => 1 });
         my $settings = $user->settings();
