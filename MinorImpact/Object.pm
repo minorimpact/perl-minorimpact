@@ -1415,6 +1415,33 @@ sub getChildTypeIDs {
     return @childTypeIDs;
 }
 
+=head2 getChildren
+
+=over
+
+=item ->getChildren(\%params)
+
+=back
+
+Returns a list of objects with fields that refer to $OBJECT.
+
+  $OBJECT->getChildren({ object_type_id => 'MinorImpact::comment' });
+
+=head3 params
+
+See L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search> for
+a complete list of suppoerted parameters.
+
+=over
+
+=item object_type_id => $string
+
+Get childen of a particular type.
+
+=back
+
+=cut
+
 sub getChildren {
     my $self = shift || return;
     my $params = shift || {};

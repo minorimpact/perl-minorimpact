@@ -1307,6 +1307,23 @@ sub db {
     return $SELF->{DB};
 }
 
+=head2 dbConfig
+
+=over
+
+=item ::dbConfig()
+
+=back
+
+Initial database setup.
+
+  MinorImpact::dbConfig();
+
+Gets run automatically every time a new MinorImpact object is
+instantiated.
+
+=cut
+
 my $VERSION = 3;
 sub dbConfig {
     #MinorImpact::log('debug', "starting");

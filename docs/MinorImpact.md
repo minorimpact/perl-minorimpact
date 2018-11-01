@@ -486,6 +486,17 @@ Returns the global database object.
 
     $DB = MinorImpact::db();
 
+## dbConfig
+
+- ::dbConfig()
+
+Initial database setup.
+
+    MinorImpact::dbConfig();
+
+Gets run automatically every time a new MinorImpact object is
+instantiated.
+
 ## debug
 
 - debug($switch)

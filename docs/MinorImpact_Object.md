@@ -360,6 +360,23 @@ If called as an object method, uses that object's type\_id.
     Get a list of types that reference this type of object.
     REQUIRED
 
+## getChildren
+
+- ->getChildren(\\%params)
+
+Returns a list of objects with fields that refer to $OBJECT.
+
+    $OBJECT->getChildren({ object_type_id => 'MinorImpact::comment' });
+
+### params
+
+See [MinorImpact::Object::Search::search()](./MinorImpact_Object_Search.md#search) for
+a complete list of suppoerted parameters.
+
+- object\_type\_id => $string
+
+    Get childen of a particular type.
+
 ## form
 
 - ::form(\\%params)
