@@ -129,6 +129,11 @@ that need to share a common userbase. Other sections are listed below.
 
 WWW specific application settings.
 
+- about = $string
+
+    If set, $string will appear on the default [about](./MinorImpact_Manual_Template.md#about)
+    page.
+
 - copyright
 
     Text to include at the bottom of every page.  YEAR is automatically translated to the current
@@ -138,13 +143,19 @@ WWW specific application settings.
 
     NAME is automatically replaced with the 'name' configuration option from this same section.
 
+- email = $string
+
+    If set, $string will appear on the default [about](./MinorImpact_Manual_Template.md#about) page as a `mailto` tag.
+
 - header\_color
 
     Header bar color.  Supports the default HTML color names: [https://www.w3schools.com/colors/colors\_names.asp](https://www.w3schools.com/colors/colors_names.asp.md).
 
-- name
+- name = $string
 
-    The name of the site.
+    The name of the site. $string will appear as a link in the 
+    deafult [header](./MinorImpact_Manual_Template.md#header), as a well as 
+    on the default [about](./MinorImpact_Manual_Template.md#about) page.
 
 - no\_login\_links
 

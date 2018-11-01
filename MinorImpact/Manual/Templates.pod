@@ -25,6 +25,11 @@ A list of L<MinorImpact objects|MinorImpact::Object> to display on a page.
 
   MinorImpact::tt("index", { objects => [ @objects ] });
 
+=head2 site_config
+
+A hash containing the values from the L<site|MinorImpact::Manual::Configuration/site> section
+of the configuration.
+
 =head2 title
 
 The page title.
@@ -84,6 +89,22 @@ Generates an application URL. See L<MinorImpact::url()|MinorImpact/url>.
 =back
 
 =head1 ACTION TEMPLATES
+
+=head2 about
+
+A generic "about" page.
+
+=head3 Includes
+
+=over
+
+=item L<header|/header>
+
+=item L<about_site|/about_site>
+
+=item L<footer|/footer>
+
+=back
 
 =head2 index
 
@@ -170,6 +191,8 @@ served up as a top level page.
 
 Any of these templates can be overridden by creating a template with the same name in the
 directory named in the template_directory configuration setting. See L<MinorImpact::Manual::Configuration|Minorimpact::Manual::Configuration/settings>.
+
+=head2 about_site
 
 =head2 copyright
 

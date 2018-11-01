@@ -1,6 +1,18 @@
-[% INCLUDE header %]
+[% INCLUDE header title = "About Us" %]
 
 <!-- TEMPLATE:default.about -->
+
+[% IF site_config.name %]
+    <h3>[% site_config.name %]</h3>
+[% END %]
+
+[% IF site_config.about %]
+    <p>[% site_config.about %]</p>
+[% END %]
+
+[% IF site_config.email %]
+    <b>Email</b> <a href=mailto:[% site_config.email %]>[% site_config.email %]</a>
+[% END %]
 
 [% INCLUDE about_site %]
 

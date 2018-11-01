@@ -25,6 +25,11 @@ A list of [MinorImpact objects](./MinorImpact_Object.md) to display on a page.
 
     MinorImpact::tt("index", { objects => [ @objects ] });
 
+## site\_config
+
+A hash containing the values from the [site](./MinorImpact_Manual_Configuration.md#site) section
+of the configuration.
+
 ## title
 
 The page title.
@@ -68,6 +73,16 @@ Returns the name of an object type.
 
 # ACTION TEMPLATES
 
+## about
+
+A generic "about" page.
+
+### Includes
+
+- [header](#header)
+- [about\_site](#about_site)
+- [footer](#footer)
+
 ## index
 
 Intended to be a generic landing page, this will generate a list of objects from the "objects"
@@ -104,6 +119,8 @@ variable.
 
 Any of these templates can be overridden by creating a template with the same name in the
 directory named in the template\_directory configuration setting. See [MinorImpact::Manual::Configuration](./Minorimpact_Manual_Configuration.md#settings).
+
+## about\_site
 
 ## copyright
 

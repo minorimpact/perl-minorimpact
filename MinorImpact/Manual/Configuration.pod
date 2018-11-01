@@ -136,6 +136,11 @@ WWW specific application settings.
 
 =over
 
+=item about = $string
+
+If set, $string will appear on the default L<about|MinorImpact::Manual::Template/about>
+page.
+
 =item copyright
 
 Text to include at the bottom of every page.  YEAR is automatically translated to the current
@@ -145,13 +150,19 @@ year.  For example:
 
 NAME is automatically replaced with the 'name' configuration option from this same section.
 
+=item email = $string
+
+If set, $string will appear on the default L<about|MinorImpact::Manual::Template/about> page as a C<mailto> tag.
+
 =item header_color
 
 Header bar color.  Supports the default HTML color names: L<https://www.w3schools.com/colors/colors_names.asp>.
 
-=item name
+=item name = $string
 
-The name of the site.
+The name of the site. $string will appear as a link in the 
+deafult L<header|MinorImpact::Manual::Template/header>, as a well as 
+on the default L<about|MinorImpact::Manual::Template/about> page.
 
 =item no_login_links
 

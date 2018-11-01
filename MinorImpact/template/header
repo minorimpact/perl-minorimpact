@@ -53,6 +53,14 @@ Content-type: text/html
                 </div>
             </div>
         [% END %]
+        <div class="w3-row">
+            <div class="w3-col s3">
+                &nbsp;
+            </div>
+            <div class="w3-col s9">
+                <a class="w3-bar-item w3-button" href='[% url({ action=>'about' }) %]'>About</a>
+            </div>
+        </div>
         [% IF user %]
             [% IF user.isAdmin %]
             <div class="w3-row">
