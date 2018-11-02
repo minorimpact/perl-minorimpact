@@ -590,6 +590,7 @@ sub toData {
 
     my $data = {};
     $data->{id} = $self->id();
+    $data->{create_date} = $self->get('create_date');
     $data->{name} = $self->name();
     $data->{public} = $self->isPublic();
     $data->{object_type_id} = $self->type()->name();
@@ -835,6 +836,7 @@ sub update {
         # Every object needs a name, even if it's not user editable or visible.
         $data->{name} = $self->typeName() . "-" . $self->id();
     }
+    $self->{DB}->do("UPDATE object SET create_date=? WHERE id=?", undef, ($data->{'create_date'}, $self->id())) if ($data->{create_date});
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($data->{'name'}, $self->id())) if ($data->{name});
     $self->{DB}->do("UPDATE object SET public=? WHERE id=?", undef, (($data->{'public'}?1:0), $self->id())) if (defined($data->{public}));;
