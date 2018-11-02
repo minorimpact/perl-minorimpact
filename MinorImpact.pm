@@ -25,7 +25,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
-our $VERSION = 5;
+our $VERSION = 6;
 
 =head1 NAME
 
@@ -1332,6 +1332,7 @@ sub dbConfig {
     my $DB = shift;
 
     MinorImpact::log('debug', "starting");
+    MinorImpact::log('notice', "VERSION=$VERSION");
 
     $DB ||= MinorImpact::db();
 
@@ -1340,13 +1341,14 @@ sub dbConfig {
         name => 'object', 
         fields => { 
             id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
-            name => { type => "varchar(50)", null => 0 },
-            user_id => { type => "int", null => 0 },
-            description => { type => "text" },
-            public => { type => 'boolean', default => 0},
-            object_type_id => { type => "int", null => 0 },
             create_date => { type => "datetime", null => 0 },
+            description => { type => "text" },
             mod_date => { type => "timestamp", null => 0 },
+            name => { type => "varchar(50)", null => 0 },
+            object_type_id => { type => "int", null => 0 },
+            public => { type => 'boolean', default => 0},
+            user_id => { type => "int", null => 0 },
+            uuid => { type => "char(36)" },
         }, 
         indexes => {
             idx_object_public => { fields => 'public' },
@@ -1359,20 +1361,21 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_type',
         fields => {
-            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
-            name => { type => "varchar(50)", null => 0 },
             create_date => { type => "datetime", null => 0 },
-            mod_date => { type => "timestamp", null => 0 },
-            description => { type => "text" },
-            public => { type => 'boolean', default => 0 },
             default_value => { type => "varchar(255)", null => 0 },
-            plural => { type => "varchar(50)" },
-            url => { type => "varchar(255)", null => 0 },
-            system => { type => 'boolean', default => 0 },
-            version => {type => "int" },
-            readonly => { type => "boolean", default => 0 },
+            description => { type => "text" },
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            mod_date => { type => "timestamp", null => 0 },
+            name => { type => "varchar(50)", null => 0 },
             no_name => { type => "boolean", default => 0 },
             no_tags => { type => "boolean", default => 0 },
+            plural => { type => "varchar(50)" },
+            public => { type => 'boolean', default => 0 },
+            readonly => { type => "boolean", default => 0 },
+            system => { type => 'boolean', default => 0 },
+            url => { type => "varchar(255)", null => 0 },
+            uuid => { type => "char(36)" },
+            version => {type => "int" },
         },
         indexes => {
             idx_object_type => { fields => "name", unique => 1 },
@@ -1383,19 +1386,19 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_field',
         fields => {
-            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
-            name => { type => "varchar(50)", null => 0 },
             create_date => { type => "datetime", null => 0 },
-            mod_date => { type => "timestamp", null => 0 },
-            description => { type => "varchar(255)" },
-            object_type_id => { type => "int", null => 0 },
             default_value => { type => "varchar(255)" },
-            type => { type => "varchar(15)" },
+            description => { type => "varchar(255)" },
             hidden => { type => "boolean", default => 0 },
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            mod_date => { type => "timestamp", null => 0 },
+            name => { type => "varchar(50)", null => 0 },
+            object_type_id => { type => "int", null => 0 },
+            populated => { type => "boolean", default => 0 },
             readonly => { type => "boolean", default => 0 },
             required => { type => "boolean", default => 0 },
             sortby => { type => "boolean", default => 0 },
-            populated => { type => "boolean", default => 0 },
+            type => { type => "varchar(15)" },
         },
         indexes => {
             idx_object_field_name => { fields=>"object_type_id,name", unique => 1 },
@@ -1407,12 +1410,12 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_data',
         fields => {
-            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
-            object_id => {type => "int", null=> 0 },
-            object_field_id => { type => "int", null => 0 },
-            value => { type => "varchar(50)", null => 0 },
             create_date => { type => "datetime", null => 0 },
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             mod_date => { type => "timestamp", null => 0 },
+            object_field_id => { type => "int", null => 0 },
+            object_id => {type => "int", null=> 0 },
+            value => { type => "varchar(50)", null => 0 },
         },
         indexes => {
             idx_object_field => { fields => "object_id,object_field_id" },
@@ -1424,8 +1427,8 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_tag',
         fields => {
-            object_id => { type => "int", null => 0 },
             name => { type => "varchar(50)", },
+            object_id => { type => "int", null => 0 },
         }, 
         indexes => {
             idx_id_name => { fields => "object_id,name", unique => 1 }
@@ -1436,8 +1439,8 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_text',
         fields => {
-            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             create_date => { type => "datetime", null => 0 },
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             mod_date => { type => "timestamp", null => 0 },
             object_id => { type => "int", null => 0 },
             object_field_id => { type => "int", null => 0 },
@@ -1453,12 +1456,12 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_reference',
         fields => {
-            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             create_date => { type => "datetime", null => 0 },
+            data => { type => "varchar(255)", null => 0 },
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             mod_date => { type => "timestamp", null => 0 },
             object_id => { type => "int", null => 0 },
             object_text_id => { type => "int", null => 0 },
-            data => { type => "varchar(255)", null => 0 },
         },
     });
 

@@ -204,7 +204,7 @@ sub _new {
         die "invalid user id" unless ($user);
         die "invalid type id" unless ($object_type_id);
 
-        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
+        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, uuid, create_date) VALUES (?, ?, ?, ?, UUID(), NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
             MinorImpact::log('notice', "Couldn't insert new object record");
@@ -834,9 +834,10 @@ sub update {
         # Every object needs a name, even if it's not user editable or visible.
         $data->{name} = $self->typeName() . "-" . $self->id();
     }
+    $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($data->{'name'}, $self->id())) if ($data->{name});
     $self->{DB}->do("UPDATE object SET public=? WHERE id=?", undef, (($data->{'public'}?1:0), $self->id())) if (defined($data->{public}));;
-    $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
+    $self->{DB}->do("UPDATE object SET uuid=? WHERE id=?", undef, ($data->{'uuid'}, $self->id())) if ($data->{uuid});
     $self->log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
 
     $self->clearCache();

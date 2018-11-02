@@ -179,7 +179,7 @@ sub createTableMySQL {
     $sql =~s/,\n$/\n/;
     $sql .= ")";
 
-    print "$sql\n";
+    #print "$sql\n";
     $DB->do($sql) || die $DB->errstr;
 
     foreach my $index_name (keys %$indexes) {
@@ -188,7 +188,7 @@ sub createTableMySQL {
         my $fields = $index->{fields} || die "no fields specified for index";
 
         my $sql = "CREATE " . ($index->{unique}?"UNIQUE":"") . " INDEX `$index_name` ON $table_name($fields)";
-        print "$sql\n";
+        #print "$sql\n";
         $DB->do($sql) || die $DB->errstr;
     }
     return;
@@ -368,13 +368,13 @@ sub updateTableMySQL {
        my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON $table_name";
         if ($db_indexes->{$index_name}) {
            if ($fields ne $db_indexes->{$index_name}->{fields}) {
-               print "$drop_sql\n";
+               #print "$drop_sql\n";
                $DB->do($drop_sql) || die $DB->errstr;
-               print "$create_sql\n";
+               #print "$create_sql\n";
                $DB->do($create_sql) || die $DB->errstr;
            }
         } else {
-            print "$create_sql\n";
+            #print "$create_sql\n";
             $DB->do($create_sql) || die $DB->errstr;
         }
     }
@@ -382,7 +382,7 @@ sub updateTableMySQL {
     foreach my $index_name (keys %$db_indexes) {
         next if ($indexes->{$index_name});
         my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON $table_name";
-        print "$drop_sql\n";
+        #print "$drop_sql\n";
         $DB->do($drop_sql) || die $DB->errstr;
     }
 
