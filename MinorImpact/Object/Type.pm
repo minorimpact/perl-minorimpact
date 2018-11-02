@@ -455,6 +455,7 @@ sub add {
     my $readonly = ($params->{readonly}?1:0);
     my $system = ($params->{system}?1:0);
     my $version = $params->{version};
+    my $uuid = $params->{uuid};
 
     #MinorImpact::log('debug', "\$name='$name'");
     my $object_type_id = MinorImpact::Object::typeID($name);
@@ -469,6 +470,7 @@ sub add {
         $DB->do("UPDATE object_type SET public=? WHERE id=?", undef, ($public, $object_type_id)) || die $DB->errstr unless ($data->{public} eq $public);
         $DB->do("UPDATE object_type SET readonly=? WHERE id=?", undef, ($readonly, $object_type_id)) || die $DB->errstr unless ($data->{readonly} eq $readonly);
         $DB->do("UPDATE object_type SET system=? WHERE id=?", undef, ($system, $object_type_id)) || die $DB->errstr unless ($data->{system} eq $system);
+        $DB->do("UPDATE object_type SET uuid=? WHERE id=?", undef, ($uuid, $object_type_id)) || die $DB->errstr unless ($data->{uuid} eq $uuid);
         $DB->do("UPDATE object_type SET version=? WHERE id=?", undef, ($version, $object_type_id)) || die $DB->errstr unless ($data->{version} eq $version);
     } else {
         die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
