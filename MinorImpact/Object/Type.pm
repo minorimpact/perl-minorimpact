@@ -315,6 +315,7 @@ sub toData {
     $data->{readonly} = $self->isReadonly();
     $data->{system} = $self->isSystem();
     $data->{version} = $self->get('version');
+    $data->{uuid} = $self->get('uuid');
 
     my $fields = $self->fields();
     foreach my $field_name (keys %{$fields}) {
@@ -472,7 +473,7 @@ sub add {
     } else {
         die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
 
-        $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, version, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural, $version)) || die $DB->errstr;
+        $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, version, uuid, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UUID(), NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural, $version)) || die $DB->errstr;
         $object_type_id = $DB->{mysql_insertid};
     }
     my $type = new MinorImpact::Object::Type($object_type_id);

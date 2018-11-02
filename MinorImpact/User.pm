@@ -29,7 +29,7 @@ The object representing application users.
 =head1 METHODS
 
 =cut
-
+our $VERSION = 1;
 sub new {
     my $package = shift;
     my $params = shift;
@@ -40,7 +40,9 @@ sub new {
 
     $self->{DB} = MinorImpact::userDB() || die "User database is not defined.";
 
-    dbConfig($self->{DB});
+    if (MinorImpact::cache("User_VERSION") != $VERSION) {
+        dbConfig();
+    }
 
     my $user_id = $params;
     MinorImpact::log('debug', "\$user_id='$params'");
@@ -92,26 +94,30 @@ sub clearCache {
 }
 
 sub dbConfig {
-    my $DB = shift || return;
+    MinorImpact::log('notice', "VERSION=$VERSION");
+    my $DB = MinorImpact::userDB() || die "No user DB";;
 
-    eval {
-        $DB->do("DESC `user`") || die $DB->errstr;
-    };
-    if ($@) {
-        MinorImpact::log('notice', $@);
-        $DB->do("CREATE TABLE `user` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `name` varchar(50) NOT NULL,
-                `email` varchar(255) NOT NULL,
-                `password` varchar(255) NOT NULL,
-                `test` varchar(255) DEFAULT NULL,
-                `admin` tinyint(1) DEFAULT NULL,
-                `create_date` datetime NOT NULL,
-                `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`)
-            )") || die $DB->errstr;
-        $DB->do("create unique index idx_user_name on user(name)") || die $DB->errstr;
-    }
+    MinorImpact::Util::DB::addTable($DB, {
+        name => "user",
+        fields => {
+            admin => { type => "boolean", },
+            create_date => { type => "datetime", null => 0, },
+            email => { type => "varchar(255)", null => 0, },
+            id => { type => "int", primary_key => 1, null => 0, auto_increment => 1, },
+            mod_date => { type => "timestamp", null => 0, },
+            name => { type => "varchar(50)", null => 0, },
+            password => { type => "varchar(255)", null => 0, },
+            test => { type => "varchar(255)", },
+            uuid => { type => "char(36)", },
+        },
+        indexes => {
+            idx_user_name => { fields => "name", unique => 1 },
+            idx_user_uuid => { fields => "uuid", },
+        },
+    });
+
+
+    MinorImpact::cache("User_VERSION", $VERSION);
 }
 
 =head2 delete
@@ -423,6 +429,11 @@ sub update {
         $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, ($password, $self->id())) || die $self->{DB}->errstr;
         $self->{data}{password} = $password;
     }
+    if (defined($params->{uuid}) && $params->{uuid}) {
+        my $uuid = $params->{uuid};
+        $self->{DB}->do("UPDATE user SET uuid=? WHERE id=?", undef, ($uuid, $self->id())) || die $self->{DB}->errstr;
+        $self->{data}{uuid} = $uuid;
+    }
 
     $self->clearCache();
     MinorImpact::log('debug', "ending");
@@ -453,6 +464,7 @@ sub toData {
     $data->{name} = $self->name();
     $data->{password} = $self->get('password');
     $data->{encrypted} = 1;
+    $data->{uuid} = $self->get('uuid');
 
     return $data;
 }
@@ -601,7 +613,7 @@ sub add {
                 die "Only an admin user can add an admin user\n";
             }
         }
-        $DB->do("INSERT INTO user (name, password, admin, email, create_date) VALUES (?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email})) || die $DB->errstr;
+        $DB->do("INSERT INTO user (name, password, admin, email, uuid, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email}, ($params->{uuid} || uuid()))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
