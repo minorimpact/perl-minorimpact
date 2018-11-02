@@ -16,6 +16,7 @@ use MinorImpact::Config;
 use MinorImpact::Object;
 use MinorImpact::User;
 use MinorImpact::Util;
+use MinorImpact::Util::DB;
 use MinorImpact::WWW;
 use Sys::Syslog;
 use Template;
@@ -24,6 +25,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
+our $VERSION = 5;
 
 =head1 NAME
 
@@ -241,7 +243,7 @@ sub new {
         my $config_db_database = $config->{db}->{database} || '';
         my $config_db_db_host = $config->{db}->{db_host} || '';
         my $config_db_port = $config->{db}->{port} || '';
-        my $dsn = "DBI:mysql:database=$config_db_database;host=$config_db_db_host;port=$config_db_port}";
+        my $dsn = "DBI:mysql:database=$config_db_database;host=$config_db_db_host;port=$config_db_port";
         $self->{DB} = DBI->connect($dsn, $config->{db}->{db_user}, $config->{db}->{db_password}, {RaiseError=>1, mysql_auto_reconnect=>1}) || die("Can't connect to database");
 
         if ($config->{user_db}) {
@@ -266,7 +268,9 @@ sub new {
             openlog($self->{conf}{default}{application_id}, 'nofatal,pid', 'local4');
         }
 
-        dbConfig($self->{DB});
+        if (cache("MinorImpact_VERSION") != $VERSION) {
+            dbConfig($self->{DB});
+        }
     }
 
     if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
@@ -1324,135 +1328,139 @@ instantiated.
 
 =cut
 
-my $VERSION = 3;
 sub dbConfig {
-    #MinorImpact::log('debug', "starting");
-    my $DB = shift || return;
+    my $DB = shift;
 
-    eval {
-        $DB->do("DESC `object`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `user_id` int(11) NOT NULL,
-            `name` varchar(50) NOT NULL,
-            `description` text,
-            `public` tinyint(1) default 0,
-            `object_type_id` int(11) NOT NULL,
-            `create_date` datetime NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`)
-        )") || die $DB->errstr;
-        $DB->do("create index idx_object_public    on object(public)") || die $DB->errstr;
-        $DB->do("create index idx_object_user_id   on object(user_id)") || die $DB->errstr;
-        $DB->do("create index idx_object_user_type on object(user_id, object_type_id)") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_type`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_type` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `name` varchar(50) DEFAULT NULL,
-            `description` text,
-            `default_value` varchar(255) NOT NULL,
-            `plural` varchar(50) DEFAULT NULL,
-            `url` varchar(255) DEFAULT NULL,
-            `system` tinyint(1) DEFAULT 0,
-            `version` int(11) DEFAULT 0,
-            `readonly` tinyint(1) DEFAULT 0,
-            `no_name` tinyint(1) DEFAULT 0,
-            `public` tinyint(1) DEFAULT 0,
-            `no_tags` tinyint(1) DEFAULT 0,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `idx_object_type` (`name`)
-        )") || die $DB->errstr;
-    }
+    MinorImpact::log('debug', "starting");
 
-    eval {
-        $DB->do("DESC `object_field`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_field` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_type_id` int(11) NOT NULL,
-            `name` varchar(50) NOT NULL,
-            `description` varchar(255),
-            `default_value` varchar(255),
-            `type` varchar(15) DEFAULT NULL,
-            `hidden` tinyint(1) DEFAULT '0',
-            `readonly` tinyint(1) DEFAULT '0',
-            `required` tinyint(1) DEFAULT '0',
-            `sortby` tinyint(1) DEFAULT '0',
-            `populated` tinyint(1) DEFAULT '0',
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`)
-        )") || die $DB->errstr;
-        $DB->do("create unique index idx_object_field_name on object_field(object_type_id, name)") || die $DB->errstr;
-        $DB->do("create index idx_object_field_type_id on object_field(object_type_id)") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_data`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_data` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_id` int(11) NOT NULL,
-            `object_field_id` int(11) NOT NULL,
-            `value` varchar(50) NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_object_field` (`object_id`,`object_field_id`),
-            KEY `idx_object_data` (`object_id`)
-        )") || die $DB->errstr;
-    }
+    $DB ||= MinorImpact::db();
 
-    eval {
-        $DB->do("DESC `object_tag`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_tag` ( 
-            `object_id` int(11) NOT NULL, 
-            `name` varchar(50) DEFAULT NULL
-          ) ENGINE=MyISAM DEFAULT CHARSET=latin1") || die $DB->errstr;
-        $DB->do("create unique index idx_id_name on object_tag (object_id, name)") || die $DB->errstr;
-    }
+    MinorImpact::log('debug', "adding table 'object'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object', 
+        fields => { 
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            name => { type => "varchar(50)", null => 0 },
+            user_id => { type => "int", null => 0 },
+            description => { type => "text" },
+            public => { type => 'boolean', default => 0},
+            object_type_id => { type => "int", null => 0 },
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+        }, 
+        indexes => {
+            idx_object_public => { fields => 'public' },
+            idx_object_user_id => { fields => 'user_id' },
+            idx_object_user_type => { fields => 'user_id,object_type_id' },
+        }
+    });
 
-    eval {
-        $DB->do("DESC `object_text`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_text` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_id` int(11) NOT NULL,
-            `object_field_id` int(11) NOT NULL,
-            `value` mediumtext,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_object_text` (`object_id`),
-            KEY `idx_object_field` (`object_id`,`object_field_id`)
-        )") || die $DB->errstr;
-    }
-    eval {
-        $DB->do("DESC `object_reference`") || die $DB->errstr;
-    };
-    if ($@) {
-        $DB->do("CREATE TABLE `object_reference` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `object_text_id` int(11) NOT NULL,
-            `data` varchar(255) NOT NULL,
-            `object_id` int(11) NOT NULL,
-            `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `create_date` datetime NOT NULL,
-            PRIMARY KEY (`id`)
-            )") || die $DB->errstr;
-    }
+    MinorImpact::log('debug', "adding table 'object_type'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_type',
+        fields => {
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            name => { type => "varchar(50)", null => 0 },
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+            description => { type => "text" },
+            public => { type => 'boolean', default => 0 },
+            default_value => { type => "varchar(255)", null => 0 },
+            plural => { type => "varchar(50)" },
+            url => { type => "varchar(255)", null => 0 },
+            system => { type => 'boolean', default => 0 },
+            version => {type => "int" },
+            readonly => { type => "boolean", default => 0 },
+            no_name => { type => "boolean", default => 0 },
+            no_tags => { type => "boolean", default => 0 },
+        },
+        indexes => {
+            idx_object_type => { fields => "name", unique => 1 },
+        }
+    });
+
+    MinorImpact::log('debug', "adding table 'object_field'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_field',
+        fields => {
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            name => { type => "varchar(50)", null => 0 },
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+            description => { type => "varchar(255)" },
+            object_type_id => { type => "int", null => 0 },
+            default_value => { type => "varchar(255)" },
+            type => { type => "varchar(15)" },
+            hidden => { type => "boolean", default => 0 },
+            readonly => { type => "boolean", default => 0 },
+            required => { type => "boolean", default => 0 },
+            sortby => { type => "boolean", default => 0 },
+            populated => { type => "boolean", default => 0 },
+        },
+        indexes => {
+            idx_object_field_name => { fields=>"object_type_id,name", unique => 1 },
+            idx_object_field_type_id => { fields => "object_type_id" },
+        }
+    });
+
+    MinorImpact::log('debug', "adding table 'object_data'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_data',
+        fields => {
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            object_id => {type => "int", null=> 0 },
+            object_field_id => { type => "int", null => 0 },
+            value => { type => "varchar(50)", null => 0 },
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+        },
+        indexes => {
+            idx_object_field => { fields => "object_id,object_field_id" },
+            idx_object_data => { fields => "object_id" },
+        }
+    });
+
+    MinorImpact::log('debug', "adding table 'object_tag'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_tag',
+        fields => {
+            object_id => { type => "int", null => 0 },
+            name => { type => "varchar(50)", },
+        }, 
+        indexes => {
+            idx_id_name => { fields => "object_id,name", unique => 1 }
+        }
+    });
+
+    MinorImpact::log('debug', "adding table 'object_text'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_text',
+        fields => {
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+            object_id => { type => "int", null => 0 },
+            object_field_id => { type => "int", null => 0 },
+            value => { type => "mediumtext" },
+        },
+        indexes => {
+            idx_object_text => { fields => 'object_id', },
+            idx_object_field => { fields => "object_id,object_field_id" },
+        }
+    });
+
+    MinorImpact::log('debug', "adding table 'object_reference'");
+    MinorImpact::Util::DB::addTable($DB, {
+        name => 'object_reference',
+        fields => {
+            id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
+            create_date => { type => "datetime", null => 0 },
+            mod_date => { type => "timestamp", null => 0 },
+            object_id => { type => "int", null => 0 },
+            object_text_id => { type => "int", null => 0 },
+            data => { type => "varchar(255)", null => 0 },
+        },
+    });
 
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
@@ -1462,6 +1470,8 @@ sub dbConfig {
     unless ($admin) {
         $DB->do("INSERT INTO user(name, password, admin) VALUES (?,?,?)", undef, ("admin", "92.96PWMq8Us.", 1)) || die $DB->errstr;
     }
+
+    cache("MinorImpact_VERSION", $VERSION);
     MinorImpact::log('debug', "ending");
 }
 
