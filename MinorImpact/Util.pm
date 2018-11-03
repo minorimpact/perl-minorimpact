@@ -23,6 +23,7 @@ Contains a set of basic utility functions.
 use strict;
 
 use Data::Dumper;
+use MinorImpact::Util::String;
 use Time::Local;
 use Data::UUID;
 
@@ -857,37 +858,8 @@ sub toMysqlDate {
     return $dates[0];
 }
 
-=head2 trim
-
-=over
-
-=item trim($string)
-
-=item trim(\$string)
-
-=back
-
-Removes white space from the beginning and end of $string.
-
-  $string = "Foo  ";
-  $trimmed_string = trim($string);
-  # RESULT: $trimmed_string = "Foo";
-
-If a reference is passed, $string will be altered directly.
-
-  $string = " Bar ";
-  trim(\$string);
-  # RESULT: $string = "Bar";
-
-=cut
-
 sub trim {
-    my $string = shift || return;
-    my $text = ref($string)?$$string:$string;
-    $text =~ s/^\s+//;
-    $text =~ s/\s+$//;
-    $$string = $text if (ref($string));
-    return $text;
+    return MinorImpact::Util::String::trim(@_);
 }
 
 =head2 trunq
