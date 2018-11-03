@@ -55,6 +55,7 @@ use MinorImpact::Object::Search;
 use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 
 my $OBJECT_CACHE;
 
@@ -508,6 +509,12 @@ For text fields, only data up to the first CR.
   $short_desc = $OBJECT->get('description', { one_line => 1});
   # RESULT: $sort_desc = "This is";
 
+=item ptrunc => $count
+
+Split the field into paragraphs, and only return the first $count.
+
+  $OBJECT->get('content', { ptrunc => 2 });
+
 =item truncate => $count
 
 Only return up to $count characters of data.
@@ -541,6 +548,9 @@ sub get {
             }
             if ($params->{truncate} =~/^\d+$/) {
                 $value = trunc($value, $params->{truncate});
+            }
+            if ($params->{ptrunc} =~/^\d+$/) {
+                $value = ptrunc($value, $params->{ptrunc});
             }
             if ($params->{markdown}) {
                 $value =  markdown($value);

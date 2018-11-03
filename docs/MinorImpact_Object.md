@@ -153,6 +153,12 @@ defined as an array.  See [MinorImpact::Object::Field::add()](./MinorImpact_Obje
         $short_desc = $OBJECT->get('description', { one_line => 1});
         # RESULT: $sort_desc = "This is";
 
+- ptrunc => $count
+
+    Split the field into paragraphs, and only return the first $count.
+
+        $OBJECT->get('content', { ptrunc => 2 });
+
 - truncate => $count
 
     Only return up to $count characters of data.

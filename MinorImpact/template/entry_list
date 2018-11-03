@@ -1,7 +1,10 @@
 <div class="w3-row">
     <h3>[% object.name() %]</h3>
     <small>[% object.get('publish_date') %] - <a href=[% url({ action => 'user', user_id => object.get('user_id')}) %]>[% object.userName() %]</a></small><br />
-    [% object.get('content', { markdown => 1}) %]<br />
+    [% object.get('content', { markdown => 1, ptrunc => 2 }) %]<br />
+    [% IF object.get('content', { markdown => 1}).length > object.get('content', { markdown => 1, ptrunc => 2 }).length %]
+        <a href="[% url({ action => 'object', id => object.id() }) %]">More...</a><br /><br />
+    [% END %]
     [% FOREACH tag IN object.tags() %]
         [% INCLUDE tag %]
     [% END %]
