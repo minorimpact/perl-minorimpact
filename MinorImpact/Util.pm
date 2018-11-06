@@ -57,7 +57,7 @@ our @EXPORT = (
 our $SELF;
 
 sub clone {
-    my $original = shift || return;
+    my $original = shift;
     my $copy;
 
     if (ref($original) eq "HASH") {
@@ -723,7 +723,7 @@ sub parseTags {
     return sort map { lc($_); } keys %tags;
 }
 
-sub _getConsonant {
+sub _consonant {
     my $letter = _getLetter();
     while (_isNoun($letter)) {
         $letter = _getLetter();
@@ -862,49 +862,16 @@ sub trim {
     return MinorImpact::Util::String::trim(@_);
 }
 
-=head2 trunq
+=head2 trunc
 
-=over
+Deprecated.
 
-=item trunq($string)
-
-=item trunq($string, $length)
-
-=back
-
-Returns a copy of $string reduced to no more than $length size.  The resulting
-string, if altered, will come with an ellipsis ("...") appended to indicate that 
-the string continues past what's shown (which will count as part of the length to 
-remain under the $length cap).  Some effort will be made to cut the original string
-at a space, which makes the exact length of the returned value unknown.
-
-  $string = "This is a string that's longer than I want it to be."
-  $short_string = trunq($string, 15);
-  # RESULT: $short_string = "This is a...";
-
-If the length of the  original $string is less than $length, uniq() will just
-return $string.
-
-  $string = "This is a string.";
-  $short_string = trunq($string, 50);
-  # RESULT: $short_string = "This is a string.";
-
-If $length is not specified, the default is 50.
+See L<MinorImpact::Util::String::trunc()|MinorImpact::Util::String/trunc>.
 
 =cut
 
 sub trunc {
-    my $string = shift || return;
-    my $len = shift || 50;
-
-    return $string if (length($string) < $len);
-    my $str = substr($string, 0, ($len-3));
-    my $strl = length($str);
-    my $test = substr($str, -10);
-    if ($test =~/ /) {
-        $str = substr($str, 0, -(indexOf(' ', (reverse split(//, $test)))+1));
-    }
-    return "$str...";
+    return MinorImpact::Util::String::trunc(@_);
 }
 
 =head2 uniq
