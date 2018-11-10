@@ -34,8 +34,9 @@ Merges the values from %query into $params->{query}.
 =cut
 
 sub mergeQuery {
+    my $params = shift || return;
     my $query = shift || return;
-    my $params = shift || {};
+    MinorImpact::log('debug', "starting");
 
     $params->{query}{tags} = [] unless (defined($params->{query}{tags}));
     $query->{tags} = [] unless (defined($query->{tags}));
@@ -51,8 +52,11 @@ sub mergeQuery {
 
     foreach my $field (keys %{$query}) {
         next if ($field =~/^(tag|tags)$/);
+        MinorImpact::log('debug', "\$params->{query}{$field}='" .  $query->{$field} . "'");
         $params->{query}{$field} = $query->{$field};
     }
+
+    MinorImpact::log('debug', "ending");
     return $params->{query};
 }
 
@@ -181,14 +185,9 @@ sub processQuery {
 
     MinorImpact::log('debug', "starting");
 
-    my $query = {};
-    if (ref($params) eq "HASH" && defined($params->{query})) {
-        $query = $params->{query};
-    }
-
     my $new_query = parseSearchString($params->{query}{search}) if (defined($params->{query}{search}) && $params->{query}{search});
     delete($params->{query}{search});
-    mergeQuery($new_query, $params);
+    mergeQuery($params, $new_query);
     MinorImpact::log('debug', "ending");
     return $params->{query};
 }
@@ -240,6 +239,36 @@ Only return objects that belong to a user with admin rights.
         admin => 1,
         public => 1,
   });
+
+=item child => \&hash
+
+Further limit the results from your search to objects who's I<children> match
+the query parameters in \&hash.
+
+  # pull just owner who have a dodge.
+  @car_owner = MinorImpact::Object::Search::search({
+    object_type_id=>'owners',
+    child => {
+      object_type_id => 'car',
+      make => 'Dodge'
+    },
+  });
+
+=item no_child => \&hash
+
+The opposite of "child": exclude objects who's children match
+\&hash.
+
+  # pull everyone by 'viper' owners
+  @car_owner = MinorImpact::Object::Search::search({
+    object_type_id=>'owners',
+    no_child => {
+      object_type_id => 'car',
+      model => 'Viper'
+    },
+  });
+
+
 
 =item id_only
 
@@ -374,11 +403,11 @@ sub search {
             #   and an admin user.
             next unless ($object->validUser($params));
             if (defined($params->{query}{child})) {
-                my @children = $object->getChildren({ query => { %{$params->{query}{child}}, id_only => 1 } });
+                my @children = $object->children({ query => { %{$params->{query}{child}}, id_only => 1 } });
                 push(@objects, $object) if (scalar(@children));
             } elsif (defined($params->{query}{no_child})) {
                 MinorImpact::log('debug', "NO CHILD: $id");
-                my @children = $object->getChildren({ query => { %{$params->{query}{no_child}}, id_only => 1 } });
+                my @children = $object->children({ query => { %{$params->{query}{no_child}}, id_only => 1 } });
                 push(@objects, $object) unless (scalar(@children));
             } else {
                 push(@objects, $object);
@@ -442,14 +471,24 @@ sub _search {
     }
 
     # If I'm not looking for objects marked 'public', then I can only look for objects
-    # owned by the current user. "security".
+    #   owned by the current user, or public. Partially for "security", and partially to
+    #   cut down on the the endless object user validation failures.
     my $user = MinorImpact::user();
-    unless ($query->{public} || ($user && $user->isAdmin())) {
-        if ($user) {
-            $query->{user_id} = $user->id();
-        } else {
+    if ($user && !$user->isAdmin()) {
+        # we only care about 'non-admin' users.
+        if (defined($query->{user_id}) && $query->{user_id} != $user->id()) {
+            # They're searching for someone else, limit it to only
+            #   'public' objects.
             $query->{public} = 1;
-        }
+        } elsif (!defined($query->{public}) && !defined($query->{user_id})) {
+            # didn't specifiy public or private, so give them their own
+            #   stuff, or any public stuff.
+            $where .= " AND (object.public = 1 OR object.user_id = ?)";
+            push(@fields, $user->id());
+        } 
+    } elsif (!$user) {
+        # the general public can only search for things marked "public".
+        $query->{public} = 1;
     }
 
     if (defined($query->{tags}) && scalar(@{$query->{tags}})) {
@@ -470,10 +509,9 @@ sub _search {
     # but that's how I did it.
     # TODO: Go through all the code and separate the terms that define "how" the search should be handled from
     #  "what" we're searching for. 
-    #MinorImpact::debug(1);
     foreach my $param (keys %$query) {
         next if ($param =~/^(from|id_only|sort|limit|page|debug|where|where_fields|child|no_child|result|search|select|tags|type_tree)$/);
-        MinorImpact::log('debug', "\$param='$param', \$query->{$param}='" . $query->{$param} . "'");
+        MinorImpact::log('debug', "\$query->{$param}='" . $query->{$param} . "'");
         next unless (defined($query->{$param}));
         MinorImpact::log('debug', "building query \$query->{$param}='" . $query->{$param} . "'");
         if ($param eq "name") {
@@ -495,8 +533,9 @@ sub _search {
             }
             push(@fields, $query->{object_type_id});
         } elsif ($param eq "user_id" || $param eq "user") {
+            my $user_id = $query->{user_id} || $query->{user};
             $where .= " AND object.user_id=?";
-            push(@fields, $query->{user_id} || $query->{user});
+            push(@fields, $user_id);
         } elsif ($param eq "readonly") {
             $from .= " JOIN object_type ON (object.object_type_id=object_type.id)" unless ($from =~/JOIN object_type /);
             $where .= " AND object_type.readonly = ? ";
@@ -532,6 +571,7 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($query->{object_type_id}) {
+            MinorImpact::log('debug', "FOO");
             my $value = $query->{$param};
             my $operator = "=";
             if ($param =~s/\>$//) { $operator = ">"; } 
@@ -566,14 +606,12 @@ sub _search {
                 push(@fields, $value);
             }
             $field_where =~s/ OR $//;
-            $where .=  "AND ($field_where)" if ($field_where);
+            $where .=  " AND ($field_where)" if ($field_where);
         }
     }
 
-    #MinorImpact::debug(1);
     my $sql = "$select $from $where";
     MinorImpact::log('debug', "sql='$sql', \@fields='" . join(',', @fields) . "' " . $query->{debug});
-    #MinorImpact::debug(0);
 
 
     my $objects;

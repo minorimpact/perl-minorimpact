@@ -33,27 +33,35 @@ MinorImpact::Object::Type
 sub new {
     my $package = shift;
     my $options = shift || {};
+    MinorImpact::log('debug', "starting");
 
     my $self = {};
-    my $object_type_id;
+    my $object_type;
     if (ref($options) eq 'HASH') {
-        $object_type_id = $options->{object_type_id};
+        $object_type = $options->{object_type_id};
     } elsif ($options) {
-        $object_type_id = $options;
+        $object_type = $options;
     }
-    die "no object_type_id specified\n" unless ($object_type_id);
+    #die "no object_type_id specified\n" unless ($object_type);
 
-    my $DB = MinorImpact::db();
-    my $sql;
-    if ($object_type_id =~/^\d+$/) {
-        $sql = "SELECT * FROM object_type WHERE id=?";
+    if ($object_type) {
+        my $DB = MinorImpact::db() || die "no db";
+        my $sql;
+        if ($object_type =~/^\d+$/) {
+            $sql = "SELECT * FROM object_type WHERE id=?";
+        } else {
+            $sql = "SELECT * from object_type WHERE name=?";
+        }
+
+        MinorImpact::log('debug', "\$sql='$sql',\$object_type='$object_type'");
+        $self->{db} = $DB->selectrow_hashref($sql, undef, ($object_type)) || die $DB->errstr;
     } else {
-        $sql = "SELECT * from object_type WHERE name=?";
+        $self->{db} = {};
     }
-    MinorImpact::log('debug', "\$sql='$sql',\$object_type_id='$object_type_id'");
-    $self->{db} = $DB->selectrow_hashref($sql, undef, ($options)) || die $DB->errstr;
 
     bless ($self, $package);
+    MinorImpact::log('debug', "ending");
+    return $self;
 }
 
 
@@ -130,7 +138,7 @@ sub delete {
     $DB->do("DELETE FROM object_field WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object WHERE object_type_id=?", undef, ($object_type_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_type WHERE id=?", undef, ($object_type_id)) || die $DB->errstr;
-    $self->clearCache();
+    clearCache($params);
 }
 
 =head2 displayName
@@ -238,6 +246,8 @@ sub form {
     my $params = shift|| {};
     MinorImpact::log('debug', "starting");
 
+    $params->{object_type_id} = $self->id();
+   
     my $type_name = $self->name();
     my $form = $type_name->form($params);
 
@@ -289,7 +299,7 @@ Return the name of this $TYPE.
 sub name {
     my $self = shift || return;
 
-    return $self->{db}{name}
+    return $self->{db}{name} || "MinorImpact::Object";
 }
 
 =head2 toData
@@ -306,6 +316,7 @@ sub toData {
 
     my $data = {};
 
+    $data->{comments} = $self->get('comments');
     $data->{id} = $self->id();
     $data->{name} = $self->name();
     $data->{no_name} = $self->get('no_name');
@@ -391,6 +402,12 @@ Add a new object type to the MinorImpact application.
 
 =over
 
+=item comments => TRUE/FALSE
+
+Turn on comments for this object type.
+
+Default: FALSE
+
 =item name => STRING
 
 The name of the object.  This must also be how it's accessed in code:
@@ -448,6 +465,7 @@ sub add {
     my $DB = MinorImpact::db();
 
     my $name = $params->{name};
+    my $comments = ($params->{comments}?1:0);
     my $no_name = ($params->{no_name}?1:0);
     my $no_tags = ($params->{no_tags}?1:0);
     my $plural = $params->{plural};
@@ -464,6 +482,7 @@ sub add {
     
     if ($object_type_id) {
         my $data = $DB->selectrow_hashref("SELECT * FROM object_type WHERE id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr();
+        $DB->do("UPDATE object_type SET comments=? WHERE id=?", undef, ($comments, $object_type_id)) || die $DB->errstr unless ($data->{comments} eq $comments);
         $DB->do("UPDATE object_type SET no_name=? WHERE id=?", undef, ($no_name, $object_type_id)) || die $DB->errstr unless ($data->{no_name} eq $no_name);
         $DB->do("UPDATE object_type SET no_tags=? WHERE id=?", undef, ($no_tags, $object_type_id)) || die $DB->errstr unless ($data->{no_tags} eq $no_tags);
         $DB->do("UPDATE object_type SET plural=? WHERE id=?", undef, ($plural, $object_type_id)) || die $DB->errstr unless ($data->{plural} eq $plural);
@@ -475,9 +494,10 @@ sub add {
     } else {
         die "'$name' is reserved." if (defined(indexOf(lc($name), @MinorImpact::Object::Field::valid_types, @MinorImpact::Object::Field::reserved_names)));
 
-        $DB->do("INSERT INTO object_type (name, system, no_name, no_tags, public, readonly, plural, version, uuid, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, UUID(), NOW())", undef, ($name, $system, $no_name, $no_tags, $public, $readonly, $plural, $version)) || die $DB->errstr;
+        $DB->do("INSERT INTO object_type (name, system, comments, no_name, no_tags, public, readonly, plural, version, uuid, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($name, $system, $comments, $no_name, $no_tags, $public, $readonly, $plural, $version, ($uuid || uuid()))) || die $DB->errstr;
         $object_type_id = $DB->{mysql_insertid};
     }
+    MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
     my $type = new MinorImpact::Object::Type($object_type_id);
 
     if (defined($params->{fields})) {
@@ -503,6 +523,8 @@ Adds a field to the database
 
   MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name=>'address', type=>'string'});
 
+See L<MinorImpact::Object::Field::add()|MinorImact::Object::Field/add> for a complete set of options.
+
 =head3 options
 
 =over
@@ -522,18 +544,98 @@ The type of field.
 sub addField { 
     my $self = shift || return;
     my $params = shift || {};
+    MinorImpact::log('debug', "starting");
 
     if (ref($self) eq 'HASH') {
         $params = $self;
         undef($self);
     }
 
-    if ($self) {
-        $params->{object_type_id} = $self->id();
-    }
+    $params->{object_type_id} = $self->id() if ($self);
     
-    return MinorImpact::Object::Field::add($params); 
+    my $field = MinorImpact::Object::Field::add($params); 
+    MinorImpact::log('debug', "ending");
+    return $field;
+    
 } 
+
+=head2 childTypeIDs
+
+=over
+
+=item ->childTypeIDs()
+
+=back
+
+Returns a list of oject type ids that have fields of a this 
+object type.
+
+  @child_type_ids = $TYPE->childTypeIDs();
+
+=cut
+
+sub childTypeIDs {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    $params->{object_type_id} = $self->id() if ($self);
+    die "no object type id" unless ($params->{object_type_id});
+
+    my @child_type_ids = ();
+    my $sql = "select DISTINCT(object_type_id) from object_field where type like '%object[" . $params->{object_type_id} . "]'";
+    my $DB = MinorImpact::db();
+    my $data = $DB->selectall_arrayref($sql, {Slice=>{}});
+    foreach my $row (@$data) {
+        push(@child_type_ids, $row->{object_type_id});
+    }
+
+    MinorImpact::log('debug', "ending");
+    return @child_type_ids;
+}
+
+=head2 childTypes
+
+=over
+
+=item ->childTypes()
+
+=back
+
+Returns a list of oject types ids that have fields of a this 
+object type.
+
+  @child_types = $TYPE->childTypes();
+
+=cut
+
+sub childTypes {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting");
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    $params->{object_type_id} = $self->id() if ($self);
+
+    my @child_types = ();
+    my @child_type_ids = MinorImpact::Object::Type::childTypeIDs($params);
+    foreach my $child_type_id (@child_type_ids) {
+        push(@child_types, new MinorImpact::Object::Type($child_type_id));
+    }
+    MinorImpact::log('debug', "ending");
+    return @child_types;
+}
 
 =head2 clearCache
 
@@ -544,30 +646,39 @@ Clear TYPE related caches.
 sub clearCache {
     my $self = shift || return;
 
+    MinorImpact::log('debug', "starting");
     my $object_type_id;
     my $object_type_name;
 
-    unless (ref($self)) {
-        $self = new MinorImpact::Object::Type($self);
+    if (ref($self) eq 'HASH') {
+        $object_type_id = $self->{object_type_id};
+        $object_type_name = $self->{object_type_name};
+    } elsif (ref($self)) {
+        $object_type_id = $self->id();
+        $object_type_name = $self->name();
+    } else {
+        $object_type_id = $self;
     }
 
-    $object_type_id = $self->id();
-    $object_type_name = $self->name();
-
-    MinorImpact::cache("object_field_$object_type_id", {});
-    MinorImpact::cache("object_field_$object_type_name", {});
-    MinorImpact::cache("object_type_$object_type_id", {});
-    MinorImpact::cache("object_type_$object_type_name", {});
-    MinorImpact::cache("object_type_id_$object_type_id", {});
-    MinorImpact::cache("object_type_id_$object_type_name", {});
-
-    my $DB = MinorImpact::db();
-    my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
-    foreach my $row (@$data) {
-        my $object_id = $row->{id};
-        MinorImpact::Object::clearCache($object_id);
+    if ($object_type_id) {
+        MinorImpact::cache("object_field_$object_type_id", {});
+        MinorImpact::cache("object_type_$object_type_id", {});
+        MinorImpact::cache("object_type_id_$object_type_id", {});
+        my $DB = MinorImpact::db();
+        my $data = $DB->selectall_arrayref("SELECT * FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
+        foreach my $row (@$data) {
+            my $object_id = $row->{id};
+            MinorImpact::Object::clearCache($object_id);
+        }
     }
 
+    if ($object_type_name) {
+        MinorImpact::cache("object_field_$object_type_name", {});
+        MinorImpact::cache("object_type_$object_type_name", {});
+        MinorImpact::cache("object_type_id_$object_type_name", {});
+    }
+
+    MinorImpact::log('debug', "ending");
     return;
 }
 

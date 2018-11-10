@@ -14,7 +14,14 @@ sub new {
 
     MinorImpact::log('debug', "starting");
 
-    $data->{attributes}{default_value} = '0000-00-00 00:00:00';
+    if (lc($data->{db}{default_value}) eq "now()") {
+        $data->{attributes}{default_value} = toMysqlDate();
+    } elsif ($data->{db}{default_value}) {
+        $data->{attributes}{default_value} = $data->{db}{default_value};
+    } else {
+        $data->{attributes}{default_value} = '0000-00-00 00:00:00';
+    }
+
     $data->{attributes}{maxlength} = 19;
 
     my $self = $package->SUPER::_new($data);

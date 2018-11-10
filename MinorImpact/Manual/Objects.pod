@@ -6,22 +6,106 @@ MinorImpact::Manual::Objects
 
 =head2 Types
 
-Make a new object type:
+Make a new object type named "vehicle":
 
   $type = MinorImpact:Object:Type::add({name => "vehicle" });
+
+Add a field indicating the number of doors a "vehicle" object will have:
+
   $type->addField({ name => "door_count", type => "int" });
 
-  MinorImpact::Object::Type("MinorImpact::entry");
+Create a new MinorImpact::Object::Type object to represent the "vehicle" type:
+
+  $vehicle = new MinorImpact::Object::Type("vehicle");
+
+Generate an html form for adding a new "vehicle":
+
+  $form = $vehicle->form();
 
 =head2 Fields
 
 Creating a standalone field with a preset value:
 
-  $field = new MinorImpact::Object::Field({ db=> { name => 'balloon_count', type=>'int' }, value => 5});
+  $field = new MinorImpact::Object::Field({ db => { name => 'balloon_count', type=>'int' }, value => 5});
 
 Including that field on on a form:
 
   $form .= $field->rowForm();
+
+=head3 Built in Fields
+
+=over
+
+=item create_date
+
+The date the object was created.
+
+=item id
+
+The internal ID of the object.
+
+=item mod_date
+
+The date the object was last modified.
+
+=item name
+
+The object's name.  Every object has one, even if it's just the UUID or part of another field.
+
+=item public
+
+Whether or not the object is available to be viewed by the general public.
+
+=back
+
+=head3 Types of User Fields
+
+=over
+
+=item boolean
+
+A TRUE/FALSE value, will be represented by a checkbox on web forms.
+
+=item datetime
+
+A datetime string, in the form "YYYY-MM-DD HH::mm::SS".  Appears as a calendar
+on forms.  (This is a bug, making it more of a "date" field than than a "dateime" field,
+but I haven't gotten to fixing it yet.)
+
+=item float
+
+A floating point number.
+
+=item int
+
+An integer.
+
+=item object
+
+A non-specificy type of MinorImpact::Object.
+
+=item password
+
+Essentially a string, but with a maximum length of 16 characters, and will be represnted by a
+'password' input type on html forms.
+
+=item string
+
+A standard string.
+
+=item text
+
+A long string, appears as a textarea field on forms.
+
+=item <Type>
+
+A particular type of MinorImpact::Object.
+
+=item url
+
+A web address.
+
+=back
 
 =head1 AUTHOR
 

@@ -48,11 +48,8 @@ use JSON;
 use Text::Markdown 'markdown';
 
 use MinorImpact;
-use MinorImpact::collection;
-use MinorImpact::entry;
 use MinorImpact::Object::Field;
 use MinorImpact::Object::Search;
-use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::Util::String;
@@ -94,7 +91,6 @@ sub new {
     my $id = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $id . ")");
 
     my $DB = MinorImpact::db();
@@ -164,13 +160,11 @@ sub new {
         $object = MinorImpact::Object::_new($package, $id||$object_data, $params);
     }
 
-    MinorImpact::log('debug', "ending($id)");
 
     die "permission denied" unless ($object->validUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
     MinorImpact::log('debug', "ending");
-    #MinorImpact::debug(0);
     return $object;
 }
 
@@ -188,22 +182,21 @@ sub _new {
     $self->{DB} = MinorImpact::db() || die "can't get DB object\n";
     $self->{CGI} = MinorImpact::cgi() || die "can't get CGI object\n";
 
+    my $user = MinorImpact::user();
+
     my $object_id;
     my $object_type_id;
     if (ref($id) eq 'HASH') {
-        #MinorImpact::log('debug', "ref(\$id)='" . ref($id) . "'");
-
-        # TODO: Why in the hell was I looking for lc($package) here?! Was that there for some kind of other 
-        #   reason?!
         $object_type_id = $id->{object_type_id} || $id->{type_id} || $package || die "No object_type_id specified\n";
         MinorImpact::log('debug', "getting type_id for '$object_type_id'");
         $object_type_id = typeID($object_type_id);
+        die "invalid type id" unless ($object_type_id);
         MinorImpact::log('debug', "got object_type_id='$object_type_id'");
 
-        my $user = new MinorImpact::User($id->{user_id}) || MinorImpact::user();
-        die "invalid name" unless ($id->{name});
-        die "invalid user id" unless ($user);
-        die "invalid type id" unless ($object_type_id);
+        $id->{name} = uuid() unless ($id->{name});
+
+        $user = new MinorImpact::User($id->{user_id}) if ($id->{user_id});
+        die "invalid user id:" . $id->{user_id} unless ($user);
 
         $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, uuid, create_date) VALUES (?, ?, ?, ?, UUID(), NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
@@ -217,12 +210,14 @@ sub _new {
         $object_id = $self->{CGI}->param("id") || MinorImpact::redirect();
     }
 
-    # These two fields are the absolute minimum requirement to be considered a valid object.
     $self->{data} = {};
+    # These two fields are the absolute minimum requirement to be considered a valid object.
     $self->{data}{id} = $object_id;
     $self->{data}{object_type_id} = $object_type_id;
 
+
     if (ref($id) eq 'HASH') {
+        $self->{data}{user_id} = $user->id() if ($user);
         my $fields = fields($id->{object_type_id});
         #MinorImpact::log('info', "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
         validateFields($fields, $id);
@@ -270,6 +265,141 @@ sub back {
     #my $sort = $CGI->param('sort');
 
     return MinorImpact::url($params);
+}
+
+=head2 children
+
+=over
+
+=item ->children(\%params)
+
+=back
+
+Returns a list of objects with fields that refer to $OBJECT.
+
+  $OBJECT->children({ object_type_id => 'MinorImpact::comment' });
+
+=head3 params
+
+See L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search> for
+a complete list of suppoerted parameters.
+
+=over
+
+=item object_type_id => $string
+
+Get childen of a particular type.
+
+=back
+
+=cut
+
+sub children {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting(" . $self->id() . ")");
+    my $local_params = clone($params);
+    $local_params->{query}{object_type_id} = $local_params->{query}{type_id} if ($local_params->{query}{type_id} && !$local_params->{query}{object_type_id});
+    $local_params->{query}{debug} .= "Object::children();";
+    #my $user_id = $self->userID();
+
+    $local_params->{query}{where} = " AND ((object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?)";
+    $local_params->{query}{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
+
+    # Uncomment these two lines if we don't want the generic 'object' field to count as a 
+    #   'child' of a particular type.  I don't know how all that's going to work.
+    $local_params->{query}{where} .= " OR (object_data.object_field_id IN (SELECT id FROM object_field WHERE type = 'object') AND object_data.value = ?)";
+    push(@{$local_params->{query}{where_fields}}, $self->id());
+
+    $local_params->{query}{where} .= ")";
+
+    my @children = MinorImpact::Object::Search::search($local_params);
+    MinorImpact::log('debug', "ending");
+    return @children;
+}
+
+=head2 childTypeIDs
+
+=over
+
+=item ::childTypeIDs(\%params)
+
+=item ->childTypeIDs()
+
+=back
+
+Returns a list of oject types ids that have fields of a particular object type.
+If called as a subroutine, requires C<object_type_id> as a parameter.
+
+  @type_ids = MinorImpact::Object::childTypeIDs({object_type_id => $object_type_id});
+
+If called as an object method, uses that object's type_id.
+
+  @type_ids = $OBJECT->childTypeIDs();
+
+... is equivilant to:
+
+  @type_ids = MinorImpact::Object::childTypeIDs({object_type_id => $OBJECT->type_id()});
+
+=head3 params
+
+=over
+
+=item object_type_id
+
+Get a list of types that reference this type of object.
+REQUIRED
+
+=back
+
+=cut
+
+sub childTypeIDs {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef $self;
+    }
+
+    MinorImpact::log('debug', "starting");
+    $params->{object_type_id} = $self->typeID() if ($self);
+    die "no object type id" unless ($params->{object_type_id});
+
+    my @child_type_ids = MinorImpact::Object::Type::childTypeIDs($params);
+
+    MinorImpact::log('debug', "ending");
+    return @child_type_ids;
+}
+
+
+=head2 childTypes
+
+Returns an array of MinorImpact::Object::Type objects that reference objects of
+this particular object's type.
+
+  @child_types = $OBJECT->childTypes()
+
+=cut
+
+sub childTypes {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    if (ref($self) eq 'HASH') {
+        $params = $self;
+        undef($self);
+    }
+
+    MinorImpact::log('debug', "starting");
+    $params->{object_type_id} = $self->typeID() if ($self);
+    die "no object type id" unless ($params->{object_type_id});
+
+    my @child_types = MinorImpact::Object::Type::childTypes($params);
+    MinorImpact::log('debug', "ending");
+    return @child_types;
 }
 
 sub churn {
@@ -533,9 +663,11 @@ sub get {
     my $name = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting(" . $self->id() . "-$name)");
+
     my @values;
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
     if (defined($self->{data}->{$name})) {
+        MinorImpact::log('debug', "ending");
        return $self->{data}->{$name};
     }
     if (defined($self->{object_data}->{$name})) {
@@ -558,10 +690,13 @@ sub get {
             push(@values, $value);
         }
         if ($field->isArray()) {
+            MinorImpact::log('debug', "ending");
             return @values;
         }
+        MinorImpact::log('debug', "ending");
         return $values[0];
     }
+    MinorImpact::log('debug', "ending");
 }   
 
 sub validateFields {
@@ -718,8 +853,6 @@ sub toString {
 
     my $script_name = $params->{script_name} || MinorImpact::scriptName() || 'index.cgi';
 
-    my $MINORIMPACT = new MinorImpact();
-
     my $string = '';
     if ($params->{column}) { $params->{format} = "column"; }
     elsif ($params->{row}) { $params->{format} = "row"; }
@@ -729,20 +862,22 @@ sub toString {
     if ($params->{format} eq 'column' || $params->{format} eq 'page') {
         #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
         $string .= "<div class='w3-container'>\n";
+        $string .= "<h3>" . $self->name() . "</h3>\n" unless ($self->isNoName());
         foreach my $name (keys %{$self->{object_data}}) {
             my $field = $self->{object_data}{$name};
             #MinorImpact::log('info', "processing $name");
-            my $type = $field->type();
+            my $field_type = $field->type();
             next if ($field->get('hidden'));
             my $value;
-            if ($type =~/object\[(\d+)\]$/) {
+            if (ref($field_type)) {
                 foreach my $v ($field->value()) {
-                    if ($v && $v =~/^\d+/) {
-                        my $o = new MinorImpact::Object($v);
-                        $value .= $o->toString() if ($o);
-                    }
+                    $value .= $v->toString(); # if ($o);
+                    #if ($v && $v =~/^\d+/) {
+                    #    my $o = new MinorImpact::Object($v);
+                    #    $value .= $o->toString() if ($o);
+                    #}
                 }
-            } elsif ($type =~/text$/) {
+            } elsif ($field_type =~/text$/) {
                 foreach my $val ($field->toString()) {
                     my $id = $field->id();
                     my $references = $self->getReferences($id);
@@ -762,7 +897,10 @@ sub toString {
                 $value = $field->toString();
             }
             my $row;
-            MinorImpact::tt($params->{template} || 'row_column', {name=>$field->displayName(), value=>$value}, \$row);
+            MinorImpact::tt($params->{template} || 'row_column', {
+                    name=>$field->displayName(), 
+                    value=>$value
+                }, \$row);
             $string .= $row;
         }
         $string .= "<!-- CUSTOM -->\n";
@@ -801,7 +939,11 @@ sub toString {
         $string = $self->name();
     } else {
         my $template = $params->{template} || 'object_link';
-        MinorImpact::tt($template, { object => $self }, \$string);
+        MinorImpact::log('debug', "depth='" . $params->{depth} . "'");
+        MinorImpact::tt($template, { 
+                depth => $params->{depth} || 0,
+                object => $self 
+            }, \$string);
     }
     MinorImpact::log('debug', "ending");
     return $string;
@@ -977,6 +1119,10 @@ sub typeID {
 =head1 SUBROUTINES
 
 =cut
+
+sub getType {
+    return MinorImpact::Object::type(@_);
+}
 
 =head2 getTypeID
 
@@ -1237,6 +1383,10 @@ sub _reload {
 sub dbConfig {
     # Placeholder.
     #MinorImpact::log('debug', "starting");
+
+    my $name = __PACKAGE__;
+    my $type = MinorImpact::Object::Type::add({ name => $name, public=>1 });
+
     #MinorImpact::log('debug', "ending");
     return;
 }
@@ -1365,113 +1515,6 @@ sub tags {
     return @tags;
 }
 
-=head2 getChildTypeIDs
-
-=over
-
-=item ::getChildTypeIDs(\%params)
-
-=item ->getChildTypeIDs()
-
-=back
-
-Returns a list of oject types ids that have fields of a particular object type.
-If called as a subroutine, requires C<object_type_id> as a parameter.
-
-  @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $object_type_id});
-
-If called as an object method, uses that object's type_id.
-
-  @type_ids = $OBJECT->getChildTypeIDs();
-
-... is equivilant to:
-
-  @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $OBJECT->type_id()});
-
-=head3 params
-
-=over
-
-=item object_type_id
-
-Get a list of types that reference this type of object.
-REQUIRED
-
-=back
-
-=cut
-
-sub getChildTypeIDs {
-    my $self = shift;
-    my $params = shift || {};
-
-    MinorImpact::log('debug', "starting");
-
-    if (ref($self) eq 'HASH') {
-        $params = $self;
-        undef $self;
-    }
-
-    my $local_params = cloneHash($params);
-    if (ref($self)) {
-        $local_params->{object_type_id} = $self->typeID();
-    }
-    $local_params->{object_type_id} = $local_params->{type_id} if ($local_params->{type_id} && !$local_params->{object_type_id});
-
-    my @childTypeIDs;
-    my $sql = "select DISTINCT(object_type_id) from object_field where type like '%object[" . $local_params->{object_type_id} . "]'";
-    my $DB = MinorImpact::db();
-    my $data = $DB->selectall_arrayref($sql, {Slice=>{}});
-    foreach my $row (@$data) {
-        push(@childTypeIDs, $row->{object_type_id});
-    }
-    MinorImpact::log('debug', "ending");
-    return @childTypeIDs;
-}
-
-=head2 getChildren
-
-=over
-
-=item ->getChildren(\%params)
-
-=back
-
-Returns a list of objects with fields that refer to $OBJECT.
-
-  $OBJECT->getChildren({ object_type_id => 'MinorImpact::comment' });
-
-=head3 params
-
-See L<MinorImpact::Object::Search::search()|MinorImpact::Object::Search/search> for
-a complete list of suppoerted parameters.
-
-=over
-
-=item object_type_id => $string
-
-Get childen of a particular type.
-
-=back
-
-=cut
-
-sub getChildren {
-    my $self = shift || return;
-    my $params = shift || {};
-
-    #MinorImpact::log('debug', "starting(" . $self->id() . ")");
-    my $local_params = cloneHash($params);
-    $local_params->{query}{object_type_id} = $local_params->{query}{type_id} if ($local_params->{query}{type_id} && !$local_params->{query}{object_type_id});
-    $local_params->{query}{debug} .= "Object::getChildren();";
-    #my $user_id = $self->userID();
-
-    $local_params->{query}{where} = " AND object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?";
-    $local_params->{query}{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
-
-    return MinorImpact::Object::Search::search($local_params);
-}
-
 # Returns true if the object supports a particular output type.
 sub stringType {
     my $self = shift || return;
@@ -1542,33 +1585,18 @@ sub form {
     my $user_id = $user->id();
 
     my $local_params = cloneHash($params);
-    #$local_params->{query}{debug} .= "Object::form();";
-    my $type;
-    if ($self) {
-        $local_params->{object_type_id} = $self->typeID();
-    } elsif (!($local_params->{object_type_id} || $local_params->{type_id})) {
-        die "Can't create a form with no object_type_id.\n";
-    }
+
+    $local_params->{object_type_id} = $self->typeID() if ($self);
     my $object_type_id = $local_params->{object_type_id} || $local_params->{type_id};
-    MinorImpact::log('debug', "\$object_type_id='$object_type_id'");
+    die "no object type id" unless ($object_type_id);
+
     my $type = new MinorImpact::Object::Type($object_type_id);
-    MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
 
     my $form;
  
     # Suck in any default values passed in the parameters.
     foreach my $field (keys %{$local_params->{default_values}}) {
         $CGI->param($field,$params->{default_values}->{$field});
-    }
-
-    # Add fields for the last things they were looking at.
-    unless ($self) {
-        my $view_history = MinorImpact::WWW::viewHistory();
-        foreach my $field (keys %$view_history) {
-            my $value = $view_history->{$field};
-            #MinorImpact::log('debug', "\$view_history->{$field} = '$value'");
-            $CGI->param($field, $value) unless ($CGI->param($field));
-        }
     }
 
     my $fields;
@@ -1588,15 +1616,21 @@ sub form {
         my $field = $fields->{$name};
         MinorImpact::log('debug', "\$field->name()='" . $field->name() . "'");
         my $field_type = $field->type();
-        next if ($field->get('hidden') || $field->get('readonly'));
-        my @params = $CGI->param($name);
+        my @param_values = $CGI->param($name);
         my @values;
-        if (scalar(@params) > 0) {
-            foreach my $field (@params) {
-                push (@values, $field) unless ($field eq '');
+        if (scalar(@param_values) > 0) {
+            foreach my $param_value (@param_values) {
+                push (@values, $param_value) unless ($param_value eq '');
             }
         } else {
             @values = $field->value();
+        }
+
+        # If the values aren't already set, and the field is both required and 
+        #   a MinorImpact::Object::Type, then set it to the last thing they were looking at.
+        if (scalar(@values) == 0 && $field->isRequired() && ref($field_type)) {
+            my $last_id = MinorImpact::WWW::viewHistory($field_type->name());
+            push(@values, $last_id) if ($last_id);
         }
 
         my $local_params = cloneHash($params);
@@ -1783,35 +1817,18 @@ sub isType {
     my $thingie = shift || return;
     my $params = shift || {};
 
-    # TODO: You know that point where you get too tired to care any more, and however good something ends
-    #   up being depends entirely on how high you were able get before that point?  I think I'm there.
-    #   This whole system relies on objects being both substantiated and unsubstantiated, using the same
-    #   functions in both cases simply using context to work out whether or not I'm a real boy or a ghost.
-    #   In this case, I'm getting meta information about the type of object that will be created based on...
-    #   shit.  That's not even what's happening here, this is base object, so anything calling this doesn't
-    #   event know what type of object it's *going* to be? Wait, that can't be true, right? What the fuck is
-    #   going on here?!
-    if (ref($self) && ref($self) ne 'HASH') {
-        return ($self->{type_data}->{$thingie}?1:0);
-    } elsif (ref($self)) {
-        # No idea, just assume it's not whatever.
-        return;
+    my $object_type_id;
+    if (ref($self) eq 'HASH') {
+        $object_type_id = $self->{object_type_id};
+    } if (ref($self)) {
+        $object_type_id = $self->typeID();
     } else {
-        my $object_type_id = $self;
-        unless ($object_type_id =~/^\d+$/) {
-            $object_type_id = MinorImpact::Object::typeID($object_type_id);
-        }
-        MinorImpact::log('debug', "\$object_type_id='$object_type_id', \$thingie='$thingie'");
-        MinorImpact::log('debug', "cache is turned " . ($params->{no_cache}?'off':'on'));
-        my $DB = MinorImpact::db();
-        my $data = MinorImpact::cache("object_type_$object_type_id") unless ($params->{no_cache});
-        unless ($data) {
-            $data = $DB->selectrow_hashref("SELECT * FROM object_type ot WHERE ot.id=?", undef, ($object_type_id)) || die $DB->errstr;
-            MinorImpact::cache("object_type_$object_type_id", $data);
-        }
-        return $data->{$thingie};
+        $object_type_id = $self;
     }
-    return;
+
+    my $type = new MinorImpact::Object::Type($object_type_id) || return;
+
+    return $type->get($thingie);
 }
 
 # Take the same search parameters generated by MinorImpact::Object::Search::parseSearchString()
@@ -1849,7 +1866,9 @@ sub match {
                 next if ($value =~/^\d+$/);
                 # Once anything matches, the game's over.  We just have to 
                 #   determine if that was a good thing or a bad (!) thing.
-                if ($value =~/$test/) {
+                if (ref($value) && $value->name() =~/$test/) {
+                    return $match;
+                } elsif ($value =~/$test/) {
                     return $match;
                 }
             }
@@ -1962,6 +1981,8 @@ sub validUser {
         return 1;
     }
     MinorImpact::log('debug', "Access denied to " . $self->name() . ": no particular reason");
+    MinorImpact::log('debug', "\$test_user->id()='" . $test_user->id() ."'");
+    MinorImpact::log('debug', "\$self->userID()='" . $self->userID() ."'");
     return 0;
 }
 

@@ -15,6 +15,12 @@ use MinorImpact::Object::Field;
 
 our @ISA = qw(MinorImpact::Object::Field);
 
+=head2 new
+
+Set maxlength = 15, default_value = 0.
+
+=cut
+
 sub new {
     my $package = shift || return;
     my $data = shift || return;
@@ -29,6 +35,12 @@ sub new {
     #MinorImpact::log('info', "ending");
     return $self;
 }
+
+=head2 validate
+
+Reject any value that contains non numberic characters.
+
+=cut
 
 sub validate {
     my $self = shift || return;

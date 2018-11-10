@@ -78,6 +78,34 @@ Search for objects.
               public => 1,
         });
 
+- child => \\&hash
+
+    Further limit the results from your search to objects who's _children_ match
+    the query parameters in \\&hash.
+
+        # pull just owner who have a dodge.
+        @car_owner = MinorImpact::Object::Search::search({
+          object_type_id=>'owners',
+          child => {
+            object_type_id => 'car',
+            make => 'Dodge'
+          },
+        });
+
+- no\_child => \\&hash
+
+    The opposite of "child": exclude objects who's children match
+    \\&hash.
+
+        # pull everyone by 'viper' owners
+        @car_owner = MinorImpact::Object::Search::search({
+          object_type_id=>'owners',
+          no_child => {
+            object_type_id => 'car',
+            model => 'Viper'
+          },
+        });
+
 - id\_only
 
     Return an array of object IDs, rather than complete objects.

@@ -2,7 +2,6 @@
 
 <!-- TEMPLATE:default.object -->
 [% IF object %]
-    <div class="w3-card-4 w3-margin w3-padding">
     <div class='w3-bar'>
         [% IF object.back() %]
             <a href='[% object.back() %]' title='Back'><i class='fa fa-arrow-left fa-2x'></i></a>
@@ -15,17 +14,13 @@
             [% INCLUDE index_menu_site %]
         [% END %]
     </div>
-    [% IF not object.isNoName() %]
-        <div class="w3-container"><h1>[% object.name({format=>'title'}) %]</h1></div>
-    [% END %]
     [% object.toString({format=>'page'}) %]
     <div class="w3-tiny w3-right" style="padding-bottom:4px"><em>Last modified [% object.get('mod_date') %]</em></div>
-    </div>
 [% END %]
 
-[% INCLUDE add_types %]
-
 [% INCLUDE object_site %]
+
+[% INCLUDE add_types %]
 
 [% IF objects.size %]
     [% INCLUDE list_object %]

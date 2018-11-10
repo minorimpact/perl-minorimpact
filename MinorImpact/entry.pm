@@ -1,13 +1,41 @@
 package MinorImpact::entry;
 
+=head1 NAME
+
+MinorImpact::entry - A 'blog entry' object.
+
+=head1 SYNOPSIS
+
+  use MinorImpact;
+
+  $entry = new MinorImpact::entry({ 
+    name => 'Tuesday', 
+    content => "I've never quite gotten the hang of Tuesdays.",
+    publish_date => "1992-04-06"m
+    public => 1,
+  });
+
+=head1 DESCRIPTION
+
+Part of the default/example MinorImpact application, this is a very simple "blog entry" object
+inherited from L<MinorImpact::Object>.
+
+=cut
+
 use strict;
 
 use Time::Local;
 
+use MinorImpact::comment;
 use MinorImpact::Object;
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 
 our @ISA = qw(MinorImpact::Object);
+
+=head1 METHODS
+
+=cut
 
 sub new {
     my $package = shift;
@@ -48,6 +76,12 @@ sub new {
     return $self;
 }
 
+=head2 cmp
+
+Overrides the default and Uses 'publish_date' for sorting.
+
+=cut
+
 sub cmp {
     my $self = shift || return;
     my $b = shift;
@@ -59,17 +93,37 @@ sub cmp {
     return $self->get('publish_date');
 }
 
-our $VERSION = 15;
+sub children {
+    my $self = shift || die "No self";
+    my $params = shift || {};
+    MinorImpact::log('debug', "starting");
+
+
+    my $local_params = clone($params);
+    $local_params->{query} = {} unless (defined($local_params->{query}));
+    $local_params->{query}{object_type_id} = "MinorImpact::comment";
+
+    #$local_params->{query}{no_child} = { "where" => "object_data.object_field_id=? AND", where_fields => [MinorImpact::Object::fieldID("MinorImpact::comment", "reply_to")]};
+    #$local_params->{query}{child} = { "reply_to>" => 0 };
+    $local_params->{query}{reply_to} = 0;
+
+    my @comments = $self->SUPER::children($local_params);
+
+    MinorImpact::log('debug', "ending");
+    return @comments;
+}
+
+our $VERSION = 26;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
     # Verify type exists.
     my $name = __PACKAGE__;
-    my $type = MinorImpact::Object::Type::add({ name => $name, plural=>'entries', public=>1 });
+    my $type = MinorImpact::Object::Type::add({ name => $name, plural=>'entries', comments => 1, public=>1 });
     die "Could not add object_type record\n" unless ($type);
 
     $type->addField({ name => 'content', required => 1, type => 'text', });
-    $type->addField({ name => 'publish_date', required => 1, type => 'datetime', });
+    $type->addField({ name => 'publish_date', required => 1, type => 'datetime', sort => 1 });
 
     MinorImpact::addSetting({name => 'default_tag', type=>'string', default_value=>'' });
 
@@ -80,6 +134,12 @@ sub dbConfig {
     return;
 }
 
+=head2 toString
+
+Overrides 'page' and 'list' with custom templates.
+
+=cut
+
 sub toString {
     my $self = shift || return;
     my $params = shift || {};
@@ -88,10 +148,12 @@ sub toString {
 
     MinorImpact::log('debug', "\$params='$params'");
     my $string;
-    if ($params->{format} eq 'list') {
+    if ($params->{format} eq 'page') {
+        $string = $self->SUPER::toString({template => 'entry_page'});
+    } elsif ($params->{format} eq 'list') {
         $string = $self->SUPER::toString({template => 'entry_list'});
     } elsif ($params->{format} eq 'row') {
-        $string = "<tr><td>" . $self->get('publish_date') . "</td><td>" . $self->toString() . "</td></tr>\n";
+        $string = "<tr><td>" . $self->type()->displayName() . "</td><td>" . $self->get('publish_date') . "</td><td>" . $self->toString() . "</td></tr>\n";
     } else {
         $string = $self->SUPER::toString($params);
     }
@@ -99,4 +161,11 @@ sub toString {
     MinorImpact::log('debug', "ending");
     return $string;
 }
+
+=head1 AUTHOR
+
+Patrick Gillan <pgillan@minorimpact.com>
+
+=cut
+
 1;

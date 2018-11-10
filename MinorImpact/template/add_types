@@ -1,3 +1,6 @@
 [% FOR object_type IN types %]
     <a href="[% url({ action=>'add', object_type_id=>object_type.id() })  %]" class="w3-bar-item w3-button">Add [% object_type.displayName() %]</a>
 [% END %]
+[% IF object && object.isType('comments') %]
+    <a href="[% url({ action=>'add', object_type_id=>'MinorImpact::comment', params => { object=> object.id() } })  %]" class="w3-bar-item w3-button">Add comment</a>
+[% END %]

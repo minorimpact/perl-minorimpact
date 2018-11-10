@@ -110,6 +110,12 @@ Add a new object type to the MinorImpact application.
 
 ### options
 
+- comments => TRUE/FALSE
+
+    Turn on comments for this object type.
+
+    Default: FALSE
+
 - name => STRING
 
     The name of the object.  This must also be how it's accessed in code:
@@ -164,6 +170,8 @@ Adds a field to the database
 
     MinorImpact::Object::Type::addField({ object_type_id => $object_type_id, name=>'address', type=>'string'});
 
+See [MinorImpact::Object::Field::add()](./MinorImact_Object_Field.md#add) for a complete set of options.
+
 ### options
 
 - name
@@ -173,6 +181,24 @@ Adds a field to the database
 - type
 
     The type of field.
+
+## childTypeIDs
+
+- ->childTypeIDs()
+
+Returns a list of oject type ids that have fields of a this 
+object type.
+
+    @child_type_ids = $TYPE->childTypeIDs();
+
+## childTypes
+
+- ->childTypes()
+
+Returns a list of oject types ids that have fields of a this 
+object type.
+
+    @child_types = $TYPE->childTypes();
 
 ## clearCache
 

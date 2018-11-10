@@ -4,6 +4,7 @@ use strict;
 
 use JSON;
 use MinorImpact;
+use MinorImpact::settings;
 use MinorImpact::Util;
 
 =head1 NAME
@@ -219,7 +220,7 @@ sub get {
     return $self->{data}->{$name};
 }
 
-sub getCollections {
+sub collections {
     my $self = shift || return;
     my $params = shift || {};
 
@@ -229,7 +230,7 @@ sub getCollections {
         $local_params->{query} ||= {};
         $local_params->{query} = { 
                             %{$local_params->{query}},
-                            debug          => 'MinorImpact::User::getCollections();',
+                            debug          => 'MinorImpact::User::collections();',
                             id_only        => 1,
                             object_type_id => MinorImpact::Object::typeID('MinorImpact::collection'), 
                             user_id        => $self->id(),

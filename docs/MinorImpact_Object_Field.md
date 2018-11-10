@@ -62,11 +62,116 @@ NOTE: This returns an array pointer because sometimes fields are arrays, and
 it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 
+If the field type is a reference to another MinorImpact::Object, the values returned
+will be objects, not IDs.
+
 ## displayName
 
 - ->displayName()
 
 Returns a "nicer" version of name.
+
+## isArray
+
+Returns TRUE if the field contains and array of values.
+
+    if ($FIELD->isArray()) {
+      # do array things
+    } else {
+      # do scalar things
+    }
+
+## isHidden
+
+Returns TRUE is this field is marked 'hidden'.
+
+    if ($FIELD->isHidden()) {
+      # don't show the field
+    } else {
+      # show the field
+    }
+
+Equivilant to:
+
+    $FIELD->get('hidden');
+
+## isReadonly
+
+Returns TRUE is this field is marked 'readonly'.
+
+    if ($FIELD->isReadonly()) {
+      # no editing
+    } else {
+      # edit
+    }
+
+Equivilant to:
+
+    $FIELD->get('readonly');
+
+## isRequired
+
+Returns TRUE is this field is marked 'required'.
+
+    if ($FIELD->isRequired()) {
+      # set the field
+    } else {
+      # don't set the field
+    }
+
+Equivilant to:
+
+    $FIELD->get('required');
+
+## add
+
+- ::add(\\%params)
+
+    MinorImpact::Object::Field::add
+
+### params
+
+- default\_value => $string
+
+    The default value of the field if nothing is set by the user.
+
+- description => $string
+
+    A brief description of the field.  Currently unused, but eventually intended
+    for "help" tooltips on forms, or other places.
+
+- hidden => TRUE/FALSE
+
+    This field will not be shown to the user or editable on forms.  Default: FALSE
+
+- name => $string
+
+    Field name.  Required.
+
+- object\_type\_id => $int
+
+    The object type this field will be 
+    &#x3d;item readonly => TRUE/FALSE
+
+    Field will be shown to the user, but will not be editable on forms.  Default: FALSE
+
+- required => TRUE/FALSE
+
+    Whether or not this field is required to be set.  Default: FALSE
+
+- sortby => TRUE/FALSE
+
+    This field will be used by [MinorImpact::Object::cmp()](./MinorImpact_Object.md#cmp) to 
+    sort lists of objects.  If set on more than one field in the same object type, results
+    are undefined. Default: FALSE
+
+- type => $string
+
+    The type of field.  Required.
+
+    Some valid types are "string", "int", "float", "text", "datetime", and "boolean".
+    See [MinorImpact::Manual::Objects](./MinorImpact_Manual_Objects.md#fields) for more
+    information.
 
 ## clearCache
 

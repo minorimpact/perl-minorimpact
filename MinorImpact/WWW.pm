@@ -52,14 +52,18 @@ sub add {
     my $object_type_id = $CGI->param('type_id') || $CGI->param('type') || $CGI->param('id') || $MINORIMPACT->redirect();
     my $type = new MinorImpact::Object::Type($object_type_id) || $MINORIMPACT->redirect();
     MinorImpact::log('debug', "\$type->name()='" . $type->name() . "'");
-    $MINORIMPACT->redirect() if ($type->isReadonly() || $type->isSystem());
+
+    if ($type->isReadonly() || $type->isSystem()) {
+        $MINORIMPACT->redirect();
+        MinorImpact::log('debug', "ending");
+    }
 
     my $object;
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
         if ($action eq 'add') {
-            #MinorImpact::log('debug', "submitted action eq 'add'");
+            MinorImpact::log('debug', "submitted action eq 'add'");
             $params->{user_id} = $user->id();
             $params->{object_type_id} = $type->id();
 
@@ -78,26 +82,17 @@ sub add {
         }
         if ($object && !scalar(@errors)) {
             my $back = $object->back() || MinorImpact::url({ action => 'object', object_id => $object->id() });
+            MinorImpact::log('debug', "ending");
             $MINORIMPACT->redirect($back);
         }
     }
 
-    #my $type_name = $type->name();
-    #my $local_params = { object_type_id=>$type->id(), no_cache => 1 };
-    #MinorImpact::log('debug', "\$type_name='$type_name'");
-    my $form;
-    eval {
-        $form = $type->form({no_cache => 1}); #$local_params);
-    };
-    if ($@) {
-        $form = MinorImpact::Object::form({ object_type_id=>$type->id(), no_cache => 1 }); #$local_params);
-    }
+    my $form = $type->form({no_cache => 1});
 
     MinorImpact::tt('add', {
                         errors           => [ @errors ],
                         form             => $form,
-                        object_type_name => $type->name(),
-                        object_type_id   => $type->id(),
+                        object_type      => $type,
                     });
     MinorImpact::log('debug', "ending");
 }
@@ -165,7 +160,7 @@ sub delete {
     $MINORIMPACT->redirect({ action => 'home' }) unless ($object);
     my $back = $object->back();
 
-    $object->delete() ;
+    $object->delete();
     $MINORIMPACT->redirect($back);
 }
 
@@ -178,7 +173,6 @@ sub delete_search {
 
     my $collection_id = $CGI->param('collection_id') || $CGI->param('cid') || $CGI->param('id') || $MINORIMPACT->redirect();
 
-    #MinorImpact::debug(1);
     my $collection = new MinorImpact::Object($collection_id);
     MinorImpact::log('debug', "\$collection->user_id()='" . $collection->user_id() . "', \$user->id()='" . $user->id() . "'");
     if ($collection && $collection->user_id() == $user->id()) {
@@ -220,7 +214,6 @@ sub edit {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{no_cache} = 1;
@@ -234,12 +227,20 @@ sub edit {
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
         my $params = $CGI->Vars;
-        # Add the booleans manually, since unchecked values don't get 
-        #   submitted.
         my $fields = $object->fields();
-        foreach my $name (keys %$fields) {
-            if ($fields->{$name}->type() eq 'boolean' && !defined($params->{$name})) {
-                $params->{$name} = 0;
+        foreach my $field_name (keys %$fields) {
+            my $field = $fields->{$field_name};
+            my $field_type = $field->type();
+            if ($field_type eq 'boolean' && !defined($params->{$field_name})) {
+                # Add the booleans manually, since unchecked values don't get 
+                #   submitted.
+                $params->{$field_name} = 0;
+            } elsif (ref($field_type) && (!$params->{$field_name}) && $field->isRequired()) {
+                # If this is a reference to an object type, and it's required, *and* it's
+                #   not already set, set it to the last one of that type the user was 
+                #   looking at.
+                my $last_id = MinorImpact::WWW::viewHistory($field_type->name());
+                $params->{$field_name} = $last_id if ($last_id);
             }
         }
 
@@ -270,7 +271,6 @@ sub edit {
                         object   =>$object,
                     });
     MinorImpact::log('debug', "ending");
-    #MinorImpact::debug(0);
 }
 
 sub settings {
@@ -279,7 +279,7 @@ sub settings {
 
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
-    my $settings = $user->settings();
+    my $settings = $user->settings() || die "Can't get settings for " . $user->name();
 
     my @errors;
     if ($CGI->param('submit') || $CGI->param('hidden_submit')) {
@@ -398,7 +398,7 @@ sub home {
     my @types = MinorImpact::Object::types({ readonly => 0, system => 0 });
 
     #foreach my $object_type_id (MinorImpact::Object::getTypeID()) {
-    #    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object_type_id}));
+    #    push(@types, MinorImpact::Object::childTypeIDs({ object_type_id=>$object_type_id}));
     #}
 
     MinorImpact::log('debug', "\$local_params->{search_placeholder}='". $local_params->{search_placeholder} . "'");
@@ -435,26 +435,25 @@ sub index {
     my $limit = $CGI->param('limit');
     my $page = $CGI->param('page');
 
-    my $local_params = cloneHash($params);
     my @objects;
-    unless (defined($local_params->{query})) {
+    unless (defined($params->{query})) {
         # Just grab whatever comes up as the default type and hope for
         #   the best.
-        $local_params->{query} = {};
-        $local_params->{query}{admin} = 1;
-        $local_params->{query}{object_type_id} = MinorImpact::Object::getTypeID();
-        $local_params->{query}{public} = 1;
+        $params->{query} = {};
+        $params->{query}{admin} = 1;
+        $params->{query}{object_type_id} = MinorImpact::Object::getTypeID();
+        $params->{query}{public} = 1;
     }
 
-    $local_params->{query}{limit} = $limit if ($limit);
-    $local_params->{query}{page} = $page if ($page);
+    $params->{query}{limit} = $limit if ($limit);
+    $params->{query}{page} = $page if ($page);
 
-    push(@objects, MinorImpact::Object::Search::search($local_params));
+    push(@objects, MinorImpact::Object::Search::search($params));
 
     MinorImpact::tt('index', {
         action => 'index',
         objects => [ @objects ],
-        query => $local_params->{query},
+        query => $params->{query},
     });
     MinorImpact::log('debug', 'ending');
 }
@@ -524,11 +523,12 @@ sub object {
     }
 
     $MINORIMPACT->redirect() unless ($object);
-    my $local_params = cloneHash($params);
+    my $type = $object->type();
+
     # Making a list of all possible types to so we can build a list of 'add new <type>'
     #   buttons on the template.
-    my @types;
-    push(@types, MinorImpact::Object::getChildTypeIDs({ object_type_id=>$object->typeID()}));
+
+    my @types = $object->childTypes();
 
     my @objects;
     if ($format eq 'json') {
@@ -538,34 +538,18 @@ sub object {
         print to_json($data);
         return;
     }
-    viewHistory($object->typeName() . "_id", $object->id());
+    viewHistory($type->name(), $object->id());
 
-
-    #my $tab_number = 0;
-    ## TODO: figure out some way for these to be alphabetized
-    #$tab_id = MinorImpact::Object::typeID($tab_id) unless ($tab_id =~/^\d+$/);
-    #foreach my $child_type_id (@types) {
-    #    last if ($child_type_id == $tab_id);
-    #    $tab_number++;
-    #}
-
-    @objects = $object->getChildren({ query => { limit => ($limit + 1), page => $page } });
-
-    my $url_prev;
-    my $url_next;
-    if (scalar(@objects)) {
-        $url_prev = ($page>1)?(MinorImpact::url({ action=>'object', object_id=>$object->id(), limit=>$limit, page=> $page?($page - 1):'' })):'';
-        $url_next = (scalar(@objects)>$limit)?MinorImpact::url({ action=>'object', object_id=>$object->id(), limit=>$limit, page=> $page?($page + 1):'' }):'';
-        pop(@objects) if ($url_next);
-    }
+    my $child_params = { query => { limit => $limit, page => $page } };
+    my @children = $object->children($child_params);
 
     MinorImpact::tt('object', {
+                            action      => "object",
                             object      => $object,
-                            objects     => [ @objects ],
+                            objects     => [ @children ],
+                            query       => $child_params->{query},
                             #tab_number  => $tab_number,
                             types       => [ @types ],
-                            url_prev    => $url_prev,
-                            url_next    => $url_next,
                             });
     MinorImpact::log('debug', "ending");
 }
@@ -682,7 +666,6 @@ sub search {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = $MINORIMPACT->cgi();
@@ -775,7 +758,6 @@ sub search {
     $page = $local_params->{query}{page};
     $limit = $local_params->{query}{limit};
     $search = $local_params->{query}{text};
-    #MinorImpact::debug(0);
 
     my $tab_number = 0;
     # TODO: figure out some way for these to be alphabetized
@@ -860,7 +842,7 @@ sub tablist {
     my $max;
     my @objects;
     if ($object) {
-        @objects = $object->getChildren($local_params);
+        @objects = $object->children($local_params);
     } else {
         @objects = MinorImpact::Object::Search::search($local_params);
     }
@@ -963,13 +945,14 @@ sub user {
 
 =item viewHistory()
 
+=item viewHistory( $object_type )
 
-=item viewHistory( $field )
-
-
-=item viewHistory( $field, $value )
+=item viewHistory( $object_type, $id )
 
 =back
+
+Records the id of the last $id of $object_type a person
+looked at in the WWW::Object() action.
 
 =cut
 

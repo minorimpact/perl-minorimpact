@@ -87,7 +87,6 @@ sub get {
 sub searchParams {
     my $self = shift || return;
 
-    #MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $params = { debug => 'collection::searchParams();' }; 
     foreach my $tag ($self->get('tag')) {
@@ -111,7 +110,6 @@ sub searchParams {
     #MinorImpact::log('debug', "\$params->{text}='" . $params->{text} . "'");
     
     MinorImpact::log('debug', "ending");
-    #MinorImpact::debug(0);
     return $params;
 }
 
@@ -150,9 +148,7 @@ sub update {
     if ($local_params->{search_filter}) {
         $local_params->{search_filter} = encode_base64(nfreeze($local_params->{search_filter}));
     }
-    #MinorImpact::debug(1);
     $self->SUPER::update($local_params);
-    #MinorImpact::debug(0);
 }
 
 1;

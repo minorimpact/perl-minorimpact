@@ -12,8 +12,11 @@ use Digest::MD5 qw(md5 md5_hex);
 use File::Spec;
 use JSON;
 use MinorImpact::CLI;
+use MinorImpact::collection;
 use MinorImpact::Config;
+use MinorImpact::entry;
 use MinorImpact::Object;
+use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
 use MinorImpact::Util::DB;
@@ -25,7 +28,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
-our $VERSION = 6;
+our $VERSION = 8;
 
 =head1 NAME
 
@@ -212,9 +215,9 @@ sub new {
     my $options = shift || {};
 
     my $self = $SELF;
-    MinorImpact::log('debug', "starting");
 
     unless ($self) {
+        MinorImpact::log('debug', "starting");
         MinorImpact::log('notice', "creating new MinorImpact object") unless ($options->{no_log});
 
         my $config;
@@ -271,6 +274,7 @@ sub new {
         if (cache("MinorImpact_VERSION") != $VERSION) {
             dbConfig($self->{DB});
         }
+        MinorImpact::log('debug', "ending");
     }
 
     if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
@@ -294,7 +298,6 @@ sub new {
         $self->redirect();
     }
 
-    MinorImpact::log('debug', "ending");
     return $self;
 }
 
@@ -343,7 +346,7 @@ L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration/Settings
 sub cache {
     my $self = shift || return;
 
-    MinorImpact::log('debug', "starting");
+    #MinorImpact::log('debug', "starting");
 
     if (!ref($self)) {
         unshift(@_, $self);
@@ -369,19 +372,21 @@ sub cache {
 
     $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
     if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
-        MinorImpact::log('debug', "removing '$name'");
+        #MinorImpact::log('debug', "removing '$name'");
+        #MinorImpact::log('debug', "ending");
         return $cache->remove($name);
     }
     if (!defined($value)) {
         $value = $cache->get($name);
         #MinorImpact::log('debug', "$name='" . $value . "'");
+        #MinorImpact::log('debug', "ending");
         return $value;
     }
 
-    MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
+    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
     $cache->set($name, $value, $timeout);
 
-    MinorImpact::log('debug', "ending");
+    #MinorImpact::log('debug', "ending");
     return $cache;
 }
 
@@ -794,7 +799,7 @@ sub url {
     my $collection_id = $params->{collection_id} if (defined($params->{collection_id}));
     my $limit = $params->{limit};
     my $object_id = $params->{object_id} || $params->{id};
-    my $object_type_id = $params->{object_type_id};
+    my $object_type_id = MinorImpact::Object::typeID($params->{object_type_id});
     my $page = $params->{page};
     my $search = $params->{search} if ($params->{search});
     my $sort = $params->{sort} if ($params->{sort});
@@ -803,6 +808,7 @@ sub url {
 
     my $pretty = isTrue($self->{conf}{default}{pretty_urls});
     my $qualified = isTrue($params->{qualified});
+
 
     my $url;
     my $domain = "https://$ENV{HTTP_HOST}";
@@ -1361,6 +1367,7 @@ sub dbConfig {
     MinorImpact::Util::DB::addTable($DB, {
         name => 'object_type',
         fields => {
+            comments => { type => "boolean", null => 0 },
             create_date => { type => "datetime", null => 0 },
             default_value => { type => "varchar(255)", null => 0 },
             description => { type => "text" },
@@ -1468,6 +1475,7 @@ sub dbConfig {
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::entry::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::entry"));
+    MinorImpact::comment::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::comment"));
 
     my $admin = new MinorImpact::User('admin');
     unless ($admin) {
@@ -1496,7 +1504,9 @@ Turn debugging on or off by setting C<$switch> to true or false.
 =cut
 
 sub debug {
-    my $toggle = shift || 0;
+    my $toggle = shift;
+    
+    return $$MinorImpact::debug unless (defined($toggle));
 
     # I'm not sure if I'm ever going to use this, but it might come in handy.
     my $sub = (caller(1))[3];

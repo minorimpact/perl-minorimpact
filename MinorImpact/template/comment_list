@@ -1,0 +1,6 @@
+<div class="w3-row" style="margin-left:[% (depth && depth*15) || 0 %]px">
+    <small>[% object.get('create_date') %] - <a href=[% url({ action => 'user', user_id => object.get('user_id')}) %]>[% object.userName() %]</a></small><br />
+    [% object.get('text', { markdown => 1 }) %]
+    <a href="[% url({ action => 'add', object_type_id => object.typeID(), params => { object => object.id() }}) %]">reply</a>
+</div>
+<hr>

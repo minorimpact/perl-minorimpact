@@ -10,9 +10,11 @@ use MinorImpact::Object::Field::boolean;
 use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::float;
 use MinorImpact::Object::Field::int;
+use MinorImpact::Object::Field::object;
 use MinorImpact::Object::Field::password;
 use MinorImpact::Object::Field::text;
 use MinorImpact::Object::Field::url;
+use MinorImpact::Object::Type;
 use Text::Markdown 'markdown';
 
 =head1 NAME
@@ -23,7 +25,7 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 
 =cut
 
-our @valid_types = ('boolean', 'datetime', 'float', 'int', 'password', 'string', 'text', 'url');
+our @valid_types = ('boolean', 'datetime', 'float', 'int', 'object', 'password', 'string', 'text', 'url');
 our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 'object_type_id', 'public', 'user_id' );
 
 =head2 new
@@ -180,7 +182,7 @@ sub defaultValue {
 sub update {
     my $self = shift || return;
 
-    #MinorImpact::log("starting");
+    MinorImpact::log('debug', "starting");
     my @values = ();
     foreach my $v (@_) {
         if (ref($v) eq 'ARRAY') {
@@ -191,14 +193,22 @@ sub update {
     }
 
     my @split_values = ();
-    foreach my $split_value (map { split(/\0/, $_); } @values) {
-        $self->validate($split_value);
-        push(@split_values, $split_value);
+    foreach my $value (@values) {
+        if (ref($value)) {
+            my $id = $value->id();
+            $self->validate($id);
+            push(@split_values, $id);
+        } else {
+            foreach my $split_value (split(/\0/, $value)) {
+                $self->validate($split_value);
+                push(@split_values, $split_value);
+            }
+        }
     }
 
     if ($self->id() && $self->object_id()) {
         my $object_id = $self->object_id();
-        MinorImpact::cache("object_data_$object_id", {});
+        MinorImpact::Object::clearCache($object_id);
         my $DB = MinorImpact::db();
         if ($self->isText()) {
             $DB->do("delete from object_text where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
@@ -250,7 +260,7 @@ sub validate {
     }
     die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
 
-    MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending(valid)");
     return $value;
 }
 
@@ -277,14 +287,27 @@ NOTE: This returns an array pointer because sometimes fields are arrays, and
 it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 
+If the field type is a reference to another MinorImpact::Object, the values returned
+will be objects, not IDs.
+
 =cut
 
 sub value { 
     my $self = shift || return; 
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting");
     my $values = [];
-    $values = clone($self->{value}) if (defined($self->{value}));
+    if (defined($self->{value})) {
+        if (ref($self->type())) {
+            foreach my $value (@{$self->{value}}) {
+                push(@$values, new MinorImpact::Object($value));
+            }
+        } else {
+            $values = clone($self->{value});
+        }
+    }
+    MinorImpact::log('debug', "starting");
     return @$values;
 }
 
@@ -366,7 +389,23 @@ sub toString {
 sub type {
     my $self = shift || return;
 
-    return $self->{db}{type};
+    MinorImpact::log('debug', "starting");
+
+    my $type = $self->{db}{type};
+
+    if ($type =~/^object/) {
+        my $object_type;
+        if ($type =~/object\[(\d+)\]/) {
+            my $object_type_id = $1;
+            $object_type = new MinorImpact::Object::Type($object_type_id);
+        } elsif ($type eq 'object') {
+            $object_type = new MinorImpact::Object::Type();
+        }
+        $type = $object_type if ($object_type);
+    }
+
+    MinorImpact::log('debug', "ending");
+    return $type;
 }
 
 # Returns a row in a table that contains the field name and the input field.
@@ -374,7 +413,7 @@ sub rowForm {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('info', "start");
+    MinorImpact::log('debug', "start");
 
     my $name = $self->name()|| return;
     my $local_params = clone($params);
@@ -400,7 +439,7 @@ sub rowForm {
         $local_params->{row_value} = htmlEscape($values[0]);
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row);
     }
-    #MinorImpact::log('info', "ending");
+    MinorImpact::log('debug', "ending");
     return $row;
 }
 
@@ -409,18 +448,34 @@ sub _input {
     my $self = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting");
+
     my $name = $params->{name} || $self->name();
     my $value = $params->{row_value};
     my $row;
-    if ($self->type() =~/object\[(\d+)\]$/) {
-        my $object_type_id = $1;
-        my $local_params = clone($params);
-        $local_params->{query}{debug} .= "Object::Field::_input();";
-        $local_params->{query}{object_type_id} = $object_type_id;
-        $local_params->{fieldname} = $name;
-        $local_params->{selected} = $value;
-        $local_params->{required} = $self->get('required');
-        $row .= "" .  MinorImpact::Object::selectList($local_params);
+    if (ref($self->type())) {
+        if ( $self->isHidden() || $self->isReadonly()) {
+            $row .= "<input type=hidden name='$name' id='$name' value='$value'>\n";
+            if (!$self->isHidden()) {
+                my $object = new MinorImpact::Object($value);
+                if ($object) {
+                    $row .= $object->toString();
+                }
+            }
+        } else {
+            my $object_type_id = $1;
+            my $local_params = clone($params);
+            $local_params->{query}{debug} .= "Object::Field::_input();";
+            $local_params->{query}{object_type_id} = $object_type_id;
+            $local_params->{fieldname} = $name;
+            $local_params->{selected} = $value;
+            $local_params->{required} = $self->get('required');
+            $row .= "" .  MinorImpact::Object::selectList($local_params);
+        }
+    } elsif ( $self->get('hidden') ) {
+        $row .= "<input type=hidden name='$name' id='$name' value='$value'>\n";
+    } elsif ( $self->isReadonly() ) {
+        $row .= "$value <input type=hidden name='$name' id='$name' value='$value'>\n";
     } else {
         $row .= "<input class='w3-input w3-border' id='$name' type=text name='$name' value='$value'";
         if ($name eq 'name') {
@@ -433,10 +488,23 @@ sub _input {
         }
         $row .= ">\n";
     }
+
+    MinorImpact::log('debug', "ending");
     return $row;
 }
 
-# Returns true if this field contains an array of values.
+=head2 isArray
+
+Returns TRUE if the field contains and array of values.
+
+  if ($FIELD->isArray()) {
+    # do array things
+  } else {
+    # do scalar things
+  }
+
+=cut
+
 sub isArray {
     my $self = shift || return;
 
@@ -444,13 +512,133 @@ sub isArray {
     return 0;
 }
 
-# Add a new field to an object.
+=head2 isHidden
+
+Returns TRUE is this field is marked 'hidden'.
+
+  if ($FIELD->isHidden()) {
+    # don't show the field
+  } else {
+    # show the field
+  }
+
+Equivilant to:
+
+  $FIELD->get('hidden');
+
+=cut
+
+sub isHidden {
+    return shift->get('hidden');
+}
+
+=head2 isReadonly
+
+Returns TRUE is this field is marked 'readonly'.
+
+  if ($FIELD->isReadonly()) {
+    # no editing
+  } else {
+    # edit
+  }
+
+Equivilant to:
+
+  $FIELD->get('readonly');
+
+=cut
+
+sub isReadonly {
+    return shift->get('readonly');
+}
+
+=head2 isRequired
+
+Returns TRUE is this field is marked 'required'.
+
+  if ($FIELD->isRequired()) {
+    # set the field
+  } else {
+    # don't set the field
+  }
+
+Equivilant to:
+
+  $FIELD->get('required');
+
+=cut
+
+sub isRequired {
+    return shift->get('required');
+}
+
 sub addField {
     add(@_);
 }
 
+=head2 add
+
+=over
+
+=item ::add(\%params)
+
+=back
+
+  MinorImpact::Object::Field::add
+
+=head3 params
+
+=over
+
+=item default_value => $string
+
+The default value of the field if nothing is set by the user.
+
+=item description => $string
+
+A brief description of the field.  Currently unused, but eventually intended
+for "help" tooltips on forms, or other places.
+
+=item hidden => TRUE/FALSE
+
+This field will not be shown to the user or editable on forms.  Default: FALSE
+
+=item name => $string
+
+Field name.  Required.
+
+=item object_type_id => $int
+
+The object type this field will be 
+=item readonly => TRUE/FALSE
+
+Field will be shown to the user, but will not be editable on forms.  Default: FALSE
+
+=item required => TRUE/FALSE
+
+Whether or not this field is required to be set.  Default: FALSE
+
+=item sortby => TRUE/FALSE
+
+This field will be used by L<MinorImpact::Object::cmp()|MinorImpact::Object/cmp> to 
+sort lists of objects.  If set on more than one field in the same object type, results
+are undefined. Default: FALSE
+
+=item type => $string
+
+The type of field.  Required.
+
+Some valid types are "string", "int", "float", "text", "datetime", and "boolean".
+See L<MinorImpact::Manual::Objects|MinorImpact::Manual::Objects/fields> for more
+information.
+
+=back
+
+=cut
+
 sub add {
     my $params = shift || return;
+    MinorImpact::log('debug', "starting");
 
     my $DB = MinorImpact::db() || die "Can't connect to database.";
 
@@ -484,10 +672,10 @@ sub add {
     }
 
     $object_type->clearCache();
+    my $field;
     MinorImpact::log('debug', "adding field '" . $object_type_id . "-" . $local_params->{name} . "'");
     my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
     if ($data) {
-        MinorImpact::log('debug', "This already fucking exists?!");
         my $object_field_id = $data->{id};
         $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
         $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
@@ -497,11 +685,12 @@ sub add {
         $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr unless ($data->{description} eq $local_params->{description});
         MinorImpact::log('debug', "UPDATE object_field SET default_value=? WHERE id=?,'" . $local_params->{default_value} . "', '$object_field_id', \$data->{default_value}='" . $data->{default_value} . "'");
         $DB->do("UPDATE object_field SET default_value=? WHERE id=?", undef, ($local_params->{default_value}, $object_field_id)) || die $DB->errstr unless ($data->{default_value} eq $local_params->{default_value});
+        $field = new MinorImpact::Object::Field($object_field_id);
     } else {
         $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
         MinorImpact::log('debug', "new object_field_id='$object_field_id'");
-        my $field = new MinorImpact::Object::Field($object_field_id);
+        $field = new MinorImpact::Object::Field($object_field_id);
         MinorImpact::log('debug', "\$field->defaultValue()='" . $field->defaultValue() . "'");
         my $data = $DB->selectall_arrayref("SELECT id FROM object WHERE object_type_id=?", {Slice=>{}}, ($object_type_id)) || die $DB->errstr;
         foreach my $row (@$data) {
@@ -514,6 +703,8 @@ sub add {
             }
         }
     }
+    MinorImpact::log('debug', "ending");
+    return $field;
 }
 
 =head2 clearCache

@@ -82,8 +82,11 @@ Display objects and information about a particular user.
 ## viewHistory
 
 - viewHistory()
-- viewHistory( $field )
-- viewHistory( $field, $value )
+- viewHistory( $object\_type )
+- viewHistory( $object\_type, $id )
+
+Records the id of the last $id of $object\_type a person
+looked at in the WWW::Object() action.
 
 # AUTHOR
 

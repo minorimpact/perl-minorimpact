@@ -61,6 +61,55 @@ object.
 
     Additional url parameters that you want to be included in the link.
 
+## children
+
+- ->children(\\%params)
+
+Returns a list of objects with fields that refer to $OBJECT.
+
+    $OBJECT->children({ object_type_id => 'MinorImpact::comment' });
+
+### params
+
+See [MinorImpact::Object::Search::search()](./MinorImpact_Object_Search.md#search) for
+a complete list of suppoerted parameters.
+
+- object\_type\_id => $string
+
+    Get childen of a particular type.
+
+## childTypeIDs
+
+- ::childTypeIDs(\\%params)
+- ->childTypeIDs()
+
+Returns a list of oject types ids that have fields of a particular object type.
+If called as a subroutine, requires `object_type_id` as a parameter.
+
+    @type_ids = MinorImpact::Object::childTypeIDs({object_type_id => $object_type_id});
+
+If called as an object method, uses that object's type\_id.
+
+    @type_ids = $OBJECT->childTypeIDs();
+
+... is equivilant to:
+
+    @type_ids = MinorImpact::Object::childTypeIDs({object_type_id => $OBJECT->type_id()});
+
+### params
+
+- object\_type\_id
+
+    Get a list of types that reference this type of object.
+    REQUIRED
+
+## childTypes
+
+Returns an array of MinorImpact::Object::Type objects that reference objects of
+this particular object's type.
+
+    @child_types = $OBJECT->childTypes()
+
 ## clearCache
 
 Clear the cache of items related to $OBJECT.
@@ -340,48 +389,6 @@ Called as an object method with an array of @tags, replaces the objects tags.
 
     @tags = ("tag1", "tag2");
     $OBJECT->tags(@tags);
-
-## getChildTypeIDs
-
-- ::getChildTypeIDs(\\%params)
-- ->getChildTypeIDs()
-
-Returns a list of oject types ids that have fields of a particular object type.
-If called as a subroutine, requires `object_type_id` as a parameter.
-
-    @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $object_type_id});
-
-If called as an object method, uses that object's type\_id.
-
-    @type_ids = $OBJECT->getChildTypeIDs();
-
-... is equivilant to:
-
-    @type_ids = MinorImpact::Object::getChildTypeIDs({object_type_id => $OBJECT->type_id()});
-
-### params
-
-- object\_type\_id
-
-    Get a list of types that reference this type of object.
-    REQUIRED
-
-## getChildren
-
-- ->getChildren(\\%params)
-
-Returns a list of objects with fields that refer to $OBJECT.
-
-    $OBJECT->getChildren({ object_type_id => 'MinorImpact::comment' });
-
-### params
-
-See [MinorImpact::Object::Search::search()](./MinorImpact_Object_Search.md#search) for
-a complete list of suppoerted parameters.
-
-- object\_type\_id => $string
-
-    Get childen of a particular type.
 
 ## form
 

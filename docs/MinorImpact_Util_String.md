@@ -94,10 +94,10 @@ If a reference is passed, $string will be altered directly.
     trim(\$string);
     # RESULT: $string = "Bar";
 
-## trunq
+## trunc
 
-- trunq($string)
-- trunq($string, $length)
+- trunc($string)
+- trunc($string, $length)
 
 Returns a copy of $string reduced to no more than $length size.  The resulting
 string, if altered, will come with an ellipsis ("...") appended to indicate that 
@@ -106,14 +106,14 @@ remain under the $length cap).  Some effort will be made to cut the original str
 at a space, which makes the exact length of the returned value unknown.
 
     $string = "This is a string that's longer than I want it to be."
-    $short_string = trunq($string, 15);
+    $short_string = trunc($string, 15);
     # RESULT: $short_string = "This is a...";
 
-If the length of the  original $string is less than $length, trunq() will just
+If the length of the  original $string is less than $length, trunc() will just
 return $string.
 
     $string = "This is a string.";
-    $short_string = trunq($string, 50);
+    $short_string = trunc($string, 50);
     # RESULT: $short_string = "This is a string.";
 
 If $length is not specified, the default is 50.

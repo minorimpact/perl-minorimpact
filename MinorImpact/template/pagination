@@ -1,8 +1,8 @@
 <!-- TEMPLATE:default.pagination -->
 
-[% IF query.page > 0 OR query.result.more %]
+[% IF (query.page && query.page > 0) OR query.result.more %]
 <div class="w3-bar">
-    [% IF query.page > 1 %]
+    [% IF query.page && query.page > 1 %]
         <div class="w3-left">
             <a href="[% url({ action => action, page => (query.page - 1), limit => query.limit }) %]" class="paginate w3-button">&#10094; Previous</a>
         </div>
