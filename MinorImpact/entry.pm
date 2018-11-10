@@ -134,6 +134,36 @@ sub dbConfig {
     return;
 }
 
+
+=head2 get
+
+Overrides the 'public' value to also check whether or not 'publish_date' has
+passed.
+
+=cut
+
+sub get {
+    my $self = shift || return;
+    my $name = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::log('debug', "starting(" . $name . ")");
+
+    my $value;
+    if ($name eq 'public') {
+        if ($self->SUPER::get('public') && fromMysqlDate($self->get('publish_date')) < time()) {
+            $value = 1;
+        } else {
+            $value = 0;
+        }
+    } else {
+        $value = $self->SUPER::get($name, $params);
+    }
+
+    MinorImpact::log('debug', "ending($value)");
+    return $value;
+}
+
 =head2 toString
 
 Overrides 'page' and 'list' with custom templates.

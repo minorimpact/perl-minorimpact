@@ -152,6 +152,10 @@ sub new {
         if (ref($object_data) eq "HASH") {
             $i = $object_data->{object_type_id};
         } 
+        if ($error =~/permission denied/) {
+            MinorImpact::log('info', "id='$i',$error");
+            return;
+        }
         MinorImpact::log('crit', "133,id='$i',$error");
         die $error;
     }
@@ -215,7 +219,6 @@ sub _new {
     $self->{data}{id} = $object_id;
     $self->{data}{object_type_id} = $object_type_id;
 
-
     if (ref($id) eq 'HASH') {
         $self->{data}{user_id} = $user->id() if ($user);
         my $fields = fields($id->{object_type_id});
@@ -227,7 +230,8 @@ sub _new {
         $self->_reload($params);
     }
 
-    #MinorImpact::log('debug', "ending(" . $self->id() . ")");
+    die "permission denied" unless $self->validUser();
+    MinorImpact::log('debug', "ending(" . $self->id() . ")");
     return $self;
 }
 
@@ -737,7 +741,7 @@ sub toData {
     $data->{id} = $self->id();
     $data->{create_date} = $self->get('create_date');
     $data->{name} = $self->name();
-    $data->{public} = $self->isPublic();
+    $data->{public} = $self->get('public');
     $data->{object_type_id} = $self->type()->name();
     $data->{user_id} = $self->user()->name();
     my $fields = $self->fields();

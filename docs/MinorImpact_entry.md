@@ -24,6 +24,11 @@ inherited from [MinorImpact::Object](./MinorImpact_Object.md).
 
 Overrides the default and Uses 'publish\_date' for sorting.
 
+## get
+
+Overrides the 'public' value to also check whether or not 'publish\_date' has
+passed.
+
 ## toString
 
 Overrides 'page' and 'list' with custom templates.
