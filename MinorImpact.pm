@@ -366,28 +366,50 @@ sub cache {
         $self->{CACHE} = $cache;
     }
 
-    my $name = shift || return;
+    my $name = shift;
     my $value = shift;
     my $timeout = shift || 3600;
 
-    $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id});
-    if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
-        #MinorImpact::log('debug', "removing '$name'");
-        #MinorImpact::log('debug', "ending");
-        return $cache->remove($name);
-    }
-    if (!defined($value)) {
+    $name = $self->{conf}{default}{application_id} . "_$name" if ($self->{conf}{default}{application_id} && $name);
+    if ($name) {
+        if (ref($value) eq 'HASH' && scalar(keys(%$value)) == 0) {
+            #MinorImpact::log('debug', "removing '$name'");
+            #MinorImpact::log('debug', "ending");
+            return $cache->remove($name);
+        }
+        if (defined($value)) {
+            #MinorImpact::log('debug', "$name='" . $value . "'");
+            #MinorImpact::log('debug', "ending");
+            $cache->set($name, $value, $timeout);
+            return $value;
+        }
+
         $value = $cache->get($name);
-        #MinorImpact::log('debug', "$name='" . $value . "'");
-        #MinorImpact::log('debug', "ending");
+        #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
         return $value;
     }
 
-    #MinorImpact::log('debug', "setting $name='" . $value . "' ($timeout)");
-    $cache->set($name, $value, $timeout);
-
     #MinorImpact::log('debug', "ending");
     return $cache;
+}
+
+sub clearCache {
+    my $self = shift || return;
+
+    if (!ref($self)) {
+        unshift(@_, $self);
+        $self = $MinorImpact::SELF;
+    }
+
+    my $cache = cache();
+
+    # FUCK. 
+    # YOU.
+    if ($self->{conf}{default}{memcached_server}) {
+        $cache->flush_all();
+    } else {
+        $cache->clear();
+    }
 }
 
 sub param {
@@ -1506,7 +1528,7 @@ Turn debugging on or off by setting C<$switch> to true or false.
 sub debug {
     my $toggle = shift;
     
-    return $$MinorImpact::debug unless (defined($toggle));
+    return $MinorImpact::debug unless (defined($toggle));
 
     # I'm not sure if I'm ever going to use this, but it might come in handy.
     my $sub = (caller(1))[3];

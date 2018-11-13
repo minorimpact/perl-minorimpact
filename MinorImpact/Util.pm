@@ -434,7 +434,9 @@ sub fleshDate {
     } else {
         return;
     }
-    return timelocal($sec, $min, $hour, $day, ($month-1), $year);
+    $month = $month - 1 if ($month > 0);
+    $day = 1 if ($day eq '0' || $day eq '00');
+    return timelocal($sec, $min, $hour, $day, $month, $year);
 }
 
 =head2 fromMysqlDate
@@ -915,7 +917,7 @@ Return a UUID string.
 sub uuid {
     $SELF->{UG} = new Data::UUID unless (defined($SELF->{UG}) && $SELF->{UG});
 
-    return $SELF->{UG}->create_str();
+    return lc($SELF->{UG}->create_str());
 }
 
 =head1 AUTHOR

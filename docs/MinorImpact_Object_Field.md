@@ -47,18 +47,18 @@ die.
 
 - ->value()
 
-Returns a pointer to an array of values.
+Returns an array of values.
 
-    $values = $FIELD->value();
+    @values = $FIELD->value();
     if ($FIELD->isArray()) {
-      foreach my $value (@$values) {
+      foreach my $value (@values) {
         print "$value\n";
       }
     } else {
       print $values[0] . "\n";
     }
 
-NOTE: This returns an array pointer because sometimes fields are arrays, and
+NOTE: This returns an array because sometimes fields are arrays, and
 it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 

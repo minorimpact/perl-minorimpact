@@ -230,11 +230,10 @@ sub ptrunc {
     my $string = shift || return;
     my $num = shift || 1;
 
-    my @pars = ();
     my $delim = "\r\n\r\n";
     my $text = (ref($string)?$$string:$string);
 
-    @pars = split($delim, $text);
+    my @pars = split($delim, $text);
     if (scalar(@pars) == 1) {
         $delim = "\r\n";
         @pars = split($delim, $text);

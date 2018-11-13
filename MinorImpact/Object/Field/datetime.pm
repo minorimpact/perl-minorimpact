@@ -66,7 +66,7 @@ sub validate {
     $value = '' if ($value eq '0000-00-00 00:00:00');
 
     if ($value =~/[^\d -:]+/) {
-        die $self->name() . " contains invalid character";
+        die $self->name() . " contains invalid character ('$value')";
     }
     $value = $self->SUPER::validate($value);
 

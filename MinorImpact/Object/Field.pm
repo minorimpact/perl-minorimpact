@@ -183,27 +183,10 @@ sub update {
     my $self = shift || return;
 
     MinorImpact::log('debug', "starting");
-    my @values = ();
-    foreach my $v (@_) {
-        if (ref($v) eq 'ARRAY') {
-            push(@values, @{$v});
-        } else {
-            push(@values, $v);
-        }
-    }
+    my @values = unpackValues(@_);
 
-    my @split_values = ();
     foreach my $value (@values) {
-        if (ref($value)) {
-            my $id = $value->id();
-            $self->validate($id);
-            push(@split_values, $id);
-        } else {
-            foreach my $split_value (split(/\0/, $value)) {
-                $self->validate($split_value);
-                push(@split_values, $split_value);
-            }
-        }
+        $self->validate($value);
     }
 
     if ($self->id() && $self->object_id()) {
@@ -215,20 +198,19 @@ sub update {
         } else {
             $DB->do("delete from object_data where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
         }
-        foreach my $split_value (@split_values) {
+        foreach my $value (@values) {
             my $sql;
             if ($self->isText()) {
                 $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
             } else {
                 $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
             }
-            #MinorImpact::log('debug', "$sql \@fields=" . $object_id . ", " . $self->id() . ", $split_value");
-            MinorImpact::log('debug', "$sql, '$object_id','" . $self->id() . "','$split_value'");
-            $DB->do($sql, undef, ($object_id, $self->id(), $split_value)) || die $DB->errstr;
+            MinorImpact::log('debug', "$sql, '$object_id','" . $self->id() . "','$value'");
+            $DB->do($sql, undef, ($object_id, $self->id(), $value)) || die $DB->errstr;
         }
     }
 
-    $self->{value} = \@split_values;
+    $self->{value} = \@values;
     MinorImpact::log('debug', "ending");
 }
 
@@ -252,16 +234,46 @@ die.
 
 sub validate {
     my $self = shift || return;
-    my $value = shift;
+    my $value = shift || return;
+
     MinorImpact::log('debug', "starting");
 
     if ((!defined($value) || (defined($value) && $value eq '')) && $self->get('required')) {
+        MinorImpact::log('debug', "ending(invalid - blank)");
         die $self->name() . " cannot be blank";
     }
-    die $self->name() . ": value is too large." if ($value && length($value) > $self->{attributes}{maxlength});
+    if ($value && $self->{attributes}{maxlength} && length($value) > $self->{attributes}{maxlength}) {
+        MinorImpact::log('debug', "ending(invalid - too large)");
+        die $self->name() . ": value is too large.";
+    }
 
     MinorImpact::log('debug', "ending(valid)");
     return $value;
+}
+
+sub unpackValues {
+    my @values = ();
+    foreach my $v (@_) {
+        if (ref($v) eq 'ARRAY') {
+            push(@values, @{$v});
+        } else {
+            push(@values, $v);
+        }
+    }
+
+    my @split_values = ();
+    foreach my $value (@values) {
+        if (ref($value)) {
+            my $id = $value->id();
+            push(@split_values, $id);
+        } else {
+            foreach my $split_value (split(/\0/, $value)) {
+                push(@split_values, $split_value);
+            }
+        }
+    }
+
+    return @split_values;
 }
 
 =head2 value
@@ -272,18 +284,18 @@ sub validate {
 
 =back
 
-Returns a pointer to an array of values.
+Returns an array of values.
 
-  $values = $FIELD->value();
+  @values = $FIELD->value();
   if ($FIELD->isArray()) {
-    foreach my $value (@$values) {
+    foreach my $value (@values) {
       print "$value\n";
     }
   } else {
     print $values[0] . "\n";
   }
 
-NOTE: This returns an array pointer because sometimes fields are arrays, and
+NOTE: This returns an array because sometimes fields are arrays, and
 it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 
@@ -393,12 +405,12 @@ sub type {
 
     my $type = $self->{db}{type};
 
-    if ($type =~/^object/) {
+    if ($type =~/object/) {
         my $object_type;
-        if ($type =~/object\[(\d+)\]/) {
+        if ($type =~/^\@?object\[(\d+)\]$/) {
             my $object_type_id = $1;
             $object_type = new MinorImpact::Object::Type($object_type_id);
-        } elsif ($type eq 'object') {
+        } elsif ($type =~/^\@?object$/) {
             $object_type = new MinorImpact::Object::Type();
         }
         $type = $object_type if ($object_type);

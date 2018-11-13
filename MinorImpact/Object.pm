@@ -99,7 +99,7 @@ sub new {
 
     # If we've created this object before, just return the cached version
     #   NOTE: This is local process cache, not a persistent external cache.
-    return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id} && $id =~/^\d+$/);
+    return $OBJECT_CACHE->{$id} if ($OBJECT_CACHE->{$id} && !ref($id));
 
     eval {
         my $type_data;
@@ -117,7 +117,16 @@ sub new {
         } else {
             $type_data = MinorImpact::cache("object_id_type_$id") unless ($params->{no_cache});
             unless ($type_data) {
-                $type_data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id)) || die $DB->errstr;
+                if ($id =~/^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$/i) {
+                    $type_data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.uuid=?", undef, (lc($id)));
+                } elsif ($id =~/^\d+/) {
+                    $type_data = $DB->selectrow_hashref("SELECT ot.* FROM object o, object_type ot WHERE o.object_type_id=ot.id AND o.id=?", undef, ($id));
+                }
+                if ($DB->errstr) {
+                    die $DB->errstr;
+                } elsif (!$type_data) {
+                    die "unknown id '$id'";
+                }
                 MinorImpact::cache("object_id_type_$id", $type_data);
             }
         }
@@ -146,28 +155,32 @@ sub new {
     };
     my $error = $@;
     if ($error && ($error =~/^error:/ || $error !~/Can't locate object method "new"/)) {
-        $error =~s/ at \/.*$//;
-        $error =~s/^error://;
+        #$error =~s/ at \/.*$//;
+        #$error =~s/^error://;
         my $i = $id;
         if (ref($object_data) eq "HASH") {
             $i = $object_data->{object_type_id};
         } 
-        if ($error =~/permission denied/) {
-            MinorImpact::log('info', "id='$i',$error");
-            return;
+
+        # Some errors are worth dying for...
+        if ($error =~/invalid object /) {
+            die $error;
         }
-        MinorImpact::log('crit', "133,id='$i',$error");
-        die $error;
+
+        # ... others are not
+        MinorImpact::log('notice', "133,id='$id',$error");
+        #die $error;
+        return;
     }
 
     unless ($object) {
         $object = MinorImpact::Object::_new($package, $id||$object_data, $params);
     }
 
-
     die "permission denied" unless ($object->validUser() || $params->{admin});
 
     $OBJECT_CACHE->{$object->id()} = $object if ($object);
+    $OBJECT_CACHE->{$id} = $object if ($object && !ref($id));
     MinorImpact::log('debug', "ending");
     return $object;
 }
@@ -197,17 +210,20 @@ sub _new {
         die "invalid type id" unless ($object_type_id);
         MinorImpact::log('debug', "got object_type_id='$object_type_id'");
 
-        $id->{name} = uuid() unless ($id->{name});
 
         $user = new MinorImpact::User($id->{user_id}) if ($id->{user_id});
         die "invalid user id:" . $id->{user_id} unless ($user);
 
-        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, uuid, create_date) VALUES (?, ?, ?, ?, UUID(), NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id)) || die("Can't add new object:" . $self->{DB}->errstr);
+        $id->{uuid} = lc($id->{uuid}) || lc($id->{id}) || uuid();
+        $id->{name} = $id->{uuid} unless ($id->{name});
+        $self->{DB}->do("INSERT INTO object (name, user_id, description, object_type_id, uuid, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($id->{'name'}, $user->id(), $id->{'description'}, $object_type_id, $id->{uuid})) || die("Can't add new object:" . $self->{DB}->errstr);
         $object_id = $self->{DB}->{mysql_insertid};
         unless ($object_id) {
             MinorImpact::log('notice', "Couldn't insert new object record");
             die "Couldn't insert new object record";
         }
+    } elsif ($id =~/^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$/i) {
+        $object_id = ${$self->{DB}->selectrow_arrayref("SELECT * FROM object WHERE uuid=?", undef, (lc($id)))}[0];
     } elsif ($id =~/^\d+$/) {
         $object_id = $id;
     } else {
@@ -223,7 +239,7 @@ sub _new {
         $self->{data}{user_id} = $user->id() if ($user);
         my $fields = fields($id->{object_type_id});
         #MinorImpact::log('info', "validating fields: " . join(",", map { "$_=>'" . $fields->{$_} . "'"; } keys (%$fields)));
-        validateFields($fields, $id);
+        #validateFields($fields, $id);
 
         $self->update($id, $params);
     } else {
@@ -422,9 +438,11 @@ sub clearCache {
     my $self = shift || return;
 
     my $object_id;
+    my $object_uuid;
 
     if (ref($self)) {
         $object_id = $self->id();
+        $object_uuid = $self->get('uuid');
     } else {
         $object_id = $self;
         undef($self);
@@ -433,6 +451,13 @@ sub clearCache {
     delete($OBJECT_CACHE->{$object_id});
     MinorImpact::cache("object_data_$object_id", {});
     MinorImpact::cache("object_id_type_$object_id", {});
+
+    if ($object_uuid) {
+        delete($OBJECT_CACHE->{$object_uuid});
+        MinorImpact::cache("object_data_$object_uuid", {});
+        MinorImpact::cache("object_id_type_$object_uuid", {});
+    }
+
     return;
 }
 
@@ -671,8 +696,14 @@ sub get {
 
     my @values;
     if (defined($self->{data}->{$name})) {
+        my $value;
+        if ($name eq 'uuid') {
+            $value = lc($self->{data}->{uuid});
+        } else {
+            $value = $self->{data}->{$name};
+        }
         MinorImpact::log('debug', "ending");
-       return $self->{data}->{$name};
+        return $value;
     }
     if (defined($self->{object_data}->{$name})) {
         my $field = $self->{object_data}->{$name};
@@ -707,7 +738,7 @@ sub validateFields {
     my $fields = shift;
     my $params = shift;
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
 
     #if (!$fields) {
     #   dumper($fields);
@@ -720,12 +751,17 @@ sub validateFields {
     #die "No parameters to validate." unless($params);
 
     foreach my $field_name (keys %$params) {  
+        MinorImpact::log('debug', "looking for $field_name");
         my $field = $fields->{$field_name};
         next unless ($field);
-        MinorImpact::log('debug', "validating $field_name='$field'");
-        $field->validate($params->{$field_name});
+        MinorImpact::log('debug', "unpacking $field_name");
+        my @values = MinorImpact::Object::Field::unpackValues($params->{$field_name});
+        foreach my $value (@values) {
+            MinorImpact::log('debug', "validating $field_name='$value'");
+            $field->validate($value);
+        }
     }
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 toData
@@ -743,23 +779,23 @@ sub toData {
     $data->{name} = $self->name();
     $data->{public} = $self->get('public');
     $data->{object_type_id} = $self->type()->name();
-    $data->{user_id} = $self->user()->name();
+    $data->{user_id} = lc($self->user()->get('uuid'));
     my $fields = $self->fields();
     foreach my $name (keys %$fields) {
         my $field = $fields->{$name};
-        #my @values = $field->value();
-        #if ($field->isArray()) {
-        #    $data->{fields}{$name} = cloneArray(\@values);
-        #} else {
-        #    $data->{fields}{$name} = $values[0];
-        #}
-        #$data->{fields}{$name} = $fields->{$name}->toData();
-        #$data->{fields}{$name} = clone($field->value());
-        $data->{$name} = clone($field->value());
+        my @values = $field->value();
+        $data->{$name} = [];
+        foreach my $value (@values) {
+            if (ref($value)) {
+                push(@{$data->{$name}}, lc($value->get('uuid')));
+            } else {
+                push(@{$data->{$name}}, $value);
+            }
+        }
     }
-    $data->{tags} = join("\0", $self->tags());
+    $data->{uuid} = lc($self->get('uuid'));
     $data->{references} = $self->getReferences();
-    $data->{uuid} = $self->get('uuid');
+    $data->{tags} = join("\0", $self->tags());
     return $data;
 }
 
@@ -961,10 +997,10 @@ sub getReferences {
     my $DB = MinorImpact::db();
     if ($object_text_id) {
         # Only return references to a particular 
-        return $DB->selectall_arrayref("select object_id, data, object_text_id from object_reference where object_text_id=?", {Slice=>{}}, ($object_text_id));
+        return $DB->selectall_arrayref("SELECT object_id, data, object_text_id FROM object_reference WHERE object_text_id=?", {Slice=>{}}, ($object_text_id));
     }
     # Return all references for this object.
-    return $DB->selectall_arrayref("select object.id as object_id, object_reference.data from object_reference, object_text, object where object_reference.object_text_id=object_text.id and object_text.object_id=object.id and object_reference.object_id=?", {Slice=>{}}, ($self->id()));
+    return $DB->selectall_arrayref("SELECT object.id as object_id, object_reference.data FROM object_reference, object_text, object WHERE object_reference.object_text_id=object_text.id and object_text.object_id=object.id and object_reference.object_id=?", {Slice=>{}}, ($self->id()));
 }
 
 =head2 update
@@ -988,6 +1024,8 @@ sub update {
 
     die "Invalid user" unless ($self->validUser({mode => 'write'}));
 
+    $self->clearCache();
+
     unless ($self->name() || $data->{name}) {
         # Every object needs a name, even if it's not user editable or visible.
         $data->{name} = $self->typeName() . "-" . $self->id();
@@ -996,19 +1034,18 @@ sub update {
     $self->{DB}->do("UPDATE object SET description=? WHERE id=?", undef, ($data->{'description'}, $self->id())) if (defined($data->{description}));
     $self->{DB}->do("UPDATE object SET name=? WHERE id=?", undef, ($data->{'name'}, $self->id())) if ($data->{name});
     $self->{DB}->do("UPDATE object SET public=? WHERE id=?", undef, (($data->{'public'}?1:0), $self->id())) if (defined($data->{public}));;
-    $self->{DB}->do("UPDATE object SET uuid=? WHERE id=?", undef, ($data->{'uuid'}, $self->id())) if ($data->{uuid});
+    $self->{DB}->do("UPDATE object SET uuid=? WHERE id=?", undef, (lc($data->{'uuid'}), $self->id())) if ($data->{uuid});
     $self->log('crit', $self->{DB}->errstr) if ($self->{DB}->errstr);
 
-    $self->clearCache();
 
     my $fields = $self->fields();
     #MinorImpact::log('info', "validating parameters");
     validateFields($fields, $data);
 
     foreach my $field_name (keys %$data) {
-        MinorImpact::log('debug', "updating \$field_name='$field_name'");
         my $field = $fields->{$field_name};
         next unless ($field);
+        MinorImpact::log('debug', "updating \$field_name='$field_name'");
         $field->update($data->{$field_name});
     }
 
@@ -1107,9 +1144,9 @@ sub typeID {
             } else {
                 my $singular = $self;
                 $singular =~s/s$//;
-                my $sql = "select id from object_type where name=? or name=? or plural=?";
-                MinorImpact::log('debug', "\$sql='$sql', ($self, $singular, $self)");
-                $object_type_id = $DB->selectrow_array("select id from object_type where name=? or name=? or plural=?", undef, ($self, $singular, $self));
+                my $sql = "SELECT id FROM object_type WHERE name=? OR name=? OR plural=? OR uuid=?";
+                MinorImpact::log('debug', "\$sql='$sql', ($self, $singular, $self, $self)");
+                $object_type_id = $DB->selectrow_array($sql, undef, ($self, $singular, $self, lc($self)));
                 MinorImpact::cache("object_type_id_$self", $object_type_id) if ($object_type_id);
             }
         }
@@ -1331,7 +1368,7 @@ sub typeName {
             $where = "id=?";
         }
 
-        my $sql = "select name, plural from object_type where $where";
+        my $sql = "SELECT name, plural FROM object_type WHERE $where";
         #MinorImpact::log('debug', "sql=$sql, ($object_type_id)");
         ($type_name, $plural_name) = $DB->selectrow_array($sql, undef, ($object_type_id));
     }
@@ -1358,7 +1395,7 @@ sub _reload {
 
     my $object_data = MinorImpact::cache("object_data_$object_id") unless ($params->{no_cache});
     if ($object_data) {
-        #MinorImpact::log('debug', "collecting object_data from cache");
+        #MinorImpact::log('debug', "collecting object_data FROM cache");
         $self->{data} = $object_data->{data};
         $self->{type_data} = $object_data->{type_data};
         $self->{object_data} = $object_data->{object_data};
@@ -1366,8 +1403,8 @@ sub _reload {
         return 
     }
 
-    $self->{data} = $self->{DB}->selectrow_hashref("select * from object where id=?", undef, ($object_id));
-    $self->{type_data} = $self->{DB}->selectrow_hashref("select * from object_type where id=?", undef, ($self->typeID()));
+    $self->{data} = $self->{DB}->selectrow_hashref("SELECT * FROM object WHERE id=?", undef, ($object_id));
+    $self->{type_data} = $self->{DB}->selectrow_hashref("SELECT * FROM object_type WHERE id=?", undef, ($self->typeID()));
 
     undef($self->{object_data});
 
@@ -1395,6 +1432,20 @@ sub dbConfig {
     return;
 }
 
+=head2 delete
+
+=over
+
+=item ->delete()
+
+=back
+
+Deletes an object and anything that references it.
+
+  $OBJECT->delete();
+
+=cut
+
 sub delete {
     my $self = shift || return;
     my $params = shift || {};
@@ -1403,24 +1454,16 @@ sub delete {
     my $object_id = $self->id();
     my $DB = MinorImpact::db();
 
-    # TODO: I just realized what this is doing: when an object is deleted, anything that references it
-    #   is just having the reference value cleared, and not even doing anything to try and come up with
-    #   a new value for the affected dependencies.  That's insane.  At the very least, if anything references
-    #   an object I'm trying to delete, I shouldn't be able to delete it.
-    my $data = $DB->selectall_arrayref("select * from object_field where type like '%object[" . $self->typeID() . "]'", {Slice=>{}}) || die $DB->errstr;
-    die "Object has references." if (scalar(@$data));
-    #foreach my $row (@$data) {
-    #    $DB->do("DELETE FROM object_data WHERE object_field_id=? and value=?", undef, ($row->{id}, $object_id)) || die $DB->errstr;
-    #}
+    my @children = $self->children();
+    foreach my $child (@children) {
+        $child->delete();
+    }
 
-    MinorImpact::log('debug', "deleting object text fields");
-    $data = $DB->selectall_arrayref("select * from object_text where object_id=?", {Slice=>{}}, ($object_id)) || die $DB->errstr;
+    my $data = $DB->selectall_arrayref("SELECT * FROM object_text WHERE object_id=?", {Slice=>{}}, ($object_id)) || die $DB->errstr;
     foreach my $row (@$data) {
-        MinorImpact::log('debug', "deleting object text field '" . $row->{id} . "'");
         $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id})) || die $DB->errstr;
     }
 
-    MinorImpact::log('debug', "deleting object data fields");
     $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_reference WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
@@ -1744,7 +1787,7 @@ sub getTagCounts {
     my $self = shift || return;
 
     my $DB = MinorImpact::db();
-    my $VAR1 = $DB->selectall_hashref("select name, count(*) as tag_count from object_tag where object_id=? group by name", 'name', undef, ($self->id())) || die $DB->errstr;
+    my $VAR1 = $DB->selectall_hashref("SELECT name, count(*) as tag_count FROM object_tag WHERE object_id=? group by name", 'name', undef, ($self->id())) || die $DB->errstr;
     #$VAR1 = {
     #      'friend' => {
     #                    'tag_count' => '1',

@@ -85,7 +85,7 @@ DEFAULT: None.
 
 Method of logging output from L<MinorImpact::log()|/log>.  Valid options are *file*, 
 *syslog* and *stderr*.
-DEFAULT: *file*
+DEFAULT: *syslog*
 
 =item memcached_server
 

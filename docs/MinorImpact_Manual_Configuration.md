@@ -86,7 +86,7 @@ that need to share a common userbase. Other sections are listed below.
 
     Method of logging output from [MinorImpact::log()](#log).  Valid options are \*file\*, 
     \*syslog\* and \*stderr\*.
-    DEFAULT: \*file\*
+    DEFAULT: \*syslog\*
 
 - memcached\_server
 

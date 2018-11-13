@@ -27,9 +27,15 @@ sub new {
     MinorImpact::log('debug', "starting");
 
     if (ref($params) eq "HASH") {
+        MinorImpact::log('debug', "FUCK");
         # all comments are public.
         $params->{public} = 1;
-        $params->{name} = trunc(ptrunc($params->{text}, 1), 30);
+        my $text = $params->{text};
+        if (ref($text) eq 'ARRAY') {
+            $text = @$text[0];
+        }
+        $params->{name} = trunc(ptrunc($text, 1), 30);
+        MinorImpact::log('debug', "FUCK ALSO");
     }
     my $self = $package->SUPER::_new($params);
     bless($self, $package);

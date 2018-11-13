@@ -369,6 +369,14 @@ Returns an array of object\_type records.
 
     Return only types that are or are not 'system' types.
 
+## delete
+
+- ->delete()
+
+Deletes an object and anything that references it.
+
+    $OBJECT->delete();
+
 ## tags
 
 - ::tags(\[\\%params\])

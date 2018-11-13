@@ -41,6 +41,23 @@ sub toString {
     return $string;
 }
 
+sub update {
+    my $self = shift || return;
+
+    my @values = MinorImpact::Object::Field::unpackValues(@_);
+    my @new_values = ();
+    foreach my $value (@values) {
+        #if ($value =~/^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$/i) {
+        unless ($value =~/^\d+$/) {
+            my $object = new MinorImpact::Object($value) || die "invalid object '$value'";
+            push(@new_values, $object->id());
+        } else {
+            push(@new_values, $value);
+        }
+    }
+    return $self->SUPER::update(@new_values);
+}
+
 =head2 validate
 
 =cut
@@ -51,17 +68,17 @@ sub validate {
 
     MinorImpact::log('debug', "starting");
 
-    my $object;
-    my $valid = 0;
 
-    $valid = 1 if ($value =~/^\d+$/);
+    #$valid = 1 if ($value =~/^\d+$/);
 
-    $object = new MinorImpact::Object($value) if ($valid);
+    my $object = new MinorImpact::Object($value);
+    unless ($object) {
+        MinorImpact::log('debug', "ending(invalid)");
+        die "invalid object '$value'";
+    }
 
-    $valid = $object?1:0;
-
-    MinorImpact::log('debug', "ending(" . ($valid?"valid":"invalid") . ")");
-    return $valid;
+    MinorImpact::log('debug', "ending(valid)");
+    return 1;
 }
 
 =head1 AUTHOR

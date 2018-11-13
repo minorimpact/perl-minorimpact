@@ -53,7 +53,10 @@ sub new {
     unless ($data->{id}) {
         if ($user_id =~/^\d+$/) {
             MinorImpact::log('debug', "searching database by id");
-            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id   = ?", undef, ($user_id));
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE id = ?", undef, ($user_id));
+        } elsif ($user_id =~/^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$/i) {
+            MinorImpact::log('debug', "searching database by uuid");
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE uuid = ?", undef, (lc($user_id)));
         } else {
             MinorImpact::log('debug', "searching database by name");
             $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id));
@@ -88,8 +91,32 @@ Clear all caches related to this user object.
 sub clearCache {
     my $self = shift || return;
 
-    MinorImpact::cache("user_data_" . $self->id(), {});
-    MinorImpact::cache("user_data_" . $self->name(), {});
+    my $id;
+    my $name;
+    my $uuid;
+    if (ref($self)) {
+        $id = $self->id();
+        $name = $self->name();
+        $uuid = $self->get('uuid');
+    } else {
+        $id = $self;
+    }
+
+    my $MI = new MinorImpact();
+    if ($id) {
+        delete($MI->{USER}) if ($MI->{USER} && $MI->{USER}->id() == $id);
+        MinorImpact::cache("user_collections_" . $id, {}) if ($id);
+        MinorImpact::cache("user_data_" . $id, {}) if ($id);
+    }
+
+    if ($name) {
+        delete ($MI->{USER}) if ($MI->{USER} && $MI->{USER}->name() eq $name);
+        MinorImpact::cache("user_data_" . $name, {});
+    } 
+    if ($uuid) {
+        delete ($MI->{USER}) if ($MI->{USER} && $MI->{USER}->get('uuid') eq $uuid);
+        MinorImpact::cache("user_data_" . $uuid, {});
+    }
 
     return;
 }
@@ -143,6 +170,8 @@ sub delete {
     my $user = MinorImpact::user();
     die "Invalid user\n" unless ($user);
     die "Not an admin user\n" unless ($user->isAdmin());
+    $self->clearCache();
+
     my $user_id = $self->id();
     my $username = $self->name();
     # This is the user object, note the MinorImpact object, so DB is already set to USERDB.
@@ -166,7 +195,6 @@ sub delete {
         die "object_count:$object_count does not match deleted count:$deleted";
     }
 
-    $self->clearCache();
 
     MinorImpact::log('debug', "ending");
     return 1;
@@ -217,7 +245,14 @@ sub get {
     my $self = shift || return;
     my $name = shift || return;
 
-    return $self->{data}->{$name};
+    my $value;
+    if ($name eq 'uuid') {
+        $value = lc($self->{data}->{uuid});
+    } else {
+        $value = $self->{data}->{$name};
+    }
+
+    return $value;
 }
 
 sub collections {
@@ -431,7 +466,7 @@ sub update {
         $self->{data}{password} = $password;
     }
     if (defined($params->{uuid}) && $params->{uuid}) {
-        my $uuid = $params->{uuid};
+        my $uuid = lc($params->{uuid});
         $self->{DB}->do("UPDATE user SET uuid=? WHERE id=?", undef, ($uuid, $self->id())) || die $self->{DB}->errstr;
         $self->{data}{uuid} = $uuid;
     }
@@ -461,11 +496,11 @@ sub toData {
     $data->{create_date} = $self->get('create_date');
     $data->{email} = $self->get('email');
     $data->{id} = $self->id();
+    $data->{uuid} = lc($self->get('uuid'));
     $data->{mod_date} = $self->get('mod_date');
     $data->{name} = $self->name();
     $data->{password} = $self->get('password');
     $data->{encrypted} = 1;
-    $data->{uuid} = $self->get('uuid');
 
     return $data;
 }
@@ -614,7 +649,7 @@ sub add {
                 die "Only an admin user can add an admin user\n";
             }
         }
-        $DB->do("INSERT INTO user (name, password, admin, email, uuid, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email}, ($params->{uuid} || uuid()))) || die $DB->errstr;
+        $DB->do("INSERT INTO user (name, password, admin, email, uuid, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email}, (lc($params->{uuid}) || lc($params->{id}) || uuid()))) || die $DB->errstr;
         my $user_id = $DB->{mysql_insertid};
         #MinorImpact::log('debug', "\$user_id=$user_id");
         return new MinorImpact::User($user_id);
@@ -623,6 +658,31 @@ sub add {
 
     MinorImpact::log('debug', "ending");
     return;
+}
+
+=head2 addObject
+
+=over
+
+=item ->addObject(\%params)
+
+=back
+
+Add a new object owned by the current user.
+
+=cut
+
+sub addObject {
+    my $self = shift || die "no user";
+    my $object_data = shift || die "no object data";
+
+    MinorImpact::log('debug', "starting");
+
+    $object_data->{user_id} = $self->id();
+    my $new_object = new MinorImpact::Object($object_data);
+
+    MinorImpact::log('debug', "ending");
+    return $new_object;
 }
 
 sub addUser {
@@ -703,12 +763,17 @@ sub search {
 
     my $sql = "SELECT id FROM user WHERE id > 0";
     my @fields = ();
+
+    if (isTrue($params->{admin})) {
+        $sql .= " AND admin IS TRUE";
+    }
     if ($params->{name}) {
         $sql .= " AND name LIKE ?";
         push(@fields, $params->{name});
     }
-    if (isTrue($params->{admin})) {
-        $sql .= " AND admin IS TRUE";
+    if ($params->{uuid}) {
+        $sql .= " AND uuid LIKE ?";
+        push(@fields, lc($params->{uuid}));
     }
 
     if ($params->{order_by}) {

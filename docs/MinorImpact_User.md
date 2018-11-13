@@ -189,6 +189,12 @@ Add a MinorImpact user.
 
     The new user's login name.
 
+## addObject
+
+- ->addObject(\\%params)
+
+Add a new object owned by the current user.
+
 ## count
 
 - count()
