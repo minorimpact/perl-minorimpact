@@ -1,4 +1,4 @@
-[% INCLUDE header title=user.name() %]
+[% INCLUDE header %]
 
 [% INCLUDE list_object %]
 
