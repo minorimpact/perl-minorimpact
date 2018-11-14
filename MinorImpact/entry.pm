@@ -103,10 +103,6 @@ sub children {
     $local_params->{query} = {} unless (defined($local_params->{query}));
     $local_params->{query}{object_type_id} = "MinorImpact::comment";
 
-    #$local_params->{query}{no_child} = { "where" => "object_data.object_field_id=? AND", where_fields => [MinorImpact::Object::fieldID("MinorImpact::comment", "reply_to")]};
-    #$local_params->{query}{child} = { "reply_to>" => 0 };
-    $local_params->{query}{reply_to} = 0;
-
     my @comments = $self->SUPER::children($local_params);
 
     MinorImpact::log('debug', "ending");

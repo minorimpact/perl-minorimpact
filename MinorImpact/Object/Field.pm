@@ -19,7 +19,7 @@ use Text::Markdown 'markdown';
 
 =head1 NAME
 
-MinorImpact::Object::Field - Base class for MinorImpact object fields.
+MinorImpact::Object::Field - Base class for MinorImpact object fields
 
 =head1 METHODS
 
@@ -38,7 +38,9 @@ our @reserved_names = ( 'create_date', 'description', 'id', 'mod_date', 'name', 
 
 =back
 
-Create a new field object.
+Create a new field object.  If called with $object_field_id or if $data->{db}{id} is set, it will
+try to create a field that belongs to a particular type of object, as defined by
+L<MinorImpact::Object::Type::addField()|MinorImpact::Object::Type/addfield>.
 
 =head3 data
 
@@ -63,6 +65,8 @@ Is the field a text field (y) or a normal length data field (n)?
 =over
 
 =item id => $int
+
+The database id of this particular field.
 
 =back
 
@@ -96,6 +100,7 @@ sub new {
     my $self;
     eval {
         my $field_type = $data->{db}{type};
+        $field_type = 'object' if ($field_type =~/^\@?object\[\d+\]$/);
         MinorImpact::log('debug', "\$field_type=$field_type");
         $self = "MinorImpact::Object::Field::$field_type"->new($data) if ($field_type);
     };
@@ -143,13 +148,15 @@ sub _new {
     if (defined($data->{value})) {
         # We're being manually assigned a value when the field object is being
         #   created.  Just use that.
-        if (ref($data->{value}) eq 'ARRAY') {
-            foreach my $value (@{$data->{value}}) {
-                push(@{$self->{value}}, split(/\0/, $value));
-            }
-        } else {
-            push(@{$self->{value}}, split(/\0/, $data->{value}));
-        }
+        #if (ref($data->{value}) eq 'ARRAY') {
+        #    foreach my $value (@{$data->{value}}) {
+        #        push(@{$self->{value}}, split(/\0/, $value));
+        #    }
+        #} else {
+        #    push(@{$self->{value}}, split(/\0/, $data->{value}));
+        #}
+        my @values = unpackValues($data->{value});
+        $self->{value} = \@values;
     } elsif ($self->{db}{id} && $self->{object_id}) {
         # We're a field that exists in the database and we're assinged to a 
         #   particular object.  Load the values from the the database.
@@ -175,9 +182,44 @@ sub _new {
     return $self;
 }
 
+=head2 defaultValue
+
+=over
+
+=item ->defaultValue()
+
+=back
+
+Returns the default value for the field.
+
+  $default_value = $FIELD->defaultValue();
+
+=cut
+
 sub defaultValue {
     return shift->{db}{default_value};
 }
+
+=head2 update
+
+=over
+
+=item ->update($value[, $value, ... ])
+
+=back
+
+Sets the value(s) for the field.
+
+  $FIELD->udpate("Sven", "Gustav");
+
+If the field type is a reference to another object (or
+an array of objects), $value can be an object or that 
+object's id.
+
+  $object = new MinorImpact::Object(45);
+  $FIELD->update($object);
+
+=cut
 
 sub update {
     my $self = shift || return;
@@ -212,6 +254,7 @@ sub update {
 
     $self->{value} = \@values;
     MinorImpact::log('debug', "ending");
+    return @values;
 }
 
 =head2 validate
@@ -250,6 +293,22 @@ sub validate {
     MinorImpact::log('debug', "ending(valid)");
     return $value;
 }
+
+=head unpackValues
+
+=over
+
+=item ::unpackValues($value[, $value, ...])
+
+=back
+
+Tries to smooth out all of the possible ways that values get packed up
+for fields, starting with coverting any array pointers in the parameter list
+to actual arrays, splitting any values that are delimited by a null character ('\0',
+something that HTML multi-select input fields produce), and converting and 
+L<MinorImpact objects|MinorImpact::Object> to their ->id() value.
+
+=cut
 
 sub unpackValues {
     my @values = ();
@@ -311,6 +370,7 @@ sub value {
     MinorImpact::log('debug', "starting");
     my $values = [];
     if (defined($self->{value})) {
+            MinorImpact::log('debug', "FUCK 1");
         if (ref($self->type())) {
             foreach my $value (@{$self->{value}}) {
                 push(@$values, new MinorImpact::Object($value));
@@ -318,8 +378,9 @@ sub value {
         } else {
             $values = clone($self->{value});
         }
+            MinorImpact::log('debug', "FUCK 2");
     }
-    MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "ending");
     return @$values;
 }
 
@@ -355,6 +416,18 @@ sub displayName {
 }
 
 # return a piece of metadata about this field.
+=head2 get
+
+=over
+
+=item ->get($name)
+
+=back
+
+Returns piece of meta data about this field.
+
+=cut
+
 sub get {
     my $self = shift || return;
     my $field = shift || return; 
@@ -425,7 +498,7 @@ sub rowForm {
     my $self = shift || return;
     my $params = shift || {};
 
-    MinorImpact::log('debug', "start");
+    MinorImpact::log('debug', "start(" . $self->name() . ")");
 
     my $name = $self->name()|| return;
     my $local_params = clone($params);
@@ -438,7 +511,7 @@ sub rowForm {
     if ($self->isArray()) {
         foreach my $value (@values) {
             my $row_form;
-            $local_params->{row_value} = htmlEscape($value);
+            $local_params->{row_value} = htmlEscape($value) unless (ref($value));
             MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
             $row .= $row_form;
         }
@@ -448,7 +521,7 @@ sub rowForm {
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row_form);
         $row .= $row_form;
     } else {
-        $local_params->{row_value} = htmlEscape($values[0]);
+        $local_params->{row_value} = htmlEscape($values[0]) unless (ref($values[0]));
         MinorImpact::tt('row_form', { field => $self, input => $self->_input($local_params) }, \$row);
     }
     MinorImpact::log('debug', "ending");
@@ -475,10 +548,9 @@ sub _input {
                 }
             }
         } else {
-            my $object_type_id = $1;
             my $local_params = clone($params);
             $local_params->{query}{debug} .= "Object::Field::_input();";
-            $local_params->{query}{object_type_id} = $object_type_id;
+            $local_params->{query}{object_type_id} = $self->type()->id();
             $local_params->{fieldname} = $name;
             $local_params->{selected} = $value;
             $local_params->{required} = $self->get('required');

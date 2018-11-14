@@ -1,6 +1,6 @@
 # NAME
 
-MinorImpact::Object::Field - Base class for MinorImpact object fields.
+MinorImpact::Object::Field - Base class for MinorImpact object fields
 
 # METHODS
 
@@ -9,7 +9,9 @@ MinorImpact::Object::Field - Base class for MinorImpact object fields.
 - new MinorImpact::Object::Field($object\_field\_id)
 - new MinorImpact::Object::Field(\\%data)
 
-Create a new field object.
+Create a new field object.  If called with $object\_field\_id or if $data->{db}{id} is set, it will
+try to create a field that belongs to a particular type of object, as defined by
+[MinorImpact::Object::Type::addField()](./MinorImpact_Object_Type.md#addfield).
 
 ### data
 
@@ -23,6 +25,8 @@ Create a new field object.
         Is the field a text field (y) or a normal length data field (n)?
 - db => \\%hash
     - id => $int
+
+        The database id of this particular field.
 - object\_id => $int
 
     The id of the $OBJECT this field belongs to, if applicable.
@@ -30,6 +34,29 @@ Create a new field object.
 - value => \\@array
 
     A pointer to an array of values for this field.
+
+## defaultValue
+
+- ->defaultValue()
+
+Returns the default value for the field.
+
+    $default_value = $FIELD->defaultValue();
+
+## update
+
+- ->update($value\[, $value, ... \])
+
+Sets the value(s) for the field.
+
+    $FIELD->udpate("Sven", "Gustav");
+
+If the field type is a reference to another object (or
+an array of objects), $value can be an object or that 
+object's id.
+
+    $object = new MinorImpact::Object(45);
+    $FIELD->update($object);
 
 ## validate
 
@@ -42,6 +69,14 @@ die.
         $FIELD->validate($value);
     };
     print "Unable to use $value: $@" if ($@);
+
+- ::unpackValues($value\[, $value, ...\])
+
+Tries to smooth out all of the possible ways that values get packed up
+for fields, starting with coverting any array pointers in the parameter list
+to actual arrays, splitting any values that are delimited by a null character ('\\0',
+something that HTML multi-select input fields produce), and converting and 
+[MinorImpact objects](./MinorImpact_Object.md) to their ->id() value.
 
 ## value
 
@@ -70,6 +105,12 @@ will be objects, not IDs.
 - ->displayName()
 
 Returns a "nicer" version of name.
+
+## get
+
+- ->get($name)
+
+Returns piece of meta data about this field.
 
 ## isArray
 
@@ -207,3 +248,11 @@ Return the object as a pure hash.
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 297:
+
+    Unknown directive: =head
