@@ -47,8 +47,6 @@ our @EXPORT = (
     "parseTags",
     "randomText",
     "toMysqlDate", 
-    "trim",
-    "trunc",
     "uniq", 
     "uuid",
 );
@@ -862,18 +860,6 @@ sub toMysqlDate {
 
 sub trim {
     return MinorImpact::Util::String::trim(@_);
-}
-
-=head2 trunc
-
-Deprecated.
-
-See L<MinorImpact::Util::String::trunc()|MinorImpact::Util::String/trunc>.
-
-=cut
-
-sub trunc {
-    return MinorImpact::Util::String::trunc(@_);
 }
 
 =head2 uniq

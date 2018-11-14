@@ -236,12 +236,6 @@ Returns the current time, or the value of $time, in a value Mysql date formate (
     $old_date = toMysqlDate(time() - 3600);
     # OUTPUT: 2018-10-18 14:35:06
 
-## trunc
-
-Deprecated.
-
-See [MinorImpact::Util::String::trunc()](./MinorImpact_Util_String.md#trunc).
-
 ## uniq
 
 - uniq(@array)

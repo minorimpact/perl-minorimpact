@@ -19,6 +19,7 @@ use Data::Dumper;
 
 use MinorImpact;
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 use Text::ParseWords;
 
 =head2 mergeQuery

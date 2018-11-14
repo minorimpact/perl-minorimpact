@@ -3,6 +3,7 @@ package MinorImpact::Config;
 use Cwd;
 use Exporter 'import';
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 use Time::Local;
 
 =head1 NAME
