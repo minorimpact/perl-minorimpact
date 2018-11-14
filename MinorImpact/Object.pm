@@ -597,13 +597,13 @@ sub selectList {
         $local_params->{query}{debug} .= "Object::selectList();";
         if ($local_params->{selected}) {
             $self = new MinorImpact::Object($local_params->{selected});
-            $local_params->{query}{user_id} = $self->userID() if ($self && !$local_params->{query}{user_id});
+            #$local_params->{query}{user_id} = $self->userID() if ($self && !$local_params->{query}{user_id});
             delete($local_params->{query}{user_id}) if ($self->isSystem());
         } else {
             undef $self;
         }
     } elsif (ref($self)) {
-        $local_params->{query}{user_id} ||= $self->userID();
+        #$local_params->{query}{user_id} ||= $self->userID();
         $local_params->{selected} = $self->id() unless ($local_params->{selected});
     }
 
