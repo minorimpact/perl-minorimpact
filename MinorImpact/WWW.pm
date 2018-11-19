@@ -354,7 +354,6 @@ sub facebook {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $user = MinorImpact::user();
@@ -373,7 +372,6 @@ sub facebook {
     #print "Content-type: text/html\n\n$url";
 
     MinorImpact::log('debug', "ending");
-    MinorImpact::debug(0);
 }
 
 =head2 home
@@ -394,13 +392,11 @@ sub home {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 }) || $MINORIMPACT->redirect();
     my $settings = $user->settings();
-    MinorImpact::debug(0);
 
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || ($settings?$settings->get('results_per_page'):20);
@@ -443,7 +439,6 @@ sub home {
                             types               => [ @types ],
                             });
     MinorImpact::log('debug', "ending");
-    MinorImpact::debug(0);
 }
 
 =head2 index
@@ -495,14 +490,12 @@ sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $user = MinorImpact::user();
 
     $MINORIMPACT->redirect({ action => 'home' }) if ($user);
 
-    MinorImpact::debug(0);
     my $CGI = MinorImpact::cgi();
     my $username = $CGI->param('username');
     my $redirect = $CGI->param('redirect');
