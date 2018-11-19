@@ -908,7 +908,7 @@ sub url {
         $id = $user_id;
         if ($pretty) {
             my $user = new MinorImpact::User($id);
-            if ($user) {
+            if ($user && $user->get('source') eq 'local') {
                 $id = uri_escape($user->name());
             }
         }
