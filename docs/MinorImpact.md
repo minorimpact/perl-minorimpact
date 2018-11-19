@@ -185,7 +185,7 @@ a memcached server is configured, or [CHI](https://metacpan.org/pod/CHI.md). (se
 - ::facebook(\[$access\_token\])
 - ->facebook(\[$access\_token\])
 
-Returns a [Net::Facebook::Oauth2](./Net_Facebook_Oauth2.md) object.
+Returns a [MinorImpact::Facebook::Oauth2](./MinorImpact_Facebook_Oauth2.md) object.
 
     $FB = MinorImpact::facebook();
 

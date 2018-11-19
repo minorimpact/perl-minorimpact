@@ -27,9 +27,7 @@ MinorImpact::WWW
 use JSON;
 use MinorImpact;
 use MinorImpact::Util;
-use Net::Facebook::Oauth2;
  
-
 =head2 add
 
 =over

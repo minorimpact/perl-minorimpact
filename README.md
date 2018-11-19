@@ -1,409 +1,131 @@
 # NAME
 
-Net::Facebook::Oauth2 - a simple Perl wrapper around Facebook OAuth 2.0 protocol
-
-<div>
-
-    <a href="https://travis-ci.org/mamod/Net-Facebook-Oauth2"><img src="https://travis-ci.org/mamod/Net-Facebook-Oauth2.svg?branch=master"></a>
-</div>
-
-# FACEBOOK GRAPH API VERSION
-
-This module complies to Facebook Graph API version 3.1, the latest
-at the time of publication, **scheduled for deprecation not sooner than July 26th, 2020**.
+MinorImpact - Application/object framework and utility library.
 
 # SYNOPSIS
 
-Somewhere in your application's login process:
+    use MinorImpact;
 
-    use Net::Facebook::Oauth2;
+    $MINORIMPACT = new MinorImpact();
 
-    my $fb = Net::Facebook::Oauth2->new(
-        application_id     => 'your_application_id', 
-        application_secret => 'your_application_secret',
-        callback           => 'http://yourdomain.com/facebook/callback'
-    );
+    # define a new object type
+    MinorImpact::Object::Type::add({name => 'test'});
 
-    # get the authorization URL for your application
-    my $url = $fb->get_authorization_url(
-        scope   => [ 'email' ],
-        display => 'page'
-    );
+    # create a new object 
+    $test = new MinorImpact::Object({ object_type_id => 'test', name => "test-$$" });
+    print $test->id() . ": " . $test->get('name') . "\n";
 
-Now redirect the user to this `$url`.
+    # retrieve a second copy of the same object using just the id
+    $test2 = new MinorImpact::Object($test->id());
+    print $test2->id() . ": " . $test2->get('name') . "\n";
 
-Once the user authorizes your application, Facebook will send him/her back
-to your application, on the `callback` link provided above. PLEASE NOTE
-THAT YOU MUST PRE-AUTHORIZE YOUR CALLBACK URI ON FACEBOOK'S APP DASHBOARD.
+    # add a field to the object definition
+    MinorImpact::Object::Type::addField({ object_type_id => $test->typeID(), name => 'field_1', type => 'string' });
+    $test->update({field_1 => 'one'});
 
-Inside that callback route, use the verifier code parameter that Facebook
-sends to get the access token:
-
-    # param() below is a bogus function. Use whatever your web framework
-    # provides (e.g. $c->req->param('code'), $cgi->param('code'), etc)
-    my $code = param('code');
-
-    use Try::Tiny;  # or eval {}, or whatever
-
-    my ($unique_id, $access_token);
-    try {
-        $access_token = $fb->get_access_token(code => $code); # <-- could die!
-
-        # Facebook tokens last ~2h, but you may upgrade them to ~60d if you want:
-        $access_token = $fb->get_long_lived_token( access_token => $access_token );
-
-        my $access_data = $fb->debug_token( input => $access_token );
-        if ($access_data && $access_data->{is_valid}) {
-            $unique_id = $access_data->{user_id};
-            # you could also check here for what scopes were granted to you
-            # by inspecting $access_data->{scopes}->@*
-        }
-    } catch {
-        # handle errors here!
-    };
-
-If you got so far, your user is logged! Save the access token in your
-database or session. As shown in the example above, Facebook also provides
-a unique _user\_id_ for this token so you can associate it with a particular
-user of your app.
-
-Later on you can use that access token to communicate with Facebook on behalf
-of this user:
-
-    my $fb = Net::Facebook::Oauth2->new(
-        access_token => $access_token
-    );
-
-    my $info = $fb->get(
-        'https://graph.facebook.com/v3.1/me'   # Facebook API URL
-    );
-
-    print $info->as_json;
-
-NOTE: if you skipped the call to `debug_token()` you can still find the
-unique user id value with a call to the 'me' endpoint shown above, under
-`$info->{id}`
+    print $test->get('field_1') . "\n";
 
 # DESCRIPTION
 
-Net::Facebook::Oauth2 gives you a way to simply access FaceBook Oauth 2.0
-protocol.
+The main interface to the MinorImpact library, a personal application/object framework and utility collection.
 
-The example folder contains some snippets you can look at, or for more
-information just keep reading :)
+## Documenation
 
-# SEE ALSO
+### Manual Pages
 
-For more information about Facebook Oauth 2.0 API
+- [Installation](./MinorImpact_Manual_Installation.md)
+- [Configuration](./MinorImpact_Manual_Configuration.md)
+- [Templates ](./MinorImpact_Manual_Templates.md)
 
-Please Check
-[http://developers.facebook.com/docs/](http://developers.facebook.com/docs/.md)
+### Sub Modules
 
-get/post Facebook Graph API
-[http://developers.facebook.com/docs/api](http://developers.facebook.com/docs/api.md)
+- [CLI](./MinorImpact_CLI.md)
+- [Config](./MinorImpact_Config.md)
+- [Object](./MinorImpact_Object.md)
+- [Object::Field](./MinorImpact_Object_Field.md)
+- [Object::Search](./MinorImpact_Object_Search.md)
+- [Object::Type](./MinorImpact_Object_Type.md)
+- [User](./MinorImpact_User.md)
+- [Util](./MinorImpact_Util.md)
+- [WWW](./MinorImpact_WWW.md)
 
-# USAGE
+### Default Objects
 
-## `Net::Facebook::Oauth->new( %args )`
+- [MinorImpact::entry](./MinorImpact_entry.md)
 
-Returns a new object to handle user authentication.
-Pass arguments as a hash. The following arguments are _REQUIRED_
-unless you're passing an access\_token (see optional arguments below):
+# INSTALLATION
 
-- `application_id`
+See [MinorImpact::Manual::Installation](./MinorImpact_Manual_Installation.md) for more detailed
+installation instructions.
 
-    Your application id as you get from facebook developers platform
-    when you register your application
+## Packages
 
-- `application_secret`
+### ...from git
 
-    Your application secret id as you get from facebook developers platform
-    when you register your application
+    $ git clone https://github.com/minorimpact/perl-minorimpact.git
+    $ git clone https://github.com/minorimpact/minorimpact-util.git
+    $ export PERL5LIB=$PERL5LIB:$PWD/perl-minorimpact
+    $ export PATH=$PATH:$PWD/minorimpact-util/bin
+    $ yum -y install epel-release
 
-The following arguments are _OPTIONAL_:
+### ...from prebuilt packages
 
-- `access_token`
+Add the Minor Impact repository information to /etc/yum.repos.d/minorimpact.repo:
 
-    If you want to instantiate an object to an existing access token, you may
-    do so by passing it to this argument.
+    [minorimpact]
+      name=Minor Impact Tools/Libraries
+      baseurl=https://minorimpact.com/repo
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://minorimpact.com/RPM-GPG-KEY-minorimpact
 
-- `browser`
+Install the package:
 
-    The user agent that will handle requests to Facebook's API. Defaults to
-    LWP::UserAgent, but can be any method that implements the methods `get`,
-    `post` and `delete` and whose response to such methods implements
-    `is_success` and `content`.
+    $ yum -y install epel-release perl-MinorImpact minorimpact-util
 
-- `display`
+## Basic Configuration
 
-    See `display` under the `get_authorization_url` method below.
+### Database
 
-- `api_version`
+Set up a database to use, if you don't already have one.  Included are basic instructions for installing a mysql database here, just for testing purposes.
 
-    Use this to replace the API version on all endpoints. The default
-    value is 'v3.1'. Note that defining an api\_version parameter together with
-    `authorize_url`, `access_token_url` or `debug_token_url` is a fatal error.
+    # yum install mariadb-server
+    # systemctl mariadb start
+    # mysql -e 'create database minorimpact;'
+    # mysql -e "CREATE USER 'minorimpact'@'localhost' IDENTIFIED BY 'minorimpact';"
+    # mysql -e "CREATE USER 'minorimpact'@'%' IDENTIFIED BY 'minorimpact';"
+    # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'localhost';"
+    # mysql -e "GRANT ALL PRIVILEGES ON minorimpact.* to 'minorimpact'@'%';"
 
-- `authorize_url`
+### Settings
 
-    Overrides the default (3.1) API endpoint for Facebook's oauth.
-    Used mostly for testing new versions.
+Create /etc/minorimpact.conf, if it doesn't already exist, and add the following database connection information:
 
-- `access_token_url`
+    db:
+      database = minorimpact
+      db_host = localhost
+      db_port = 3306
+      db_user = minorimpact
+      db_password = minorimpact
 
-    Overrides the default (3.1) API endpoint for Facebook's access token.
-    Used mostly for testing new versions.
+See [MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md) for more configuration options.
 
-- `debug_token_url`
+### Users
 
-    Overrides the default (3.1) API endpoint for Facebook's token information.
-    Used mostly for testing new versions.
+Change the admin user password by running the update\_user.pl script installed from minorimpact-util.
 
-## `$fb->get_authorization_url( %args )`
+    # /opt/minorimpact/bin/update_user.pl -u admin -p admin 
+    Enter password for admin: admin
+    Enter new password for admin:
+                           Again:
 
-Returns an authorization URL for your application. Once you receive this
-URL, redirect your user there in order to authorize your application.
+Add a new user for yourself:
 
-The following argument is _REQUIRED_:
-
-- `callback`
-
-        callback => 'http://example.com/login/facebook/success'
-
-    The callback URL, where Facebook will send users after they authorize
-    your application. YOU MUST CONFIRM THIS URL ON FACEBOOK'S APP DASHBOARD.
-
-    To do that, go to the App Dashboard, click Facebook Login in the right-hand
-    menu, and check the **Valid OAuth redirect URIs** in the Client OAuth Settings
-    section.
-
-This method also accepts the following _OPTIONAL_ arguments:
-
-- `scope`
-
-        scope => ['user_birthday','user_friends', ...]
-
-    Array of Extended permissions as described by the Facebook Oauth API.
-    You can get more information about scope/Extended Permission from
-
-    [https://developers.facebook.com/docs/facebook-login/permissions/](https://developers.facebook.com/docs/facebook-login/permissions/.md)
-
-    Please note that requesting information other than `name`, `email` and
-    `profile_picture` **will require your app to be reviewed by Facebook!**
-
-- `state`
-
-        state => '123456abcde'
-
-    An arbitrary unique string provided by you to guard against Cross-site Request
-    Forgery. This value will be returned to you by Facebook, unchanged. Note that,
-    as of Facebook API v3.0, this argument is _mandatory_, so if you don't
-    provide a 'state' argument, we will default to `time()`.
-
-- `auth_type`
-
-    When a user declines a given permission, you must reauthorize them. But when
-    you do so, any previously declined permissions will not be asked again by
-    Facebook. Set this argument to `'rerequest'` to explicitly tell the dialog
-    you're re-asking for a declined permission.
-
-- `display`
-
-        display => 'page'
-
-    How to display Facebook Authorization page. Defaults to `page`.
-    Can be any of the following:
-
-    - `page`
-
-        This will display facebook authorization page as full page
-
-    - `popup`
-
-        This option is useful if you want to popup authorization page
-        as this option tell facebook to reduce the size of the authorization page
-
-    - `wab`
-
-        From the name, for wab and mobile applications this option is the best, as
-        the facebook authorization page will fit there :)
-
-- `response_type`
-
-        response_type => 'code'
-
-    When the redirect back to the app occurs, determines whether the response
-    data is in URL parameters or fragments. Defaults to `code`, which is
-    Facebook's default and useful for cases where the server handles the token
-    (which is most likely why you are using this module), but can be also be
-    `token`, `code%20token`, or `granted_scopes`. Note that changing this to
-    anything other than 'code' might change the login flow described in this
-    documentation, rendering calls to `get_access_token()` pointless.
-    Please see
-    [Facebook's login documentation](https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow.md)
-    for more information.
-
-## `$fb->get_access_token( %args )`
-
-This method issues a GET request to Facebook's API to retrieve the
-access token string for the specified code (passed as an argument).
-
-Returns the access token string or raises an exception in case of errors
-(**make sure to trap calls with eval blocks or a try/catch module**). Note
-that Facebook's access tokens are short-lived, around 2h of idle time
-before expiring. If you want to "upgrade" the token to a long lived one
-(with around 60 days of idle time), use this token to feed the
-`get_long_lived_token()` method.
-
-You should call this method inside the route for the callback URI defined
-in the `get_authorization_url` method. It receives the following arguments:
-
-- `code`
-
-    This is the verifier code that Facebook sends back to your
-    callback URL once user authorize your app, you need to capture
-    this code and pass to this method in order to get the access token.
-
-    Verifier code will be presented with your callback URL as code
-    parameter as the following:
-
-    http://your-call-back-url.com?code=234er7y6fdgjdssgfsd...
-
-    Note that if you have fiddled with the `response_type` argument,
-    you might not get this parameter properly.
-
-When the access token is returned you need to save it in a secure
-place in order to use it later in your application. The token indicates
-that a user has authorized your site/app, meaning you can associate that
-token to that user and issue API requests to Facebook on their behalf.
-
-To know _WHICH_ user has granted you the authorization (e.g. when building
-a login system to associate that token with a unique user on your database),
-you must make a request to fetch Facebook's own unique identifier for that
-user, and then associate your own user's unique id to Facebook's.
-
-This was usually done by making a GET request to the `me` API endpoint and
-looking for the 'id' field. However, Facebook has introduced a new endpoint
-for that flow that returns the id (this time as 'user\_id') and some extra
-validation data, like whether the token is valid, to which app it refers to,
-what scopes the user agreed to, etc, so now you are encouraged to call the
-`debug_token()` method as shown in the SYNOPSIS.
-
-**IMPORTANT:** Expect that the length of all access token types will change
-over time as Facebook makes changes to what is stored in them and how they
-are encoded. You can expect that they will grow and shrink over time.
-Please use a variable length data type without a specific maximum size to
-store access tokens.
-
-## `$fb->get_long_lived_token( access_token => $access_token )`
-
-Asks facebook to retrieve the long-lived (~60d) version of the provided
-short-lived (~2h) access token retrieved from `get_access_token()`. If
-successful, this method will return the long-lived token, which you can
-use to replace the short-lived one. Otherwise, it croaks with an error
-message, in which case you can continue to use the short-lived version.
-
-[See here](https://developers.facebook.com/docs/facebook-login/access-tokens/refreshing.md)
-for the gory details.
-
-## `$fb->debug_token( input => $access_token )`
-
-This method should be called right after `get_access_token()`. It will
-query Facebook for details about the given access token and validate that
-it was indeed granted to your app (and not someone else's).
-
-It requires a single argument, `input`, containing the access code obtained
-from calling `get_access_token`.
-
-It croaks on HTTP/connection/Facebook errors, returns nothing if for whatever
-reason the response is invalid without errors (e.g. no app\_id and no user\_id),
-and also if the returned app\_id is not the same as your own application\_id
-(pass a true value to `skip_check` to skip this validation).
-
-If all goes well, it returns a hashref with the JSON structure returned by
-Facebook.
-
-## `$fb->get( $url, $args )`
-
-Sends a GET request to Facebook and stores the response in the given object.
-
-- `url`
-
-    Facebook Graph API URL as string. You must provide the full URL.
-
-- `$args`
-
-    hashref of parameters to be sent with graph API URL if required.
-
-You can access the response using the following methods:
-
-- `$response>as_json`
-
-    Returns response as json object
-
-- `$response>as_hash`
-
-    Returns response as perl hashref
-
-For more information about facebook graph API, please check
-http://developers.facebook.com/docs/api
-
-## `$fb->post( $url, $args )`
-
-Send a POST request to Facebook and stores the response in the given object.
-See the `as_hash` and `as_json` methods above for how to retrieve the
-response.
-
-- `url`
-
-    Facebook Graph API URL as string
-
-- `$args`
-
-    hashref of parameters to be sent with graph API URL
-
-For more information about facebook graph API, please check
-[http://developers.facebook.com/docs/api](http://developers.facebook.com/docs/api.md)
-
-## `$fb->delete( $url, $args )`
-
-Send a DELETE request to Facebook and stores the response in the given object.
-See the `as_hash` and `as_json` methods above for how to retrieve the
-response.
-
-- `url`
-
-    Facebook Graph API URL as string
-
-- `$args`
-
-    hashref of parameters to be sent with graph API URL
+    # /opt/minorimpact/bin/add_user.pl -u admin -a yes <user>
+    Enter password for admin: 
+    Enter new password for <user>:
+                            Again:
 
 # AUTHOR
 
-Mahmoud A. Mehyar, <mamod.mehyar@gmail.com>
-
-# CONTRIBUTORS
-
-Big Thanks To
-
-- Takatsugu Shigeta [@comewalk](https://github.com/comewalk.md)
-- Breno G. de Oliveira [@garu](https://github.com/garu.md)
-- squinker [@squinker](https://github.com/squinker.md)
-- Valcho Nedelchev [@valchonedelchev](https://github.com/valchonedelchev.md)
-
-# COPYRIGHT AND LICENSE
-
-Copyright (C) 2012-2016 by Mahmoud A. Mehyar
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.1 or,
-at your option, any later version of Perl 5 you may have available.
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 574:
-
-    Unterminated C<...> sequence
+Patrick Gillan <pgillan@minorimpact.com>

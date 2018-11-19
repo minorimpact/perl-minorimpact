@@ -1,4 +1,4 @@
-package Net::Facebook::Oauth2;
+package MinorImpact::Facebook::Oauth2;
 
 use strict;
 use warnings;
@@ -18,8 +18,8 @@ sub new {
     my $api_version = defined $options{api_version} ? $options{api_version} : 'v3.1';
 
     if (!defined $options{access_token}){
-        croak "You must provide your application id in new()\nNet::Facebook::Oauth2->new( application_id => '...' )" unless defined $self->{options}->{application_id};
-        croak "You must provide your application secret in new()\nNet::Facebook::Oauth2->new( application_secret => '...' )" unless defined $self->{options}->{application_secret};
+        croak "You must provide your application id in new()\nMinorImpact::Facebook::Oauth2->new( application_id => '...' )" unless defined $self->{options}->{application_id};
+        croak "You must provide your application secret in new()\nMinorImpact::Facebook::Oauth2->new( application_secret => '...' )" unless defined $self->{options}->{application_secret};
     }
 
     if (defined $options{access_token_url}) {
@@ -254,7 +254,7 @@ sub _has_access_token {
 __END__
 =head1 NAME
 
-Net::Facebook::Oauth2 - a simple Perl wrapper around Facebook OAuth 2.0 protocol
+MinorImpact::Facebook::Oauth2 - a simple Perl wrapper around Facebook OAuth 2.0 protocol
 
 =for html
 <a href="https://travis-ci.org/mamod/Net-Facebook-Oauth2"><img src="https://travis-ci.org/mamod/Net-Facebook-Oauth2.svg?branch=master"></a>
@@ -268,9 +268,9 @@ at the time of publication, B<< scheduled for deprecation not sooner than July 2
 
 Somewhere in your application's login process:
 
-    use Net::Facebook::Oauth2;
+    use MinorImpact::Facebook::Oauth2;
 
-    my $fb = Net::Facebook::Oauth2->new(
+    my $fb = MinorImpact::Facebook::Oauth2->new(
         application_id     => 'your_application_id', 
         application_secret => 'your_application_secret',
         callback           => 'http://yourdomain.com/facebook/callback'
@@ -322,7 +322,7 @@ user of your app.
 Later on you can use that access token to communicate with Facebook on behalf
 of this user:
 
-    my $fb = Net::Facebook::Oauth2->new(
+    my $fb = MinorImpact::Facebook::Oauth2->new(
         access_token => $access_token
     );
 
@@ -338,7 +338,7 @@ C<< $info->{id} >>
 
 =head1 DESCRIPTION
 
-Net::Facebook::Oauth2 gives you a way to simply access FaceBook Oauth 2.0
+MinorImpact::Facebook::Oauth2 gives you a way to simply access FaceBook Oauth 2.0
 protocol.
 
 The example folder contains some snippets you can look at, or for more
@@ -356,7 +356,7 @@ L<http://developers.facebook.com/docs/api>
 
 =head1 USAGE
 
-=head2 C<Net::Facebook::Oauth-E<gt>new( %args )>
+=head2 C<MinorImpact::Facebook::Oauth-E<gt>new( %args )>
 
 Returns a new object to handle user authentication.
 Pass arguments as a hash. The following arguments are I<REQUIRED>

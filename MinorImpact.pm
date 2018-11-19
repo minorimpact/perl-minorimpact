@@ -15,6 +15,7 @@ use MinorImpact::CLI;
 use MinorImpact::collection;
 use MinorImpact::Config;
 use MinorImpact::entry;
+use MinorImpact::Facebook::Oauth2;
 use MinorImpact::Object;
 use MinorImpact::settings;
 use MinorImpact::User;
@@ -423,7 +424,7 @@ sub clearCache {
 
 =back
 
-Returns a L<Net::Facebook::Oauth2> object.
+Returns a L<MinorImpact::Facebook::Oauth2> object.
 
   $FB = MinorImpact::facebook();
 
@@ -445,7 +446,7 @@ sub facebook {
 
     return unless ($access_token || ($self->{conf}{default}{facebook_app_id} && $self->{conf}{default}{facebook_app_secret}));
 
-    my $FB = Net::Facebook::Oauth2->new(
+    my $FB = MinorImpact::Facebook::Oauth2->new(
         access_token       => $access_token,
         application_id     => $self->{conf}{default}{facebook_app_id},
         application_secret => $self->{conf}{default}{facebook_app_secret},

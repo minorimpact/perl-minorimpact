@@ -1,6 +1,6 @@
 # NAME
 
-Net::Facebook::Oauth2 - a simple Perl wrapper around Facebook OAuth 2.0 protocol
+MinorImpact::Facebook::Oauth2 - a simple Perl wrapper around Facebook OAuth 2.0 protocol
 
 <div>
 
@@ -16,9 +16,9 @@ at the time of publication, **scheduled for deprecation not sooner than July 26t
 
 Somewhere in your application's login process:
 
-    use Net::Facebook::Oauth2;
+    use MinorImpact::Facebook::Oauth2;
 
-    my $fb = Net::Facebook::Oauth2->new(
+    my $fb = MinorImpact::Facebook::Oauth2->new(
         application_id     => 'your_application_id', 
         application_secret => 'your_application_secret',
         callback           => 'http://yourdomain.com/facebook/callback'
@@ -70,7 +70,7 @@ user of your app.
 Later on you can use that access token to communicate with Facebook on behalf
 of this user:
 
-    my $fb = Net::Facebook::Oauth2->new(
+    my $fb = MinorImpact::Facebook::Oauth2->new(
         access_token => $access_token
     );
 
@@ -86,7 +86,7 @@ unique user id value with a call to the 'me' endpoint shown above, under
 
 # DESCRIPTION
 
-Net::Facebook::Oauth2 gives you a way to simply access FaceBook Oauth 2.0
+MinorImpact::Facebook::Oauth2 gives you a way to simply access FaceBook Oauth 2.0
 protocol.
 
 The example folder contains some snippets you can look at, or for more
@@ -104,7 +104,7 @@ get/post Facebook Graph API
 
 # USAGE
 
-## `Net::Facebook::Oauth->new( %args )`
+## `MinorImpact::Facebook::Oauth->new( %args )`
 
 Returns a new object to handle user authentication.
 Pass arguments as a hash. The following arguments are _REQUIRED_
