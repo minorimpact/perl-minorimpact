@@ -1080,8 +1080,8 @@ sub user {
             };
             if ($@) {
                 MinorImpact::log('notice', $@);
+                return;
             }
-            return;
         }
 
         #my $access_data = $fb->debug_token( input => $access_token );
