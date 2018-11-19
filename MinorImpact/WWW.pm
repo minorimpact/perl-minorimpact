@@ -641,6 +641,7 @@ sub register {
                 push(@errors, $error);
             }
             if ($user) {
+                MinorImpact::session('user_id', $user->id());
                 $MI->redirect({ action => 'home' });
             } else {
                 if (scalar(@errors)) { unshift(@errors, "Can't create new user:"); }
