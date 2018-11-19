@@ -2,11 +2,6 @@ package MinorImpact::WWW;
 
 use strict;
 
-use JSON;
-
-use MinorImpact;
-use MinorImpact::Util;
-
 =head1 NAME
 
 MinorImpact::WWW
@@ -28,6 +23,12 @@ MinorImpact::WWW
 =head1 SUBROUTINES
 
 =cut
+
+use JSON;
+use MinorImpact;
+use MinorImpact::Util;
+use Net::Facebook::Oauth2;
+ 
 
 =head2 add
 
@@ -346,6 +347,32 @@ sub edit_user {
     });
 }
 
+sub facebook {
+    my $MINORIMPACT = shift || return;
+    my $params = shift || {};
+
+    MinorImpact::debug(1);
+    MinorImpact::log('debug', "starting");
+
+    my $user = MinorImpact::user();
+
+    $MINORIMPACT->redirect({ action => 'home' }) if ($user);
+
+    my $FB = MinorImpact::facebook() || $MINORIMPACT->redirect();
+
+    my $url = $FB->get_authorization_url(
+        scope   => [ 'email' ],
+        display => 'page'
+    );
+    MinorImpact::log('debug', "\$url='$url'");
+    $MINORIMPACT->redirect($url) if ($url);
+    $MINORIMPACT->redirect();
+    #print "Content-type: text/html\n\n$url";
+
+    MinorImpact::log('debug', "ending");
+    MinorImpact::debug(0);
+}
+
 =head2 home
 
 =over
@@ -364,11 +391,13 @@ sub home {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::user({ force => 1 });
+    my $user = MinorImpact::user({ force => 1 }) || $MINORIMPACT->redirect();
     my $settings = $user->settings();
+    MinorImpact::debug(0);
 
     my $format = $CGI->param('format') || 'html';
     my $limit = $CGI->param('limit') || ($settings?$settings->get('results_per_page'):20);
@@ -411,6 +440,7 @@ sub home {
                             types               => [ @types ],
                             });
     MinorImpact::log('debug', "ending");
+    MinorImpact::debug(0);
 }
 
 =head2 index
@@ -462,13 +492,15 @@ sub login {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
-    my $user = $MINORIMPACT->user();
+    my $user = MinorImpact::user();
 
     $MINORIMPACT->redirect({ action => 'home' }) if ($user);
 
-    my $CGI = $MINORIMPACT->cgi();
+    MinorImpact::debug(0);
+    my $CGI = MinorImpact::cgi();
     my $username = $CGI->param('username');
     my $redirect = $CGI->param('redirect');
     my @errors;
@@ -477,7 +509,13 @@ sub login {
         push(@errors, "Invalid username or password");
     }
 
-    MinorImpact::tt('login', { errors => [ @errors ], redirect => $redirect, username => $username });
+    MinorImpact::tt('login', { 
+        errors => [ @errors ], 
+        facebook_app_id => $MINORIMPACT->{conf}{default}{facebook_app_id} || undef,
+        redirect => $redirect, 
+
+        username => $username 
+    });
     MinorImpact::log('debug', "ending");
 }
 
@@ -595,7 +633,7 @@ sub register {
         if (!scalar(@errors)) {
             my $user;
             eval {
-                $user = MinorImpact::User::add({ email=>$email, password=>$password, username=>$username });
+                $user = MinorImpact::User::add({ email=>$email, password=>$password, username=>$username, source => 'local' });
             };
             if ($@) {
                 my $error = $@;

@@ -28,7 +28,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
-our $VERSION = 8;
+our $VERSION = 9;
 
 =head1 NAME
 
@@ -277,8 +277,9 @@ sub new {
         MinorImpact::log('debug', "ending");
     }
 
-    if ($self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
+    if (0 && $self->{CGI}->param("a") ne 'login' && ($options->{valid_user} || $options->{user_id} || $options->{admin})) {
         my ($script_name) = scriptName();
+        MinorImpact::log('debug', "WHY ARE WE HERE?!");
         my $user = $self->user();
         if ($user) {
             if ($options->{user_id} && $user->id() != $options->{user_id}) {
@@ -293,7 +294,7 @@ sub new {
             $self->redirect({ action => 'login' });
         }
     }
-    if ($options->{https} && ($ENV{HTTPS} ne 'on' && !$ENV{HTTP_X_FORWARDED_FOR})) {
+    if (0 && $options->{https} && ($ENV{HTTPS} ne 'on' && !$ENV{HTTP_X_FORWARDED_FOR})) {
         MinorImpact::log('notice', "not https");
         $self->redirect();
     }
@@ -412,6 +413,50 @@ sub clearCache {
     }
 }
 
+=head2 facebook
+
+=over
+
+=item ::facebook([$access_token])
+
+=item ->facebook([$access_token])
+
+=back
+
+Returns a L<Net::Facebook::Oauth2> object.
+
+  $FB = MinorImpact::facebook();
+
+=cut
+
+sub facebook {
+    my $self = shift;
+    my $access_token = shift;
+
+    if ($self && !ref($self) && !$access_token) {
+        $access_token = $self;
+        undef($self);
+    }
+
+    $self = new MinorImpact() unless ($self);
+    #return $self->{facebook} if ($self->{facebook});
+
+    $access_token = MinorImpact::session('facebook_access_token', $access_token);
+
+    return unless ($access_token || ($self->{conf}{default}{facebook_app_id} && $self->{conf}{default}{facebook_app_secret}));
+
+    my $FB = Net::Facebook::Oauth2->new(
+        access_token       => $access_token,
+        application_id     => $self->{conf}{default}{facebook_app_id},
+        application_secret => $self->{conf}{default}{facebook_app_secret},
+        callback           => MinorImpact::url({action => 'home', qualified => 1 })
+    );
+
+    #$self->{facebook} = $FB if ($FB);
+
+    return $FB;
+}
+
 sub param {
     my $self = shift || return;
     my $param = shift;
@@ -482,7 +527,7 @@ sub redirect {
         undef($self);
     } 
 
-    if (ref($params) ne 'HASH') {
+    if ($params && ref($params) ne 'HASH') {
         my $redirect = $params;
         $params = {};
         $params->{url} = $redirect;
@@ -531,6 +576,8 @@ sub session {
     my $name = shift;
     my $value = shift;
 
+    MinorImpact::log("debug", "starting");
+
     my $MI = new MinorImpact();
     my $CGI = MinorImpact::cgi();
 
@@ -540,22 +587,27 @@ sub session {
     my $session = MinorImpact::cache("session:$session_id") || {};
 
     unless ($name) {
+        MinorImpact::log("debug", "ending");
         return $session;
     }
 
     if ($name && !defined($value)) {
+        MinorImpact::log("debug", "ending($name='" . $session->{$name} . "')");
         return $session->{$name};
     }
 
     if ($name && defined($value)) {
         if (ref($value) eq 'HASH' && scalar(keys %$value) == 0) {
+            MinorImpact::log('debug', "deleting \$session->{$name}");
             delete($session->{$name});
         } else {
+            MinorImpact::log('debug', "setting \$session->{$name}='$value'");
             $session->{$name} = $value;
         }
     }
 
-    return MinorImpact::cache("session:$session_id", $session, $timeout);
+    MinorImpact::cache("session:$session_id", $session, $timeout);
+    MinorImpact::log("debug", "ending");
 }
 
 sub sessionID {
@@ -574,6 +626,7 @@ sub sessionID {
         $session_id = $ENV{SSH_CLIENT} . "-" . $ENV{USER};
     }
     
+    MinorImpact::log('debug', "\$session_id='$session_id'");
     return $session_id;
 }
 
@@ -815,9 +868,10 @@ sub url {
     $self = new MinorImpact() unless ($self);
 
     my $CGI = MinorImpact::cgi();
-    my $user = MinorImpact::user();
+    #my $user = MinorImpact::user();
 
-    my $action = $params->{action} || ($user?'home':'index');
+    #my $action = $params->{action} || ($user?'home':'index');
+    my $action = $params->{action} || 'index';
     my $collection_id = $params->{collection_id} if (defined($params->{collection_id}));
     my $limit = $params->{limit};
     my $object_id = $params->{object_id} || $params->{id};
@@ -851,11 +905,12 @@ sub url {
         $id = $object_id;
         undef($object_id);
     } elsif ($action eq 'user' && $user_id) {
-        my $user = new MinorImpact::User($user_id);
-        if ($user) {
-            $id = $user->name();
-        } else {
-            $id = $user_id;
+        $id = $user_id;
+        if ($pretty) {
+            my $user = new MinorImpact::User($id);
+            if ($user) {
+                $id = uri_escape($user->name());
+            }
         }
         undef($user_id);
     }
@@ -968,7 +1023,26 @@ sub user {
     my $CGI = MinorImpact::cgi();
     my $username = $params->{username} || $CGI->param('username') || $ENV{USER} || '';
     my $password = $params->{password} || $CGI->param('password') || '';
-    my $user_hash = md5_hex("$username:$password");
+    my $facebook_code = $CGI->param('code');
+
+    my $user_hash;
+    if ($username) {
+       $user_hash = md5_hex("$username:$password");
+    } else {
+       $user_hash = $facebook_code;
+    }
+
+    # $user_hash is a quick way of indexing the login credentials so we can re-verify the
+    #   user quickly during the *very first* login, before the cookie has a chance to be set -
+    #   otherwise we have to go through the expensive validation procedure every single time user()
+    #   is called during that first page draw.  It's annoying as shit.  If this is the first page, 
+    #   the cookie hasn't been set, so if there are a ton of items  we'd have to validate against 
+    #   the database over and over again... so just validate against a stored hash and return the 
+    #   cached user.  Once USERHASH is set, we know we've already checked this username/passsword 
+    #   combination (or external id code), and if USER is set we already know it succeeded.
+    if ($self->{USER} && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
+        return $self->{USER};
+    }
 
     # Check the number of login failures for this IP
     my $IP = $ENV{HTTP_X_FORWARDED_FOR} || $ENV{SERVER_ADDR} || $ENV{SSH_CONNECTION} || 'X';
@@ -988,13 +1062,49 @@ sub user {
         }
     }
 
-    # If this is the first page, the cookie hasn't been set, so if there are a ton of items
-    #   we'd have to validate against the database over and over again... so just validate against
-    #   a stored hash and return the cached user.  Once USERHASH is set, we know we've already 
-    #   checked this username/passsword combination, and if USER is set we already know it succeeded.
-    if ($self->{USER} && $self->{USER}->name() eq $username && $self->{USERHASH} && $user_hash eq $self->{USERHASH}) {
-        return $self->{USER};
+    if ($facebook_code) {
+        $self->{USERHASH} = $facebook_code;
+        MinorImpact::log('debug', "\$facebook_code='$facebook_code'");
+        #print "Content-type: text/plain\n\nFUCK:$facebook_code\n";
+        #return;
+        my $FB = MinorImpact::facebook();
+        my $access_token;
+        my $unique_id;
+        my $access_token = MinorImpact::session('facebook_access_token');
+        unless ($access_token) {
+            eval {
+                $access_token = $FB->get_access_token(code => $facebook_code); # <-- could die!
+                $access_token = $FB->get_long_lived_token();
+
+                MinorImpact::session('facebook_access_token', $access_token);
+            };
+            if ($@) {
+                MinorImpact::log('notice', $@);
+            }
+            return;
+        }
+
+        #my $access_data = $fb->debug_token( input => $access_token );
+        #if ($access_data && $access_data->{is_valid}) {
+        #    $unique_id = $access_data->{user_id};
+        #}
+
+        my $me = $FB->get( 'https://graph.facebook.com/v3.1/me?fields=name,email,id' );
+        my $info = $me->as_hash;
+        my $email = $info->{email};
+        my $name = $info->{name};
+        my $user = new MinorImpact::User($email) || new MinorImpact::User($name);
+        unless ($user) {
+            $user = MinorImpact::User::add({ name => $name, email => $email, password => '', source => 'facebook'});
+        }
+        return unless ($user);
+        $user->facebook($info);
+
+        $self->{USER} = $user;
+        MinorImpact::session('user_id', $user->id());
+        return $user;
     }
+
 
     # If the username and password are provided, then validate the user.
     if ($username && $password && !$self->{USERHASH}) {
@@ -1026,7 +1136,7 @@ sub user {
     #   already been set.
     my $user_id = MinorImpact::session('user_id');
     if ($user_id) {
-        #MinorImpact::log('debug', "cached user_id=$user_id");
+        MinorImpact::log('debug', "session user_id=$user_id");
         my $user = new MinorImpact::User($user_id);
         if ($user) {
             $self->{USER} = $user;
@@ -1042,14 +1152,15 @@ sub user {
     #   <shrug>. I don't know.  I'm just going to leave it for now and hope for the best.
     #
     if ($ENV{'USER'}) {
-        my $user = new MinorImpact::User($ENV{'USER'});
+        my $username = $ENV{'USER'};
+        my $user = new MinorImpact::User($username);
         if (!$user && !$params->{admin}) {
             # TODO: Make this a configuration option, so the developer can prevent
             #   new users from getting created randomly.
             # TODO: Add a 'shell' or 'local' parameter so we can queury all the accounts
             #   created using this method (I'm holding off on adding it because I still
             #   dan't have a mechanism for automating database updates).
-            $user = MinorImpact::User::addUser({username => $ENV{'USER'}, password => '', email => '' });
+            $user = MinorImpact::User::addUser({username => $username, password => '', email => "$username\@localhost"});
         }
         # Check to see if the user has a blank password, the assumption being that this is
         #   some yahoo using the library for a simple command line script and doesn't care
@@ -1204,7 +1315,9 @@ sub www {
     } elsif ( $action eq 'edit') {
         MinorImpact::WWW::edit($self, $local_params);
     } elsif ( $action eq 'edit_user') {
-        MinorImpact::WWW::edit_user($self, $local_params);
+        MinorImpact::WWW::settings($self, $local_params);
+    } elsif ( $action eq 'facebook') {
+        MinorImpact::WWW::facebook($self, $local_params);
     } elsif ( $action eq 'home') {
         MinorImpact::WWW::home($self, $local_params);
     } elsif ( $action eq 'login') {
@@ -1501,7 +1614,8 @@ sub dbConfig {
 
     my $admin = new MinorImpact::User('admin');
     unless ($admin) {
-        $DB->do("INSERT INTO user(name, password, admin) VALUES (?,?,?)", undef, ("admin", "92.96PWMq8Us.", 1)) || die $DB->errstr;
+        my $password = crypt("admin", $$);
+        $DB->do("INSERT INTO user(name, password, admin) VALUES (?,?,?,?)", undef, ("admin", $password, 1, 'local')) || die $DB->errstr;
     }
 
     cache("MinorImpact_VERSION", $VERSION);

@@ -180,6 +180,15 @@ Called with no values, cache() return the raw cache oject, either [Cache::Memcac
 a memcached server is configured, or [CHI](https://metacpan.org/pod/CHI.md). (see 
 [MinorImpact::Manual::Configuration](./MinorImpact_Manual_Configuration.md#settings)) for more information on cache configuration.
 
+## facebook
+
+- ::facebook(\[$access\_token\])
+- ->facebook(\[$access\_token\])
+
+Returns a [Net::Facebook::Oauth2](./Net_Facebook_Oauth2.md) object.
+
+    $FB = MinorImpact::facebook();
+
 ## redirect
 
 - ::redirect()

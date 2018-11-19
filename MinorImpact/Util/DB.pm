@@ -14,6 +14,7 @@ MinorImpact::Util::DB - MinorImpact database utilities
 
 use Data::Dumper;
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 
 =head2 addTable
 

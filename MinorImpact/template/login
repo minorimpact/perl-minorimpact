@@ -3,15 +3,27 @@
 <!-- TEMPLATE:default.login -->
 
 <div class='w3-container'>
-<form class='w3-container' id=form_login method=POST>
-    <input type=hidden name=redirect value='[% redirect %]'>
-    <input type=hidden name=a value='login'>
-    <label>Username</label>
-    <input class='w3-input w3-border' type=text name=username value='[% username %]' required>
-    <label>Password</label>
-    <input class='w3-input w3-border' type=password name=password required>
-    <button class='w3-btn w3-grey'>Log in</button>
-</form>
+    <form class='w3-container' id=form_login method=POST>
+        <input type=hidden name=redirect value='[% redirect %]'>
+        <input type=hidden name=a value='login'>
+        <label>Username</label>
+        <div class="w3-row" style="margin-top:8px">
+            <input class='w3-input w3-border' type=text name=username value='[% username %]' required>
+        </div>
+        <label>Password</label>
+        <div class="w3-row" style="margin-top:8px">
+            <input class='w3-input w3-border' type=password name=password required>
+        </div>
+        <div class="w3-row" style="margin-top:8px">
+            <input type=submit name=submit class="w3-input w3-border" value='Log In'>
+        </div>
+    </form>
+    [% IF facebook_app_id %]
+        <div align='center' class='w3-container'>
+            <em> - OR - </em></br>
+            <a href="[% url({ action => 'facebook' }) %]" class="w3-row w3-input w3-border w3-button w3-blue">Log In with Facebook</a>
+        </div>
+    [% END %]
 </div>
 
 [% INCLUDE footer %]

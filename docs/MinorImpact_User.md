@@ -36,6 +36,28 @@ Delete the user and all of the objects owned by that user.
 
     $USER->delete();
 
+## facebook
+
+- ->facebook(\\%params)
+
+Add Facebook info to an existing user.
+
+    $USER->facebook({ name => 'Facebook Name', email => 'Facebook Email Address, id => 'Facebook ID });
+
+### params
+
+- name
+
+    The 'name' value from the Facebook 'me' graph endpoint.
+
+- email
+
+    The 'email' value from the Facebook 'me' graph endpoint.
+
+- id
+
+    The 'email' value from the Facebook 'me' graph endpoint.
+
 ## get
 
 - get($field)

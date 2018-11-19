@@ -30,7 +30,7 @@ The object representing application users.
 =head1 METHODS
 
 =cut
-our $VERSION = 1;
+our $VERSION = 3;
 sub new {
     my $package = shift;
     my $params = shift;
@@ -59,7 +59,7 @@ sub new {
             $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE uuid = ?", undef, (lc($user_id)));
         } else {
             MinorImpact::log('debug', "searching database by name");
-            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ?", undef, ($user_id));
+            $data = $self->{DB}->selectrow_hashref("SELECT * FROM user WHERE name = ? OR email = ?", undef, ($user_id, $user_id));
         }
         MinorImpact::log('debug', "2 \$data->{name}='" . $data->{name} . "'");
         return unless $data;
@@ -135,15 +135,35 @@ sub dbConfig {
             mod_date => { type => "timestamp", null => 0, },
             name => { type => "varchar(50)", null => 0, },
             password => { type => "varchar(255)", null => 0, },
+            source => { type => 'varchar(25)', default => 'local', null => 0 },
             test => { type => "varchar(255)", },
             uuid => { type => "char(36)", },
+            verified => { type => "boolean", },
         },
         indexes => {
+            #idx_user_email => { fields => "email", unique => 1 },
             idx_user_name => { fields => "name", unique => 1 },
             idx_user_uuid => { fields => "uuid", },
         },
     });
 
+    MinorImpact::Util::DB::addTable($DB, {
+        name => "user_external",
+        fields => {
+            create_date => { type => "datetime", null => 0, },
+            email => { type => "varchar(255)", null => 1, },
+            external_id => { type => "int", null => 0 },
+            id => { type => "int", primary_key => 1, null => 0, auto_increment => 1, },
+            user_id => { type => "int", null => 0 },
+            mod_date => { type => "timestamp", null => 0, },
+            name => { type => "varchar(50)", null => 0, },
+            source => { type => 'varchar(25)', null => 0 },
+        },
+        indexes => {
+            idx_user_external_user_id_source => { fields => "user_id,source", unique => 1},
+            idx_user_external_external_id => { fields => "user_id,source", unique => 1 },
+        },
+    });
 
     MinorImpact::cache("User_VERSION", $VERSION);
 }
@@ -190,6 +210,7 @@ sub delete {
     }
     if ($object_count == $deleted) {
         MinorImpact::log('info', "deleting user $user_id");
+        $DB->do("DELETE FROM user_external WHERE user_id=?", undef, ($user_id)) || die $DB->errstr;
         $DB->do("DELETE FROM user WHERE id=?", undef, ($user_id)) || die $DB->errstr;
     } else {
         die "object_count:$object_count does not match deleted count:$deleted";
@@ -198,6 +219,50 @@ sub delete {
 
     MinorImpact::log('debug', "ending");
     return 1;
+}
+
+=head2 facebook
+
+=over
+
+=item ->facebook(\%params)
+
+=back
+
+Add Facebook info to an existing user.
+
+  $USER->facebook({ name => 'Facebook Name', email => 'Facebook Email Address, id => 'Facebook ID });
+
+=head3 params
+
+=over
+
+=item name
+
+The 'name' value from the Facebook 'me' graph endpoint.
+
+=item email
+
+The 'email' value from the Facebook 'me' graph endpoint.
+
+=item id
+
+The 'email' value from the Facebook 'me' graph endpoint.
+
+=back
+
+=cut
+
+sub facebook {
+    my $self = shift || die "no user";
+    my $params = shift || die "no params";
+    MinorImpact::log('debug', "starting");
+
+    my $DB = $MinorImpact::SELF->{USERDB} || die "no db";
+
+    $DB->do("REPLACE INTO user_external (user_id, name, email, external_id, source, create_date) VALUES (?, ?, ?, ?, 'facebook', NOW())", undef, ($self->id(), $params->{name}, $params->{email}, $params->{id})) || die $DB->errstr;
+
+    MinorImpact::log('debug', "ending");
 }
 
 sub form {
@@ -632,32 +697,32 @@ sub add {
     MinorImpact::log('debug', "starting");
 
     my $DB = $MinorImpact::SELF->{USERDB};
-    if ($DB && ($params->{name} || $params->{username})) {
-        $params->{name} = $params->{username} unless ($params->{name});
-        $params->{admin} ||= 0;
-        my $password;
-        if (isTrue($params->{encrypted})) {
-            $password = $params->{password};
-        } else {
-            # Only the first 8 characters matter to crypt(); disturbing and weird.
-            $password = crypt($params->{password}||"", $$);
-        }
 
-        if ($params->{admin}) {
-            my $user = MinorImpact::user();
-            unless ($user && $user->isAdmin()) {
-                die "Only an admin user can add an admin user\n";
-            }
-        }
-        $DB->do("INSERT INTO user (name, password, admin, email, uuid, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email}, (lc($params->{uuid}) || lc($params->{id}) || uuid()))) || die $DB->errstr;
-        my $user_id = $DB->{mysql_insertid};
-        #MinorImpact::log('debug', "\$user_id=$user_id");
-        return new MinorImpact::User($user_id);
+    die "no db" unless ($DB);
+    die "no username" unless ($params->{name} || $params->{username});
+    die "no email" unless ($params->{email});
+
+    $params->{name} = $params->{username} unless ($params->{name});
+    $params->{admin} ||= 0;
+    my $password;
+    if (isTrue($params->{encrypted})) {
+        $password = $params->{password};
+    } else {
+        # Only the first 8 characters matter to crypt(); disturbing and weird.
+        $password = crypt($params->{password}||"", $$);
     }
-    die "Couldn't add user " . $params->{username};
 
+    if ($params->{admin}) {
+        my $user = MinorImpact::user();
+        unless ($user && $user->isAdmin()) {
+            die "Only an admin user can add an admin user\n";
+        }
+    }
+    $DB->do("INSERT INTO user (name, password, admin, email, uuid, source, create_date) VALUES (?, ?, ?, ?, ?, ?, NOW())", undef, ($params->{name}, $password, isTrue($params->{admin}), $params->{email}, (lc($params->{uuid}) || lc($params->{id}) || uuid()), $params->{source})) || die $DB->errstr;
+    my $user_id = $DB->{mysql_insertid};
+    #MinorImpact::log('debug', "\$user_id=$user_id");
     MinorImpact::log('debug', "ending");
-    return;
+    return new MinorImpact::User($user_id);
 }
 
 =head2 addObject
