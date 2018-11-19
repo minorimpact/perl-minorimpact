@@ -58,6 +58,15 @@ Add Facebook info to an existing user.
 
     The 'email' value from the Facebook 'me' graph endpoint.
 
+## form
+
+- ->form()
+
+If the user was created locally (ie, not from Facebook or Google), returns
+an HTML form for editing the user's email address and password.
+
+    $form = $USER->form();
+
 ## get
 
 - get($field)

@@ -265,28 +265,46 @@ sub facebook {
     MinorImpact::log('debug', "ending");
 }
 
+=head2 form
+
+=over
+
+=item ->form()
+
+=back
+
+If the user was created locally (ie, not from Facebook or Google), returns
+an HTML form for editing the user's email address and password.
+
+  $form = $USER->form();
+
+=cut
+
 sub form {
     my $self = shift || return;
     MinorImpact::log('debug', "starting");
 
-    my $field;
-    my $form = "<form method=POST class='w3-container w3-padding'>\n";
-    $form .= "<input type=hidden name=a value='settings'>\n";
-    $form .= "<input type=hidden name=id value='" . $self->id() . "'>\n";
-   
-    $field = new MinorImpact::Object::Field({db => { name => 'email', type => 'string'}, value => $self->get('email') });
-    $form .= $field->rowForm();
+    my $form;
+    if ($self->get('source') eq 'local') {
+        my $field;
+        $form = "<form method=POST class='w3-container w3-padding'>\n";
+        $form .= "<input type=hidden name=a value='settings'>\n";
+        $form .= "<input type=hidden name=id value='" . $self->id() . "'>\n";
+       
+        $field = new MinorImpact::Object::Field({db => { name => 'email', type => 'string'}, value => $self->get('email') });
+        $form .= $field->rowForm();
 
-    $field = new MinorImpact::Object::Field({db => { name => 'password', type => 'password'}});
-    $form .= $field->rowForm();
+        $field = new MinorImpact::Object::Field({db => { name => 'password', type => 'password'}});
+        $form .= $field->rowForm();
 
-    $field = new MinorImpact::Object::Field({db => { name => 'new_password', type => 'password' }});
-    $form .= $field->rowForm();
+        $field = new MinorImpact::Object::Field({db => { name => 'new_password', type => 'password' }});
+        $form .= $field->rowForm();
 
-    $field = new MinorImpact::Object::Field({db => { name => 'new_password2', type => 'password' }});
-    $form .= $field->rowForm();
-    $form .= "<div class='w3-row' style='margin-top:8px'>\n<input type=submit name=submit class='w3-input w3-border'>\n</div>\n";
-    $form .= "</form>\n";
+        $field = new MinorImpact::Object::Field({db => { name => 'new_password2', type => 'password' }});
+        $form .= $field->rowForm();
+        $form .= "<div class='w3-row' style='margin-top:8px'>\n<input type=submit name=submit class='w3-input w3-border'>\n</div>\n";
+        $form .= "</form>\n";
+    }
 
     MinorImpact::log('debug', "ending");
     return $form;
@@ -519,10 +537,11 @@ sub update {
         $self->{DB}->do("UPDATE user SET admin=? WHERE id=?", undef, (isTrue($params->{admin}), $self->id())) || die $self->{DB}->errstr;
         $self->{data}{admin} = isTrue($params->{admin});
     }
-    if (defined($params->{email})) {
+    if (defined($params->{email}) && $self->get('email') ne $params->{email}) {
         MinorImpact::log('debug',"setting email to '" . $params->{email} . "'");
-        $self->{DB}->do("UPDATE user SET email=? WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstra;
+        $self->{DB}->do("UPDATE user SET email=?, verified=0 WHERE id=?", undef, ($params->{email}, $self->id())) || die $self->{DB}->errstra;
         $self->{data}{email} = $params->{email};
+        $self->{data}{verified} = 0;
     }
     if (defined($params->{password})) {
         my $password = $params->{password} || '';

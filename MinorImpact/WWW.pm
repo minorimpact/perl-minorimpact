@@ -304,7 +304,10 @@ sub settings {
         }
     }
     my $form = "<h3>Site Settings</h3>\n" . $settings->form({action => 'settings'});
-    $form .= "<h3>User Settings</h3>\n" . $user->form();
+    my $user_form = $user->form();
+    if ($user_form) {
+        $form .= "<h3>User Settings</h3>\n" . $user_form;
+    }
 
     MinorImpact::tt('settings', { 
         errors  => [ @errors ],
