@@ -11,8 +11,10 @@
 [% END %]
 
 [% IF site_config.email %]
-    <b>Email</b> <a href=mailto:[% site_config.email %]>[% site_config.email %]</a>
+    <p><b>Email</b> <a href=mailto:[% site_config.email %]>[% site_config.email %]</a></p>
 [% END %]
+
+<p><a href="[% url({action => "terms"}) %]">Privacy Policy, Term and Conditions</a></p>
 
 [% INCLUDE about_site %]
 

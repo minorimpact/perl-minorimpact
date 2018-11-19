@@ -940,7 +940,7 @@ sub url {
     }
 
     # Remove any extraneous characters.
-    $url =~s/[\?\/]$//;
+    $url =~s/[\?\/]+$//;
     MinorImpact::log('debug', "\$url='$url'");
     MinorImpact::log('debug', "ending");
     return $url;
