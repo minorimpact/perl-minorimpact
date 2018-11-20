@@ -1099,7 +1099,9 @@ sub user {
             $user = MinorImpact::User::add({ name => $name, email => $email, password => '', source => 'facebook'});
         }
         return unless ($user);
-        $user->facebook($info);
+
+        $info->{source} = 'facebook';
+        $user->external($info);
 
         $self->{USER} = $user;
         MinorImpact::session('user_id', $user->id());

@@ -221,48 +221,69 @@ sub delete {
     return 1;
 }
 
-=head2 facebook
+=head2 external
 
 =over
 
-=item ->facebook(\%params)
+=item ->external([\%params])
 
 =back
 
-Add Facebook info to an existing user.
+Add external info to an existing user.
 
-  $USER->facebook({ name => 'Facebook Name', email => 'Facebook Email Address, id => 'Facebook ID });
+  $USER->external({ 
+    email => 'external Email Address', 
+    id => 'external ID',
+    name => 'external Name', 
+    source => 'facebook' 
+  });
+
+If called with no parameters, returns an array of hashes, one for each external
+source.
+
+  @external = $USER->external();
+  foreach $info (@external) {
+    print $info->{source} . ":" . $info->{name} .  "\n";   # facebook:external Name
+  }
 
 =head3 params
 
 =over
 
-=item name
-
-The 'name' value from the Facebook 'me' graph endpoint.
-
 =item email
 
-The 'email' value from the Facebook 'me' graph endpoint.
+The 'email' value from the external source.
 
 =item id
 
-The 'email' value from the Facebook 'me' graph endpoint.
+The 'id' value from the external source.
+
+=item name
+
+The 'name' value from the external source.
+
+=item source
+
+The internal name of the source.  REQUIRED.
 
 =back
 
 =cut
 
-sub facebook {
+sub external {
     my $self = shift || die "no user";
-    my $params = shift || die "no params";
-    MinorImpact::log('debug', "starting");
+    my $params = shift;
 
     my $DB = $MinorImpact::SELF->{USERDB} || die "no db";
 
-    $DB->do("REPLACE INTO user_external (user_id, name, email, external_id, source, create_date) VALUES (?, ?, ?, ?, 'facebook', NOW())", undef, ($self->id(), $params->{name}, $params->{email}, $params->{id})) || die $DB->errstr;
-
-    MinorImpact::log('debug', "ending");
+    if ($params) {
+        die "no source" unless ($params->{source});
+        $DB->do("REPLACE INTO user_external (user_id, name, email, external_id, source, create_date) VALUES (?, ?, ?, ?, ?, NOW())", undef, ($self->id(), $params->{name}, $params->{email}, $params->{id}, $params->{source})) || die $DB->errstr;
+    } else {
+        my $externals = $DB->selectall_arrayref("SELECT name, email, external_id as id, source FROM user_external WHERE user_id=?", {Slice=>{}}, ($self->id()));
+        die $DB->errstr if ($DB->errstr);
+        return @$externals;
+    }
 }
 
 =head2 form
@@ -532,8 +553,8 @@ sub update {
     die "Unable to verify current user\n" unless ($user);
     die "Invalid user\n" unless ($user->id() == $self->id() || $user->isAdmin());
     if (defined($params->{admin})) {
-        MinorImpact::log('debug', "Updating admin priviledges");
         die "Not an admin user\n" unless ($user->isAdmin());
+        MinorImpact::log('debug', "Updating admin priviledges");
         $self->{DB}->do("UPDATE user SET admin=? WHERE id=?", undef, (isTrue($params->{admin}), $self->id())) || die $self->{DB}->errstr;
         $self->{data}{admin} = isTrue($params->{admin});
     }
@@ -545,9 +566,14 @@ sub update {
     }
     if (defined($params->{password})) {
         my $password = $params->{password} || '';
-        $password = crypt($password, $$) unless (defined($params->{encrypted}) && isTrue($params->{encrpted}));
+        $password = crypt($password, $$) unless (defined($params->{encrypted}) && isTrue($params->{encrypted}));
         $self->{DB}->do("UPDATE user SET password=? WHERE id=?", undef, ($password, $self->id())) || die $self->{DB}->errstr;
         $self->{data}{password} = $password;
+    }
+    if (defined($params->{source}) && $params->{source}) {
+        my $source = $params->{source};
+        $self->{DB}->do("UPDATE user SET source=? WHERE id=?", undef, ($source, $self->id())) || die $self->{DB}->errstr;
+        $self->{data}{source} = $source;
     }
     if (defined($params->{uuid}) && $params->{uuid}) {
         my $uuid = lc($params->{uuid});
@@ -584,7 +610,11 @@ sub toData {
     $data->{mod_date} = $self->get('mod_date');
     $data->{name} = $self->name();
     $data->{password} = $self->get('password');
+    $data->{source} = $self->get('source');
     $data->{encrypted} = 1;
+
+    my @externals = $self->external();
+    $data->{externals} = \@externals;
 
     return $data;
 }
