@@ -1451,6 +1451,9 @@ sub delete {
     my $params = shift || {};
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
+
+    die "invalid user" unless ($self->validUser({mode => 'delete' }));
+
     my $object_id = $self->id();
     my $DB = MinorImpact::db();
 
