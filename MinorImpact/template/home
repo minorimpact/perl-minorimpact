@@ -1,6 +1,8 @@
-[% INCLUDE header title='Home' %]
+[% INCLUDE header title=user.name() %]
 
 <!-- TEMPLATE:default.home -->
+
+<h3>[% user.name() %]</h3>
 
 [% INCLUDE add_types %]
 

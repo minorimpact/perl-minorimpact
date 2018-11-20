@@ -1,4 +1,6 @@
-[% INCLUDE header %]
+[% INCLUDE header title = display_user.name() %]
+
+<h3>[% display_user.name() %]</h3>
 
 [% INCLUDE list_object %]
 

@@ -1,5 +1,7 @@
 [% INCLUDE header title='Settings' %]
 
+<h3>[% user.name() %]</h3>
+
 [% form %]
 
 [% INCLUDE footer %]

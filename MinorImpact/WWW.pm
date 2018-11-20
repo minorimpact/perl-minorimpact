@@ -969,7 +969,12 @@ sub user {
     $local_params->{query}{public} = 1;
     my @objects = MinorImpact::Object::Search::search($local_params);
 
-    MinorImpact::tt('user', { action => 'user', objects => [ @objects ], query => $local_params->{query} });
+    MinorImpact::tt('user', { 
+        action => 'user', 
+        display_user => $user, 
+        objects => [ @objects ], 
+        query => $local_params->{query} 
+    });
 }
 
 =head2 viewHistory

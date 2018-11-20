@@ -36,6 +36,12 @@ The page title.
 
     MinorImpact::tt($template_name, { title => "Page Name" });
 
+## user
+
+The current logged in user.
+
+    <h3>[% user.name() %]</h3>
+
 # METHODS
 
 A handful of MinorImpact methods are available to use from within templates.

@@ -36,27 +36,44 @@ Delete the user and all of the objects owned by that user.
 
     $USER->delete();
 
-## facebook
+## external
 
-- ->facebook(\\%params)
+- ->external(\[\\%params\])
 
-Add Facebook info to an existing user.
+Add external info to an existing user.
 
-    $USER->facebook({ name => 'Facebook Name', email => 'Facebook Email Address, id => 'Facebook ID });
+    $USER->external({ 
+      email => 'external Email Address', 
+      id => 'external ID',
+      name => 'external Name', 
+      source => 'facebook' 
+    });
+
+If called with no parameters, returns an array of hashes, one for each external
+source.
+
+    @external = $USER->external();
+    foreach $info (@external) {
+      print $info->{source} . ":" . $info->{name} .  "\n";   # facebook:external Name
+    }
 
 ### params
 
-- name
-
-    The 'name' value from the Facebook 'me' graph endpoint.
-
 - email
 
-    The 'email' value from the Facebook 'me' graph endpoint.
+    The 'email' value from the external source.
 
 - id
 
-    The 'email' value from the Facebook 'me' graph endpoint.
+    The 'id' value from the external source.
+
+- name
+
+    The 'name' value from the external source.
+
+- source
+
+    The internal name of the source.  REQUIRED.
 
 ## form
 
