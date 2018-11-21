@@ -753,6 +753,8 @@ sub add {
 
     $params->{name} = $params->{username} unless ($params->{name});
     $params->{admin} ||= 0;
+    $params->{source} ||= 'local';
+
     my $password;
     if (isTrue($params->{encrypted})) {
         $password = $params->{password};
