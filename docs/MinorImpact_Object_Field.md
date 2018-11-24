@@ -70,6 +70,8 @@ die.
     };
     print "Unable to use $value: $@" if ($@);
 
+## unpackValues
+
 - ::unpackValues($value\[, $value, ...\])
 
 Tries to smooth out all of the possible ways that values get packed up
@@ -80,7 +82,7 @@ something that HTML multi-select input fields produce), and converting and
 
 ## value
 
-- ->value()
+- ->value(\\%params)
 
 Returns an array of values.
 
@@ -98,7 +100,22 @@ it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 
 If the field type is a reference to another MinorImpact::Object, the values returned
-will be objects, not IDs.
+will be objects, not IDs (unless the `id_only` param is set).
+
+### params
+
+- id\_only => TRUE/FALSE
+
+    If the field is a [MinorImpact::Object](./MinorImpact_Object.md), return the
+    object's id, rather than the obect itelf.  
+    DEFAULT: FALSE
+
+- value\_id => TRUE/FALSE
+
+    Rather than an array of values, return an array of hashes with the `value` and
+    `value_id` keys set to the value and internal ID field of the object\_value (or object\_text) 
+    row from the database.  
+    DEFAULT: FALSE
 
 ## displayName
 
@@ -248,11 +265,3 @@ Return the object as a pure hash.
 # AUTHOR
 
 Patrick Gillan <pgillan@minorimpact.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 297:
-
-    Unknown directive: =head

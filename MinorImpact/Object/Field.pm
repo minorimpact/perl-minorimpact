@@ -156,7 +156,9 @@ sub _new {
         #    push(@{$self->{value}}, split(/\0/, $data->{value}));
         #}
         my @values = unpackValues($data->{value});
-        $self->{value} = \@values;
+        foreach my $value (@values) {
+            push(@{$self->{value}}, { value => $value });
+        }
     } elsif ($self->{db}{id} && $self->{object_id}) {
         # We're a field that exists in the database and we're assinged to a 
         #   particular object.  Load the values from the the database.
@@ -165,17 +167,17 @@ sub _new {
         if ($self->{attributes}{is_text}) {
             $data_table = "object_text";
         }
-        my $data = $DB->selectall_arrayref("select value from $data_table where object_field_id=? and object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
+        my $data = $DB->selectall_arrayref("SELECT id, value FROM $data_table WHERE object_field_id=? AND object_id=?", {Slice=>{}}, ($self->{db}{id}, $self->{object_id}));
         foreach my $row (@$data) {
             MinorImpact::log('debug',"\$row->{value}='" . $row->{value} . "'");
-            push(@{$self->{value}}, $row->{value});
+            push(@{$self->{value}}, { value=> $row->{value}, value_id=>$row->{id} });
         }
     }
 
     # We didn't get any values from either of those other two places, so just use the default,
     #  if one is set.
     if (scalar(@{$self->{value}}) == 0 && defined($self->{attributes}{default_value})) {
-        push(@{$self->{value}}, $self->{attributes}{default_value});
+        push(@{$self->{value}}, { value => $self->{attributes}{default_value} });
     }
 
     MinorImpact::log('debug', "ending");
@@ -236,23 +238,28 @@ sub update {
         MinorImpact::Object::clearCache($object_id);
         my $DB = MinorImpact::db();
         if ($self->isText()) {
-            $DB->do("delete from object_text where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
+            $DB->do("DELETE FROM object_text WHERE object_id=? AND object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
         } else {
-            $DB->do("delete from object_data where object_id=? and object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
+            $DB->do("DELETE FROM object_data WHERE object_id=? AND object_field_id=?", undef, ($object_id, $self->id())) || die $DB->errstr;
         }
         foreach my $value (@values) {
             my $sql;
             if ($self->isText()) {
-                $sql = "insert into object_text(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+                $sql = "INSERT INTO object_text(object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())";
             } else {
-                $sql = "insert into object_data(object_id, object_field_id, value, create_date) values (?, ?, ?, NOW())";
+                $sql = "INSERT INTO object_data(object_id, object_field_id, value, create_date) VALUES (?, ?, ?, NOW())";
             }
             MinorImpact::log('debug', "$sql, '$object_id','" . $self->id() . "','$value'");
             $DB->do($sql, undef, ($object_id, $self->id(), $value)) || die $DB->errstr;
+            my $value_id = $DB->{mysql_insertid};
+            push (@{$self->{value}}, { value => $value, value_id => $value_id});
+        }
+    } else {
+        foreach my $value (@values) {
+            push(@{$self->{value}}, { value => $_ });
         }
     }
 
-    $self->{value} = \@values;
     MinorImpact::log('debug', "ending");
     return @values;
 }
@@ -294,7 +301,7 @@ sub validate {
     return $value;
 }
 
-=head unpackValues
+=head2 unpackValues
 
 =over
 
@@ -339,7 +346,7 @@ sub unpackValues {
 
 =over
 
-=item ->value()
+=item ->value(\%params)
 
 =back
 
@@ -359,7 +366,26 @@ it's just easier to always return an array - even if it's just one value - than
 it is to have to make the decision every time.
 
 If the field type is a reference to another MinorImpact::Object, the values returned
-will be objects, not IDs.
+will be objects, not IDs (unless the C<id_only> param is set).
+
+=head3 params
+
+=over
+
+=item id_only => TRUE/FALSE
+
+If the field is a L<MinorImpact::Object|MinorImpact::Object>, return the
+object's id, rather than the obect itelf.  
+DEFAULT: FALSE
+
+=item value_id => TRUE/FALSE
+
+Rather than an array of values, return an array of hashes with the C<value> and
+C<value_id> keys set to the value and internal ID field of the object_value (or object_text) 
+row from the database.  
+DEFAULT: FALSE
+
+=back
 
 =cut
 
@@ -370,15 +396,21 @@ sub value {
     MinorImpact::log('debug', "starting");
     my $values = [];
     if (defined($self->{value})) {
-            MinorImpact::log('debug', "FUCK 1");
-        if (ref($self->type())) {
-            foreach my $value (@{$self->{value}}) {
-                push(@$values, new MinorImpact::Object($value));
+        foreach my $value (@{$self->{value}}) {
+            if (ref($self->type()) && !$params->{id_only}) {
+                if ($params->{value_id}) {
+                    push(@$values, { new MinorImpact::Object($value->{value}), value_id=>$value->{value_id}});
+                } else {
+                    push(@$values, new MinorImpact::Object($value->{value}));
+                }
+            } else {
+                if ($params->{value_id}) {
+                    push(@$values, $value);
+                } else {
+                    push(@$values, $value->{value});
+                }
             }
-        } else {
-            $values = clone($self->{value});
         }
-            MinorImpact::log('debug', "FUCK 2");
     }
     MinorImpact::log('debug', "ending");
     return @$values;
@@ -459,7 +491,7 @@ sub toString {
     if ($params->{format} eq 'json') {
         $string = to_json($self->toData());
     } else {
-        foreach my $value (@{$self->{value}}) {
+        foreach my $value ($self->value()) {
             if ($self->{attributes}{markdown}) {
                 $value = markdown($value);
             }
