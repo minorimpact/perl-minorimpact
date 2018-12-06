@@ -36,15 +36,11 @@ sub new {
         die "no object" unless (ref($params->{object}));
         die "no field id" unless ($params->{object_field_id});
 
-        my $object = $params->{object};
-        my $field = $object->field($params->{object_field_id});
+        my $object = $params->{object} || die "no object";
+        my $field = $object->field($params->{object_field_id}) || die "no field";
         die "not a reference field" unless ($field->get('references'));
 
-        my $match = 0;
-        foreach my $value ($field->value()) {
-            $match = 1 if($value =~/$data/);
-        }
-        die "no matching data" unless ($match);
+        die "no matching data" unless (_verify_data($object, $field, $data));
 
         $params->{name} = trunc(ptrunc($data, 1), 30);
     }
@@ -100,6 +96,48 @@ sub toString {
     MinorImpact::log('debug', "ending");
     return $string;
 }
+
+=head2 verify
+
+=over
+
+=item ->verify()
+
+=back
+
+Verify that the string in this reference is still part of the original object. Returns
+1 if the reference is still good, 0 otherwise.
+
+  # cleanup references after object update
+  foreach $REFERENCE ($OBJECT->references()) {
+    $REFERENCE->delete() unless ($REFERENCE->verify());
+  }
+
+=cut
+
+sub verify {
+    my $self = shift || return;
+
+    my $object = $self->get('object') || return;
+    my $field = $object->field($self->get('object_field_id')) || return;
+    return unless ($field->get('references'));
+    my $data = $self->get('data') || return;
+
+    return _verify_data($object, $field, $data);
+}
+
+sub _verify_data {
+    my $object = shift || return;
+    my $field = shift || return;
+    my $data = shift || return;
+
+    my $match = 0;
+    foreach my $value ($field->value()) {
+        $match = 1 if($value =~/$data/);
+    }
+    return $match;
+}
+
 
 =head1 AUTHOR
 

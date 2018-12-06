@@ -572,7 +572,6 @@ sub _search {
                 push(@fields, "\%$text\%");
             }
         } elsif ($query->{object_type_id}) {
-            MinorImpact::log('debug', "FOO");
             my $value = $query->{$param};
             my $operator = "=";
             if ($param =~s/\>$//) { $operator = ">"; } 

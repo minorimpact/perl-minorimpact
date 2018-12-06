@@ -262,6 +262,14 @@ sub update {
         }
     }
 
+    foreach my $reference ($self->references()) {
+        # TODO: Other people can create references between objects they don't own, references that won't get ever
+        #   deleted because they will never come up again... this could (will) be a major problem.
+        unless ($reference->verify()) {
+            $reference->delete();
+        }
+    }
+
     MinorImpact::log('debug', "ending");
     return @values;
 }
@@ -954,6 +962,13 @@ sub delete {
     if ($name && !$object_field_id) {
         $object_field_id = ($DB->selectrow_array("SELECT id FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)))[0] || return; # Do we really want do die on this hill? die $DB->errstr;
     }
+
+    foreach my $reference ($self->references()) {
+        # TODO: Other people can create references between objects they don't own, references that won't get ever
+        #   deleted because they will never come up again... this could (will) be a major problem.
+        $reference->delete();
+    }
+
     $DB->do("DELETE FROM object_data WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_field_id=?", undef, ($object_field_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_field WHERE object_type_id=? AND name=?", undef, ($object_type_id, $name)) || die $DB->errstr;

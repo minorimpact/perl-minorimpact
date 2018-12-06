@@ -803,7 +803,6 @@ sub search {
         #if (scalar(@types) == 1) {
         #    $local_params->{query}{object_type_id} = $types[0];
         #    delete($local_params->{query}{type_tree});
-        #    MinorImpact::log('debug', 'FOO');
         #    @objects = MinorImpact::Object::Search::search($local_params);
         #}
     }

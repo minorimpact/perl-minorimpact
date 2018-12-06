@@ -1514,14 +1514,8 @@ sub delete {
         $child->delete();
     }
 
-    my $data = $DB->selectall_arrayref("SELECT * FROM object_text WHERE object_id=?", {Slice=>{}}, ($object_id)) || die $DB->errstr;
-    foreach my $row (@$data) {
-        $DB->do("DELETE FROM object_reference WHERE object_text_id=?", undef, ($row->{id})) || die $DB->errstr;
-    }
-
     $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
-    $DB->do("DELETE FROM object_reference WHERE object_id=? OR reference_object_id=?", undef, ($object_id, $object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id)) || die $DB->errstr;
 

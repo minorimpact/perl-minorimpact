@@ -118,6 +118,11 @@ Clear the cache of items related to $OBJECT.
 
 ## field
 
+- ->field($name)
+- ->field($id)
+
+Returns a particular field object, given the field's name or id.
+
 ## id
 
 - id() 
