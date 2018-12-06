@@ -1757,6 +1757,7 @@ sub log {
         my $date = toMysqlDate();
         print STDERR  "$date " . $self->{conf}{default}{application_id} . "[$$]: $log\n";
     } elsif ($self->{conf}{default}{log_method} eq 'syslog') {
+        # debug, info, notice, warning, err, crit, alert, emerg
         syslog($level, $log);
     }
 } 
