@@ -32,6 +32,20 @@ sub new {
             $data = @$data[0];
         }
 
+        die "no data" unless ($data);
+        die "no object" unless (ref($params->{object}));
+        die "no field id" unless ($params->{object_field_id});
+
+        my $object = $params->{object};
+        my $field = $object->field($params->{object_field_id});
+        die "not a reference field" unless ($field->get('references'));
+
+        my $match = 0;
+        foreach my $value ($field->value()) {
+            $match = 1 if($value =~/$data/);
+        }
+        die "no matching data" unless ($match);
+
         $params->{name} = trunc(ptrunc($data, 1), 30);
     }
     my $self = $package->SUPER::_new($params);

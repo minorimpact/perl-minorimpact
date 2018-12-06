@@ -118,14 +118,19 @@ sub add_reference {
 
     print "Content-type: text/plain\n\n";
     if ($object_field_id && $data && $reference_object && $object ) {
-        my $reference = new MinorImpact::reference({ 
-            object => $object,
-            reference_object => $reference_object,
-            object_field_id => $object_field_id,
-            data => $data
-        });
-        unless ($reference) {
-            MinorImpact::log('error', "Can't create object reference: " . $DB->errstr);
+        my $reference;
+        eval {
+            $reference = new MinorImpact::reference({ 
+                object => $object,
+                reference_object => $reference_object,
+                object_field_id => $object_field_id,
+                data => $data
+            });
+        };
+        if ($@ && !$reference) {
+            MinorImpact::log('notice', "Can't create object reference: '$@'");
+        } elsif (!$reference) {
+            MinorImpact::log('notice', "Can't create object reference: " . $DB->errstr);
         }
     }
     MinorImpact::log('debug', "ending");
