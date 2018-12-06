@@ -109,7 +109,7 @@ sub children {
     return @comments;
 }
 
-our $VERSION = 26;
+our $VERSION = 28;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
@@ -118,7 +118,7 @@ sub dbConfig {
     my $type = MinorImpact::Object::Type::add({ name => $name, plural=>'entries', comments => 1, public=>1 });
     die "Could not add object_type record\n" unless ($type);
 
-    $type->addField({ name => 'content', required => 1, type => 'text', });
+    $type->addField({ name => 'content', required => 1, type => 'text', references => 1 });
     $type->addField({ name => 'publish_date', required => 1, type => 'datetime', sort => 1 });
 
     MinorImpact::addSetting({name => 'default_tag', type=>'string', default_value=>'' });

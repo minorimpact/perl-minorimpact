@@ -461,6 +461,21 @@ sub clearCache {
     return;
 }
 
+=head2 field
+
+=cut
+
+sub field {
+    my $self = shift || return;
+    my $name = shift || return;
+
+    my $field;
+    if (defined($self->{object_data}->{$name})) {
+        $field = $self->{object_data}->{$name};
+    }
+    return $field;
+}
+
 =head2 id
 
 =over
@@ -589,7 +604,7 @@ sub selectList {
     my $self = shift || return;
     my $params = shift || {};
 
-    #MinorImpact::log('debug', "starting");
+    MinorImpact::log('debug', "starting");
     my $local_params = cloneHash($params);
     $local_params->{query}{debug} .= "Object::selectList();";
     if (ref($self) eq 'HASH') {
@@ -629,7 +644,7 @@ sub selectList {
         $select .= ">" . $object->name() . "</option>\n";
     }
     $select .= "</select>\n";
-    #MinorImpact::log('debug', "ending");
+    MinorImpact::log('debug', "ending");
     return $select;
 }
 
@@ -650,6 +665,8 @@ defined as an array.  See L<MinorImpact::Object::Field::add()|MinorImpact::Objec
   $object_name = $OBJECT->get("name");
   # get the description, and convert it from markdown to HTML.
   $object_description = $OBJECT->get("description", { mardown => 1});
+
+This always returns the 'raw' value of the field.
 
 =head3 params
 
@@ -695,6 +712,9 @@ sub get {
     MinorImpact::log('debug', "starting(" . $self->id() . "-$name)");
 
     my @values;
+    # Return attributes.  $self->{data} contains elements of the 
+    #   "standard" object definition: user id, public, name, 
+    #   creation date - that sort of thing.
     if (defined($self->{data}->{$name})) {
         my $value;
         if ($name eq 'uuid') {
@@ -704,10 +724,9 @@ sub get {
         }
         MinorImpact::log('debug', "ending");
         return $value;
-    }
-    if (defined($self->{object_data}->{$name})) {
+    } elsif (defined($self->{object_data}->{$name})) {
         my $field = $self->{object_data}->{$name};
-        my @value = $self->{object_data}->{$name}->value();
+        my @value = $field->value($params);
         #MinorImpact::log('debug',"$name='" . join(",", @value) . "'");
         foreach my $value (@value) {
             if ($params->{one_line}) {
@@ -721,6 +740,9 @@ sub get {
             }
             if ($params->{markdown}) {
                 $value =  markdown($value);
+            }
+            if ($params->{references}) {
+                $value = "<div onmouseup='getSelectedText(" . $self->id() . "," . $field->id() . ");'>$value</div>\n";
             }
             push(@values, $value);
         }
@@ -794,8 +816,16 @@ sub toData {
         }
     }
     $data->{uuid} = lc($self->get('uuid'));
-    $data->{references} = $self->getReferences();
     $data->{tags} = join("\0", $self->tags());
+
+    foreach my $reference ($self->references()) {
+        my $object = new MinorImpact::Object($reference->{object_id});
+        if ($object) {
+            $reference->{object_uuid} = $object->get('uuid');
+        }
+    }
+    $data->{references} = \@{$self->references()};
+        
     return $data;
 }
 
@@ -908,34 +938,7 @@ sub toString {
             #MinorImpact::log('info', "processing $name");
             my $field_type = $field->type();
             next if ($field->get('hidden'));
-            my $value;
-            if (ref($field_type)) {
-                foreach my $v ($field->value()) {
-                    $value .= $v->toString(); # if ($o);
-                    #if ($v && $v =~/^\d+/) {
-                    #    my $o = new MinorImpact::Object($v);
-                    #    $value .= $o->toString() if ($o);
-                    #}
-                }
-            } elsif ($field_type =~/text$/) {
-                foreach my $val ($field->toString()) {
-                    my $id = $field->id();
-                    my $references = $self->getReferences($id);
-                    foreach my $ref (@$references) {
-                        my $test_data = $ref->{data};
-                        $test_data =~s/\W/ /gm;
-                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
-                        if ($val =~/($test_data)/mgi) {
-                            my $match = $1;
-                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->{object_id}});
-                            $val =~s/$match/<a href='$url'>$ref->{data}<\/a>/;
-                        }
-                    }
-                    $value .= "<div onmouseup='getSelectedText($id);'>$val</div>\n";
-                }
-            } else {
-                $value = $field->toString();
-            }
+            my $value = $field->toString({references => 1});;
             my $row;
             MinorImpact::tt($params->{template} || 'row_column', {
                     name=>$field->displayName(), 
@@ -946,19 +949,19 @@ sub toString {
         $string .= "<!-- CUSTOM -->\n";
         $string .= "</div>\n";
 
-        unless ($params->{no_references}) {
-            my $references = $self->getReferences();
-            if (scalar(@$references)) {
-                $string .= "<h2>References</h2>\n";
-                $string .= "<table>\n";
-                foreach my $ref (@$references) {
-                    my $object = new MinorImpact::Object($ref->{object_id});
-                    $string .= "<tr><td>" . $object->toString(). "</td><td></td></tr>\n";
-                    $string .= "<tr><td colspan=2>\"" . $ref->{data} . "\"</td></tr>\n";
-                }
-                $string .= "</table>\n";
-            }
-        }
+        #unless ($params->{no_references}) {
+        #    my @references = $self->references();
+        #    if (scalar(@references)) {
+        #        $string .= "<h2>References</h2>\n";
+        #        $string .= "<table>\n";
+        #        foreach my $ref (@references) {
+        #            my $object = new MinorImpact::Object($ref->{object_id});
+        #            $string .= "<tr><td>" . $object->toString(). "</td><td></td></tr>\n";
+        #            $string .= "<tr><td colspan=2>\"" . $ref->{data} . "\"</td></tr>\n";
+        #        }
+        #        $string .= "</table>\n";
+        #    }
+        #}
 
         foreach my $tag ($self->tags()) {
             my $t;
@@ -989,18 +992,51 @@ sub toString {
     return $string;
 }
 
+=head2 references
 
-sub getReferences {
-    my $self = shift || return;
-    my $object_text_id = shift;
+=over
 
-    my $DB = MinorImpact::db();
-    if ($object_text_id) {
-        # Only return references to a particular 
-        return $DB->selectall_arrayref("SELECT object_id, data, object_text_id FROM object_reference WHERE object_text_id=?", {Slice=>{}}, ($object_text_id));
-    }
-    # Return all references for this object.
-    return $DB->selectall_arrayref("SELECT object.id as object_id, object_reference.data FROM object_reference, object_text, object WHERE object_reference.object_text_id=object_text.id and object_text.object_id=object.id and object_reference.object_id=?", {Slice=>{}}, ($self->id()));
+=item ->references()
+
+=back
+
+Returns an array of hashes that contain all the object
+references created for this object.
+
+  @refs = $OBJECT->references();
+  foreach $ref (@refs) {
+    print $ref->{object_id} . ":" . $ref->{data} . "\n"; # 1:foo
+  }
+
+=head3 fields
+
+=over
+
+=item data
+
+The actual text of the reference.
+
+=item object_id
+
+The id of the object the text belongs to.
+
+=back
+
+=cut
+
+sub references {
+    my $self = shift || die "no object";
+    MinorImpact::log('debug', "starting");
+
+    my @references = MinorImpact::Object::Search::search({
+        query => {
+            object_type_id => 'MinorImpact::reference',
+            reference_object => $self->id()
+        }
+    });
+
+    MinorImpact::log('debug', "ending");
+    return @references;
 }
 
 =head2 update
@@ -1469,7 +1505,7 @@ sub delete {
 
     $DB->do("DELETE FROM object_data WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_text WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
-    $DB->do("DELETE FROM object_reference WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
+    $DB->do("DELETE FROM object_reference WHERE object_id=? OR reference_object_id=?", undef, ($object_id, $object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object_tag WHERE object_id=?", undef, ($object_id)) || die $DB->errstr;
     $DB->do("DELETE FROM object WHERE id=?", undef, ($object_id)) || die $DB->errstr;
 

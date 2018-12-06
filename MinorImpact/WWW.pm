@@ -100,20 +100,40 @@ sub add_reference {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
+    MinorImpact::log('debug', "starting");
+
     my $user = $MINORIMPACT->user({ force => 1 });
     my $CGI = MinorImpact::cgi();
     my $DB = MinorImpact::db();
 
     my $object_id = $CGI->param('object_id');
-    my $object_text_id = $CGI->param('object_text_id');
+    my $reference_object_id = $CGI->param('reference_object_id');
+    my $object_field_id = $CGI->param('object_field_id');
     my $data = $CGI->param('data');
 
+    MinorImpact::log('debug', "\$object_id='$object_id',\$reference_object_id='$reference_object_id'");
     my $object = new MinorImpact::Object($object_id) || $MINORIMPACT->redirect();
+    my $reference_object = new MinorImpact::Object($reference_object_id) || $MINORIMPACT->redirect();
 
     print "Content-type: text/plain\n\n";
-    if ($object_text_id && $data && $object && $object->user_id() eq $user->id()) {
-        $DB->do("INSERT INTO object_reference(object_text_id, data, object_id, create_date) VALUES (?, ?, ?, NOW())", undef, ($object_text_id, $data, $object->id())) || die $DB->errstr;
+    if ($object_field_id && $data &&
+        $reference_object && $object ) {
+        unless ($object_field_id =~/^\d+$/) {
+            # TODO Make this look for a field by name, because I'm using the field name in 'entry_page'
+        }
+        my $reference = new MinorImpact::reference({ 
+            object => $object,
+            reference_object => $reference_object,
+            object_field_id=>$object_field_id,
+            data => $data
+        });
+        unless ($reference) {
+            MinorImpact::log('error', "Can't create object reference: " . $DB->errstr);
+        }
     }
+    MinorImpact::log('debug', "ending");
+    MinorImpact::debug(0);
 }
 
 sub admin {
@@ -592,7 +612,7 @@ sub object_types {
     print "Content-type: text/plain\n\n";
     my @json;
     foreach my $object_type (MinorImpact::Object::types({readonly => 0, system => 0})) {
-        push(@json, {id=>$object_type->id(), name=>$object_type->name()});
+        push(@json, {id=>$object_type->id(), name=>$object_type->displayName()});
     }
     print to_json(\@json);
 }
@@ -788,6 +808,19 @@ sub search {
     }
     $local_params->{query}{search} = $search;
     @objects = MinorImpact::Object::Search::search($local_params);
+    if ($format =~/^json/) {
+        my $objects = [];
+        foreach my $object (@objects) {
+            if ($format eq 'json_short') {
+                push(@$objects, { name=> $object->name(), id => $object->id() });
+            } else {
+                push(@$objects, $object->toData());
+            }
+        }
+        print "Content-type: text/plain\n\n";
+        print to_json($objects);
+        return;
+    }
     $page = $local_params->{query}{page};
     $limit = $local_params->{query}{limit};
     $search = $local_params->{query}{text};
@@ -827,6 +860,8 @@ sub tablist {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting");
+
     my $CGI = $MINORIMPACT->cgi();
     my $user = $MINORIMPACT->user();
 
@@ -836,7 +871,7 @@ sub tablist {
     elsif ($limit eq 0) { $limit = ''; }
     my $object_id = $CGI->param('id') || $CGI->param('object_id');
     my $page = $CGI->param('page') || 1;
-    my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id') || $CGI->param('type') || return;
+    my $object_type_id = $CGI->param('object_type_id') || $CGI->param('type_id') || $CGI->param('type');
 
     my $search = MinorImpact::session('search');
     my $collection_id = MinorImpact::session('collection_id');
@@ -856,22 +891,19 @@ sub tablist {
     $local_params->{query} = {object_type_id=>$object_type_id, sort=>1, debug=> "MinorImpact::www::tablist();"};
     $local_params->{query}{user_id} = $user->id() if ($user);
 
-    my @collections = sort { $a->cmp($b); } $user->getCollections() if ($user);
-    my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
-    unless ($object) {
-        if ($collection) {
-            $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
-            $local_params->{query}{debug} .= "collection::searchParams();";
-        } elsif ($search) {
-            $local_params->{query}{search} = $search;
-        }
-    }
-    $local_params->{query}{page} = $page;
-    $local_params->{query}{limit} = $limit + 1 if ($limit);
+    #my @collections = sort { $a->cmp($b); } $user->collections() if ($user);
+    #my $collection = new MinorImpact::Object($collection_id) if ($collection_id);
+    #unless ($object) {
+    #    if ($collection) {
+    #        $local_params->{query} = { %{$local_params->{query}}, %{$collection->searchParams()} };
+    #        $local_params->{query}{debug} .= "collection::searchParams();";
+    #    } elsif ($search) {
+    #        $local_params->{query}{search} = $search;
+    #    }
+    #}
+    #$local_params->{query}{page} = $page;
+    #$local_params->{query}{limit} = $limit + 1 if ($limit);
 
-    # TODO: Figure out how to get the maximum number of objects without having to do a complete search...
-    #   Right now I know there's 'more' because I'm asking for one more than will fit on the page, but
-    #   I can't do a proper 'X of Y' until I can get the whole caboodle.
     my $max;
     my @objects;
     if ($object) {
@@ -879,11 +911,15 @@ sub tablist {
     } else {
         @objects = MinorImpact::Object::Search::search($local_params);
     }
-    if ($format eq 'json') {
+    if ($format =~/^json/) {
         pop(@objects) if ($limit && scalar(@objects) > $limit);
         my @data;
         foreach my $object (@objects) {
-            push(@data, $object->toData());
+            if ($format eq 'json_short') {
+                push(@data, { name => $object->name(), id=> $object->id() });
+            } else {
+                push(@data, $object->toData());
+            }
         }
         print "Content-type: text/plain\n\n";
         print to_json(\@data);
@@ -907,6 +943,7 @@ sub tablist {
                             url_prev       => $url_prev,
                             url_next       => $url_next,
     });
+    MinorImpact::log('debug', "ending");
 }
 
 =head2 tags

@@ -17,6 +17,7 @@ use MinorImpact::Config;
 use MinorImpact::entry;
 use MinorImpact::Facebook::Oauth2;
 use MinorImpact::Object;
+use MinorImpact::reference;
 use MinorImpact::settings;
 use MinorImpact::User;
 use MinorImpact::Util;
@@ -29,7 +30,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
-our $VERSION = 9;
+our $VERSION = 13;
 
 =head1 NAME
 
@@ -1541,6 +1542,7 @@ sub dbConfig {
             object_type_id => { type => "int", null => 0 },
             populated => { type => "boolean", default => 0 },
             readonly => { type => "boolean", default => 0 },
+            references => { type => "boolean", default => 0 },
             required => { type => "boolean", default => 0 },
             sortby => { type => "boolean", default => 0 },
             type => { type => "varchar(15)" },
@@ -1606,14 +1608,20 @@ sub dbConfig {
             id => { type => "int", null => 0, auto_increment => 1, primary_key => 1},
             mod_date => { type => "timestamp", null => 0 },
             object_id => { type => "int", null => 0 },
-            object_text_id => { type => "int", null => 0 },
+            object_field_id => { type => "int", null => 0 },
+            reference_object_id => { type => "int", null => 0 },
         },
+        indexes => {
+            idx_object_reference_object_field_id => { fields => "object_id,object_field_id" },
+            idx_object_reference_object_id => { fields => "reference_object_id" },
+        }
     });
 
     MinorImpact::settings::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::settings"));
     MinorImpact::collection::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::collection"));
     MinorImpact::entry::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::entry"));
     MinorImpact::comment::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::comment"));
+    MinorImpact::reference::dbConfig() unless (MinorImpact::Object::typeID("MinorImpact::reference"));
 
     my $admin = new MinorImpact::User('admin');
     unless ($admin) {

@@ -116,6 +116,8 @@ Clear the cache of items related to $OBJECT.
 
     $OBJECT->clearCache();
 
+## field
+
 ## id
 
 - id() 
@@ -186,6 +188,8 @@ defined as an array.  See [MinorImpact::Object::Field::add()](./MinorImpact_Obje
     $object_name = $OBJECT->get("name");
     # get the description, and convert it from markdown to HTML.
     $object_description = $OBJECT->get("description", { mardown => 1});
+
+This always returns the 'raw' value of the field.
 
 ### params
 
@@ -293,6 +297,28 @@ of either of:
         $output = $OBJECT->toString({template => 'object_template'});
 
     The template will have access to the object via the `object` variable.
+
+## references
+
+- ->references()
+
+Returns an array of hashes that contain all the object
+references created for this object.
+
+    @refs = $OBJECT->references();
+    foreach $ref (@refs) {
+      print $ref->{object_id} . ":" . $ref->{data} . "\n"; # 1:foo
+    }
+
+### fields
+
+- data
+
+    The actual text of the reference.
+
+- object\_id
+
+    The id of the object the text belongs to.
 
 ## update
 

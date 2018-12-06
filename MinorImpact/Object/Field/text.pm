@@ -1,7 +1,5 @@
 package MinorImpact::Object::Field::text;
 
-use Text::Markdown 'markdown';
-
 use MinorImpact;
 use MinorImpact::Util;
 use MinorImpact::Object::Field;
@@ -15,8 +13,8 @@ sub new {
     #MinorImpact::log('info', "starting");
 
     $data->{attributes}{maxlength} = 16777215;
-    $data->{attributes}{markdown} = 1;
     $data->{attributes}{is_text} = 1;
+    $data->{attributes}{string_value_seperator} = "\n";
 
     my $self = $package->SUPER::_new($data);
     bless($self, $package);

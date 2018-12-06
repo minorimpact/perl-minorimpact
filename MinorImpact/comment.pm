@@ -27,7 +27,6 @@ sub new {
     MinorImpact::log('debug', "starting");
 
     if (ref($params) eq "HASH") {
-        MinorImpact::log('debug', "FUCK");
         # all comments are public.
         $params->{public} = 1;
         my $text = $params->{text};
@@ -35,7 +34,6 @@ sub new {
             $text = @$text[0];
         }
         $params->{name} = trunc(ptrunc($text, 1), 30);
-        MinorImpact::log('debug', "FUCK ALSO");
     }
     my $self = $package->SUPER::_new($params);
     bless($self, $package);
@@ -89,7 +87,7 @@ sub cmp {
     return $self->get('create_date');
 }
 
-our $VERSION = 2;
+our $VERSION = 3;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
@@ -98,7 +96,7 @@ sub dbConfig {
     my $type = MinorImpact::Object::Type::add({ name => $name, public=>0, no_tags => 1, no_name => 1, comments => 1});
     die "Could not add object_type record\n" unless ($type);
 
-    $type->addField({ name => 'text', required => 1, type => 'text', });
+    $type->addField({ name => 'text', required => 1, type => 'text', references => 1});
 
     $type->addField({ name => 'object', type => 'object', required => 1, readonly => 1});
 

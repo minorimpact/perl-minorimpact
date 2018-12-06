@@ -21,14 +21,6 @@ sub new {
     return $self;
 }
 
-sub addValue {
-    my $self = shift || return;
-    my $data = shift || return;
-
-    $data->{value} = ($data->{value}?1:0);
-    $self->SUPER::addValue($data);
-}
-
 sub toString {
     my $self = shift || return;
     #MinorImpact::log('info', "starting");

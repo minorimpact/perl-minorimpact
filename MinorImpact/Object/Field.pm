@@ -6,6 +6,7 @@ use Data::Dumper;
 use JSON;
 use MinorImpact;
 use MinorImpact::Util;
+use MinorImpact::Util::String;
 use MinorImpact::Object::Field::boolean;
 use MinorImpact::Object::Field::datetime;
 use MinorImpact::Object::Field::float;
@@ -135,6 +136,7 @@ sub _new {
     $self->{attributes} = {};
     $self->{attributes}{isText} = 0;
     $self->{attributes}{maxlength} = 255;
+    $self->{attributes}{string_value_seperator} = ",";
 
     # Override the default field attributes with anything added by an
     #   inherited class.
@@ -399,15 +401,31 @@ sub value {
         foreach my $value (@{$self->{value}}) {
             if (ref($self->type()) && !$params->{id_only}) {
                 if ($params->{value_id}) {
-                    push(@$values, { new MinorImpact::Object($value->{value}), value_id=>$value->{value_id}});
+                    push(@$values, { value => new MinorImpact::Object($value->{value}), value_id=>$value->{value_id}});
                 } else {
                     push(@$values, new MinorImpact::Object($value->{value}));
                 }
             } else {
+                my $local_value = clone($value);
+                if ($self->get('references') && (defined($params->{references}) && $params->{references} != 0)) {
+                    my @references = $self->references();
+                    foreach my $ref (@references) {
+                        my $data = $ref->get('data');
+                        my $test_data = $data;
+
+                        $test_data =~s/\W/ /gm;
+                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
+                        if ($local_value->{value} =~/($test_data)/mgi) {
+                            my $match = $1;
+                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->get('reference_object')->id()});
+                            $local_value->{value} =~s/$match/<a href='$url'>$data<\/a>/;
+                        }
+                    }
+                }
                 if ($params->{value_id}) {
-                    push(@$values, $value);
+                    push(@$values, $local_value);
                 } else {
-                    push(@$values, $value->{value});
+                    push(@$values, $local_value->{value});
                 }
             }
         }
@@ -482,22 +500,57 @@ sub object_id {
     return shift->{object_id}; 
 }
 
+sub object {
+    my $self = shift || die "no field";
+
+    my $object = new MinorImpact::Object($self->object_id());
+    return $object;
+}
+
+sub references {
+    my $self = shift || die "no field";
+
+    return unless ($self->get('references'));
+    my $object_id = $self->object_id() || return;
+    my $id = $self->id() || return;
+
+    my @references = MinorImpact::Object::Search::search({
+        query => {
+            object_type_id => 'MinorImpact::reference', 
+            object => $object_id, 
+            object_field_id => $id
+        }
+    });
+
+    return @references;
+}
+
 sub toString { 
     my $self = shift || return; 
     my $params = shift || {};
     
     my $string;
+    my $sep = $self->{attributes}{string_value_seperator};
 
     if ($params->{format} eq 'json') {
         $string = to_json($self->toData());
     } else {
-        foreach my $value ($self->value()) {
-            if ($self->{attributes}{markdown}) {
-                $value = markdown($value);
+        foreach my $value ($self->value($params)) {
+            if (ref($value)) {
+                $string .= $value->toString($params);
+            } else {
+                $string .= "$value";
             }
-            $string .= "$value,";
+            if ($self->get('references') && $params->{references}) {
+                my $object_id = $self->object_id();
+                my $id = $self->id();
+                if ($object_id && $id) {
+                    $string = "<div onmouseup='getSelectedText(" . $object_id . "," . $id . ");'>$string</div>\n";
+                }
+            }
+            $string .= $sep;
         }
-        $string =~s/,$//;
+        $string =~s/$sep$//;
     }
 
     return $string;
@@ -688,10 +741,6 @@ sub isRequired {
     return shift->get('required');
 }
 
-sub addField {
-    add(@_);
-}
-
 =head2 add
 
 =over
@@ -764,10 +813,11 @@ sub add {
 
     $local_params->{name} || die "Field name can't be blank.";
     $local_params->{type} || die "Field type can't be blank.";
-    $local_params->{required} = $local_params->{required}?1:0;
     $local_params->{hidden} = $local_params->{hidden}?1:0;
     $local_params->{sortby} = $local_params->{sortby}?1:0;
     $local_params->{readonly} = $local_params->{readonly}?1:0;
+    $local_params->{references} = $local_params->{references}?1:0;
+    $local_params->{required} = $local_params->{required}?1:0;
     $local_params->{description} = $local_params->{description} || '';
     $local_params->{default_value} = $local_params->{default_value} || '';
 
@@ -794,16 +844,17 @@ sub add {
     if ($data) {
         my $object_field_id = $data->{id};
         $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
-        $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
         $DB->do("UPDATE object_field SET hidden=? WHERE id=?", undef, ($local_params->{hidden}, $object_field_id)) || die $DB->errstr unless ($data->{hidden} eq $local_params->{hidden});
         $DB->do("UPDATE object_field SET sortby=? WHERE id=?", undef, ($local_params->{sortby}, $object_field_id)) || die $DB->errstr unless ($data->{sortby} eq $local_params->{sortby});
         $DB->do("UPDATE object_field SET readonly=? WHERE id=?", undef, ($local_params->{readonly}, $object_field_id)) || die $DB->errstr unless ($data->{readonly} eq $local_params->{readonly});
+        $DB->do("UPDATE object_field SET `references`=? WHERE id=?", undef, ($local_params->{references}, $object_field_id)) || die $DB->errstr unless ($data->{references} eq $local_params->{references});
+        $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
         $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr unless ($data->{description} eq $local_params->{description});
         MinorImpact::log('debug', "UPDATE object_field SET default_value=? WHERE id=?,'" . $local_params->{default_value} . "', '$object_field_id', \$data->{default_value}='" . $data->{default_value} . "'");
         $DB->do("UPDATE object_field SET default_value=? WHERE id=?", undef, ($local_params->{default_value}, $object_field_id)) || die $DB->errstr unless ($data->{default_value} eq $local_params->{default_value});
         $field = new MinorImpact::Object::Field($object_field_id);
     } else {
-        $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
+        $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, references, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{references}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
         MinorImpact::log('debug', "new object_field_id='$object_field_id'");
         $field = new MinorImpact::Object::Field($object_field_id);
