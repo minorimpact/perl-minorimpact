@@ -463,17 +463,33 @@ sub clearCache {
 
 =head2 field
 
+=over
+
+=item ->field($name)
+
+=item ->field($id)
+
+=back
+
+Returns a particular field object, given the field's name or id.
+
 =cut
 
 sub field {
     my $self = shift || return;
     my $name = shift || return;
 
-    my $field;
-    if (defined($self->{object_data}->{$name})) {
-        $field = $self->{object_data}->{$name};
+    my $fields = $self->fields();
+    if (defined($fields->{$name})) {
+        return $fields->{$name};
     }
-    return $field;
+    if ($name =~/^\d+$/) {
+       foreach my $field_name (keys %{$fields}) {
+           my $field = $fields->{$field_name};
+           return $field if ($field->id() == $name);
+       } 
+    }
+    return;
 }
 
 =head2 id

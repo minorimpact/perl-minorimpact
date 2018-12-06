@@ -117,15 +117,11 @@ sub add_reference {
     my $reference_object = new MinorImpact::Object($reference_object_id) || $MINORIMPACT->redirect();
 
     print "Content-type: text/plain\n\n";
-    if ($object_field_id && $data &&
-        $reference_object && $object ) {
-        unless ($object_field_id =~/^\d+$/) {
-            # TODO Make this look for a field by name, because I'm using the field name in 'entry_page'
-        }
+    if ($object_field_id && $data && $reference_object && $object ) {
         my $reference = new MinorImpact::reference({ 
             object => $object,
             reference_object => $reference_object,
-            object_field_id=>$object_field_id,
+            object_field_id => $object_field_id,
             data => $data
         });
         unless ($reference) {
