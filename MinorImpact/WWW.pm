@@ -109,21 +109,22 @@ sub add_reference {
 
     my $object_id = $CGI->param('object_id');
     my $reference_object_id = $CGI->param('reference_object_id');
-    my $object_field_id = $CGI->param('object_field_id');
+    my $object_field_uuid = $CGI->param('object_field_uuid');
     my $data = $CGI->param('data');
 
     MinorImpact::log('debug', "\$object_id='$object_id',\$reference_object_id='$reference_object_id'");
     my $object = new MinorImpact::Object($object_id) || $MINORIMPACT->redirect();
+    my $field = $object->field($object_field_uuid) || $MINORIMPACT->redirect();
     my $reference_object = new MinorImpact::Object($reference_object_id) || $MINORIMPACT->redirect();
 
     print "Content-type: text/plain\n\n";
-    if ($object_field_id && $data && $reference_object && $object ) {
+    if ($field && $data && $reference_object && $object ) {
         my $reference;
         eval {
             $reference = new MinorImpact::reference({ 
                 object => $object,
                 reference_object => $reference_object,
-                object_field_id => $object_field_id,
+                object_field_uuid => $field->get('uuid'),
                 data => $data
             });
         };

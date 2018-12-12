@@ -33,14 +33,20 @@ sub new {
         }
 
         die "no data" unless ($data);
-        die "no object" unless (ref($params->{object}));
-        die "no field id" unless ($params->{object_field_id});
+        die "no object" unless ($params->{object});
+        die "no object" unless ($params->{object});
+        die "no field id" unless ($params->{object_field_uuid});
 
-        my $object = $params->{object} || die "no object";
-        my $field = $object->field($params->{object_field_id}) || die "no field";
+        my $object = $params->{object} || die "no object";;
+        unless (ref($object)) {
+            my $object_id = $object;
+            $object = new MinorImpact::Object($object_id) || die "can't create object '$object_id'";
+        }
+        my $field = $object->field($params->{object_field_uuid}) || die "no field";
+
         die "not a reference field" unless ($field->get('references'));
 
-        die "no matching data" unless (_verify_data($object, $field, $data));
+        die "no matching data" unless (_verifyObjectFieldData($object, $field, $data));
 
         $params->{name} = trunc(ptrunc($data, 1), 30);
     }
@@ -51,7 +57,33 @@ sub new {
     return $self;
 }
 
-our $VERSION = 1;
+=head2 addLink
+
+=over
+
+=item ->addLink($data)
+
+=back
+
+Applies the link in this reference to C<$data>;
+
+=cut
+
+sub addLink {
+    my $self = shift || die "no reference";
+    my $text = shift || return;
+
+    my $new_text = $text;
+    my $match = $self->match($text);
+    if ($match) {
+        my $url = MinorImpact::url({ action => 'object', object_id => $self->get('reference_object')->id()});
+        $new_text =~s/$match/<a href='$url'>$match<\/a>/;
+    }
+
+    return $new_text;
+}
+
+our $VERSION = 4;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
 
@@ -62,7 +94,7 @@ sub dbConfig {
 
     $type->addField({ name => 'data', required => 1, type => 'text', readonly => 1 });
     $type->addField({ name => 'object', type => 'object', required => 1, readonly => 1});
-    $type->addField({ name => 'object_field_id', type => 'int', required => 1, readonly => 1});
+    $type->addField({ name => 'object_field_uuid', type => 'string', required => 1, readonly => 1});
     $type->addField({ name => 'reference_object', type => 'object', required => 1, readonly => 1});
 
     $type->setVersion($VERSION);
@@ -70,6 +102,41 @@ sub dbConfig {
 
     MinorImpact::log('debug', "ending");
     return;
+}
+
+=head2 match
+
+=over
+
+=item ->match($text)
+
+=back
+
+Returns true if the reference object's C<data> matches C<$text>.
+
+  $REFERENCE->update('data', "foo");
+  $REFERENCE->match("This is foolhardy nonsense."); # returns TRUE
+
+=cut
+
+sub match {
+    my $self = shift || die "no reference";
+    my $value = shift || return;
+
+    return _matchDataValue($self->get('data'), $value);
+}
+
+sub _matchDataValue {
+    my $data = shift || return;
+    my $value = shift || return;
+
+    #$test_data =~s/\W/ /gm;
+    #$test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
+    #if ($local_value->{value} =~/($test_data)/mgi) {
+    #    my $match = $1;
+    if ($value =~/($data)/) {
+        return $1;
+    }
 }
 
 =head2 toString
@@ -97,6 +164,15 @@ sub toString {
     return $string;
 }
 
+sub objectField {
+    my $self = shift || return;
+
+    my $object = $self->get('object') || die "no object";
+    my $field = $object->field($self->get('object_field_uuid')) || die "no field";
+
+    return $field;
+}
+
 =head2 verify
 
 =over
@@ -119,23 +195,22 @@ sub verify {
     my $self = shift || return;
 
     my $object = $self->get('object') || return;
-    my $field = $object->field($self->get('object_field_id')) || return;
-    return unless ($field->get('references'));
+    my $field = $self->objectField() || return;
     my $data = $self->get('data') || return;
+    $field->get('references') || return;
 
-    return _verify_data($object, $field, $data);
+    return _verifyObjectFieldData($object, $field, $data);
 }
 
-sub _verify_data {
+sub _verifyObjectFieldData {
     my $object = shift || return;
     my $field = shift || return;
     my $data = shift || return;
 
-    my $match = 0;
     foreach my $value ($field->value()) {
-        $match = 1 if($value =~/$data/);
+        return 1 if (_matchDataValue($data, $value));
     }
-    return $match;
+    return;
 }
 
 

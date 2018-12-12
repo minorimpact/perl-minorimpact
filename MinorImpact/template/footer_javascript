@@ -16,10 +16,10 @@
             buttons: {
                 "Create Reference": function() {
                     var data = \$(this).data('data');
-                    var object_field_id = \$(this).data('object_field_id');
+                    var object_field_uuid = \$(this).data('object_field_uuid');
                     var object_id = \$(this).data('object_id');
                     var reference_object_id = \$("#reference_object_id").val();
-                    var url = "[% url({ action=>'add_reference' }) %]?object_field_id=" + object_field_id + "&object_id=" + object_id + "&reference_object_id=" + reference_object_id + "&data=" + encodeURI(data);
+                    var url = "[% url({ action=>'add_reference' }) %]?object_field_uuid=" + object_field_uuid + "&object_id=" + object_id + "&reference_object_id=" + reference_object_id + "&data=" + encodeURI(data);
                     \$.get(url, function(data, status){
                         \$( "#reference_add-dialog" ).dialog("close");
                         window.location.reload(true);
@@ -61,14 +61,14 @@
         });
     }
 
-    function getSelectedText(object_id, object_field_id) {
+    function getSelectedText(object_id, object_field_uuid) {
         var data = "";
         if (window.getSelection && \$('#reference_add-dialog').dialog('isOpen') ==  false) {
             data = window.getSelection().toString();
             if (data.length == 0) {
                 return;
             }
-            \$("#reference_add-dialog").data('object_field_id',object_field_id).data('data', data).data('object_id', object_id).dialog("open");
+            \$("#reference_add-dialog").data('object_field_uuid',object_field_uuid).data('data', data).data('object_id', object_id).dialog("open");
             \$("#reference_add-data").html(data);
             \$("#reference_object_id").html('');
             var url = "[% url({  action=>'search', params=>{ format => 'json_short' } }) %]&&object_type_id=" + \$("#object_type_id").val();

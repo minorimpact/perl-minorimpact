@@ -30,7 +30,7 @@ use Time::Local;
 use URI::Escape;
 
 our $SELF;
-our $VERSION = 13;
+our $VERSION = 14;
 
 =head1 NAME
 
@@ -1520,7 +1520,7 @@ sub dbConfig {
             readonly => { type => "boolean", default => 0 },
             system => { type => 'boolean', default => 0 },
             url => { type => "varchar(255)", null => 0 },
-            uuid => { type => "char(36)" },
+            uuid => { type => "char(36)", null => 0 },
             version => {type => "int" },
         },
         indexes => {
@@ -1545,7 +1545,8 @@ sub dbConfig {
             references => { type => "boolean", default => 0 },
             required => { type => "boolean", default => 0 },
             sortby => { type => "boolean", default => 0 },
-            type => { type => "varchar(15)" },
+            type => { type => "varchar(15)", null => 0 },
+            uuid => { type => "char(36)", null => 0 },
         },
         indexes => {
             idx_object_field_name => { fields=>"object_type_id,name", unique => 1 },

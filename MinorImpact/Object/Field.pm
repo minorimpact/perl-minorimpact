@@ -94,8 +94,10 @@ sub new {
     if (ref($id) eq 'HASH') {
         $data = $id;
         $id = $data->{db}{id};
-    } else {
+    } elsif ($id =~/^\d+$/) {
         $data->{db} = $DB->selectrow_hashref("SELECT * from object_field where id = ?", undef, ($id));
+    } elsif ($id =~/^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$/i) {
+        $data->{db} = $DB->selectrow_hashref("SELECT * from object_field where uuid = ?", undef, ($id));
     }
 
     my $self;
@@ -416,18 +418,9 @@ sub value {
             } else {
                 my $local_value = clone($value);
                 if ($self->get('references') && (defined($params->{references}) && $params->{references} != 0)) {
-                    my @references = $self->references();
-                    foreach my $ref (@references) {
-                        my $data = $ref->get('data');
-                        my $test_data = $data;
-
-                        $test_data =~s/\W/ /gm;
-                        $test_data = join("\\W+?", split(/[\s\n]+/, $test_data));
-                        if ($local_value->{value} =~/($test_data)/mgi) {
-                            my $match = $1;
-                            my $url = MinorImpact::url({ action => 'object', object_id => $ref->get('reference_object')->id()});
-                            $local_value->{value} =~s/$match/<a href='$url'>$data<\/a>/;
-                        }
+                    MinorImpact::log('debug', "Adding references");
+                    foreach my $reference ($self->references()) {
+                        $local_value->{value} = $reference->addLink($local_value->{value});
                     }
                 }
                 if ($params->{value_id}) {
@@ -520,13 +513,13 @@ sub references {
 
     return unless ($self->get('references'));
     my $object_id = $self->object_id() || return;
-    my $id = $self->id() || return;
+    my $uuid = $self->get('uuid') || return;
 
     my @references = MinorImpact::Object::Search::search({
         query => {
             object_type_id => 'MinorImpact::reference', 
             object => $object_id, 
-            object_field_id => $id
+            object_field_uuid => $uuid
         }
     });
 
@@ -551,9 +544,9 @@ sub toString {
             }
             if ($self->get('references') && $params->{references}) {
                 my $object_id = $self->object_id();
-                my $id = $self->id();
-                if ($object_id && $id) {
-                    $string = "<div onmouseup='getSelectedText(" . $object_id . "," . $id . ");'>$string</div>\n";
+                my $uuid = $self->get('uuid');
+                if ($object_id && $uuid) {
+                    $string = "<div onmouseup='getSelectedText(" . $object_id . ",\"" . $uuid . "\");'>$string</div>\n";
                 }
             }
             $string .= $sep;
@@ -851,18 +844,28 @@ sub add {
     my $data = $DB->selectrow_hashref("SELECT * FROM object_field WHERE object_type_id=? AND name=?", {Slice=>{}}, ($object_type_id, $local_params->{name}));
     if ($data) {
         my $object_field_id = $data->{id};
-        $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
+        # Maybe limit references to just 'text' fields? It would make it easier knowing we'd only ever have to pull data from object_text
+        #   rather than object_text OR object_data... but "string" type or, really, any custom user user field type could (and should) be
+        #   able to support references, so this is unnecessarily/confusingly limiting.  But maybe I'll feel differently after I think
+        #   about if for a bit.
+        #$local_params->{references} = 0 unless ($local_params->{type} eq 'text' || (!defined($local_params->{type}) && $data->{type} eq 'text'));
+        $DB->do("UPDATE object_field SET default_value=? WHERE id=?", undef, ($local_params->{default_value}, $object_field_id)) || die $DB->errstr unless ($data->{default_value} eq $local_params->{default_value});
+        $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr if ($data->{description} eq $local_params->{description});
         $DB->do("UPDATE object_field SET hidden=? WHERE id=?", undef, ($local_params->{hidden}, $object_field_id)) || die $DB->errstr unless ($data->{hidden} eq $local_params->{hidden});
-        $DB->do("UPDATE object_field SET sortby=? WHERE id=?", undef, ($local_params->{sortby}, $object_field_id)) || die $DB->errstr unless ($data->{sortby} eq $local_params->{sortby});
         $DB->do("UPDATE object_field SET readonly=? WHERE id=?", undef, ($local_params->{readonly}, $object_field_id)) || die $DB->errstr unless ($data->{readonly} eq $local_params->{readonly});
         $DB->do("UPDATE object_field SET `references`=? WHERE id=?", undef, ($local_params->{references}, $object_field_id)) || die $DB->errstr unless ($data->{references} eq $local_params->{references});
         $DB->do("UPDATE object_field SET required=? WHERE id=?", undef, ($local_params->{required}, $object_field_id)) || die $DB->errstr unless ($data->{required} eq $local_params->{required});
-        $DB->do("UPDATE object_field SET description=? WHERE id=?", undef, ($local_params->{description}, $object_field_id)) || die $DB->errstr unless ($data->{description} eq $local_params->{description});
-        MinorImpact::log('debug', "UPDATE object_field SET default_value=? WHERE id=?,'" . $local_params->{default_value} . "', '$object_field_id', \$data->{default_value}='" . $data->{default_value} . "'");
-        $DB->do("UPDATE object_field SET default_value=? WHERE id=?", undef, ($local_params->{default_value}, $object_field_id)) || die $DB->errstr unless ($data->{default_value} eq $local_params->{default_value});
+        $DB->do("UPDATE object_field SET sortby=? WHERE id=?", undef, ($local_params->{sortby}, $object_field_id)) || die $DB->errstr unless ($data->{sortby} eq $local_params->{sortby});
+        $DB->do("UPDATE object_field SET type=? WHERE id=?", undef, ($local_params->{type}, $object_field_id)) || die $DB->errstr unless ($data->{type} eq $local_params->{type});
+        # Everything else can get set back to the default if add() is called for a field that already exists, but we want `uuid` to stay
+        #   unmolested unless specifically requested.
+        $DB->do("UPDATE object_field SET uuid=? WHERE id=?", undef, (lc($local_params->{uuid}), $object_field_id)) || die $DB->errstr if (defined($local_params->{uuid}) && $data->{uuid} ne $local_params->{uuid});
         $field = new MinorImpact::Object::Field($object_field_id);
     } else {
-        $DB->do("INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, references, required, sortby, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{references}, $local_params->{required}, $local_params->{sortby})) || die $DB->errstr;
+        my $sql = "INSERT INTO object_field (object_type_id, name, description, default_value, type, hidden, readonly, `references`, required, sortby, uuid, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        my $uuid = lc($local_params->{uuid} || uuid());
+        MinorImpact::log('debug', "$sql ('$object_type_id', '" . $local_params->{name} . "', '" . $local_params->{description} . "', '" . $local_params->{default_value} . "', '". $local_params->{type} . "', '" . $local_params->{hidden} . "', '" . $local_params->{readonly} . "', '" . $local_params->{references} . "', '" . $local_params->{required} . "', '" . $local_params->{sortby} . "', '$uuid')");
+        $DB->do($sql, undef, ($object_type_id, $local_params->{name}, $local_params->{description}, $local_params->{default_value}, $local_params->{type}, $local_params->{hidden}, $local_params->{readonly}, $local_params->{references}, $local_params->{required}, $local_params->{sortby}, $uuid)) || die $DB->errstr;
         my $object_field_id = $DB->{mysql_insertid};
         MinorImpact::log('debug', "new object_field_id='$object_field_id'");
         $field = new MinorImpact::Object::Field($object_field_id);
@@ -992,14 +995,16 @@ sub toData {
 
     my $data = {};
 
-    $data->{name} = $self->{db}{name};
-    $data->{type} = $self->{db}{type};
-    $data->{required} = $self->{db}{required};
-    $data->{hidden} = $self->{db}{hidden};
-    $data->{sortby} = $self->{db}{sortby};
-    $data->{readonly} = $self->{db}{readonly};
-    $data->{description} = $self->{db}{description};
     $data->{default_value} = $self->{db}{default_value};
+    $data->{description} = $self->{db}{description};
+    $data->{hidden} = $self->{db}{hidden};
+    $data->{name} = $self->{db}{name};
+    $data->{readonly} = $self->{db}{readonly};
+    $data->{references} = $self->{db}{references};
+    $data->{required} = $self->{db}{required};
+    $data->{sortby} = $self->{db}{sortby};
+    $data->{type} = $self->{db}{type};
+    $data->{uuid} = $self->{db}{uuid};
 
     return $data;
 }

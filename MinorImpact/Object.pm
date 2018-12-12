@@ -483,12 +483,10 @@ sub field {
     if (defined($fields->{$name})) {
         return $fields->{$name};
     }
-    if ($name =~/^\d+$/) {
-       foreach my $field_name (keys %{$fields}) {
-           my $field = $fields->{$field_name};
-           return $field if ($field->id() == $name);
-       } 
-    }
+    foreach my $field_name (keys %{$fields}) {
+        my $field = $fields->{$field_name};
+        return $field if ($field->id() == $name || $field->get('uuid') eq $name);
+    } 
     return;
 }
 
@@ -725,6 +723,7 @@ sub get {
     my $name = shift || return;
     my $params = shift || {};
 
+    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $self->id() . "-$name)");
 
     my @values;
@@ -739,6 +738,7 @@ sub get {
             $value = $self->{data}->{$name};
         }
         MinorImpact::log('debug', "ending");
+        MinorImpact::debug(0);
         return $value;
     } elsif (defined($self->{object_data}->{$name})) {
         my $field = $self->{object_data}->{$name};
@@ -758,17 +758,20 @@ sub get {
                 $value =  markdown($value);
             }
             if ($params->{references}) {
-                $value = "<div onmouseup='getSelectedText(" . $self->id() . "," . $field->id() . ");'>$value</div>\n";
+                $value = "<div onmouseup='getSelectedText(" . $self->id() . ",\"" . $field->get('uuid') . "\");'>$value</div>\n";
             }
             push(@values, $value);
         }
         if ($field->isArray()) {
             MinorImpact::log('debug', "ending");
+            MinorImpact::debug(0);
             return @values;
         }
         MinorImpact::log('debug', "ending");
+        MinorImpact::debug(0);
         return $values[0];
     }
+    MinorImpact::debug(0);
     MinorImpact::log('debug', "ending");
 }   
 
@@ -834,14 +837,6 @@ sub toData {
     $data->{uuid} = lc($self->get('uuid'));
     $data->{tags} = join("\0", $self->tags());
 
-    foreach my $reference ($self->references()) {
-        my $object = new MinorImpact::Object($reference->{object_id});
-        if ($object) {
-            $reference->{object_uuid} = $object->get('uuid');
-        }
-    }
-    $data->{references} = \@{$self->references()};
-        
     return $data;
 }
 

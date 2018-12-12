@@ -6,6 +6,21 @@ MinorImpact::reference
 
 An object for other linking two MinorImpact objects.
 
+## addLink
+
+- ->addLink($data)
+
+Applies the link in this reference to `$data`;
+
+## match
+
+- ->match($text)
+
+Returns true if the reference object's `data` matches `$text`.
+
+    $REFERENCE->update('data', "foo");
+    $REFERENCE->match("This is foolhardy nonsense."); # returns TRUE
+
 ## toString
 
 Overrides the `list` format to use `reference_list` instead of
