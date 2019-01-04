@@ -347,7 +347,7 @@ L<MinorImpact::Manual::Configuration|MinorImpact::Manual::Configuration/Settings
 =cut
 
 sub cache {
-    my $self = shift || return;
+    my $self = shift;
 
     #MinorImpact::log('debug', "starting");
 
@@ -397,22 +397,24 @@ sub cache {
 }
 
 sub clearCache {
-    my $self = shift || return;
+    my $self = shift;
 
     if (!ref($self)) {
         unshift(@_, $self);
         $self = $MinorImpact::SELF;
     }
 
-    my $cache = cache();
+    my $cache = MinorImpact::cache();
 
     # FUCK. 
     # YOU.
     if ($self->{conf}{default}{memcached_server}) {
-        $cache->flush_all();
+        $cache->flush_all() || die "can't flush cache";
     } else {
         $cache->clear();
     }
+    delete($self->{USER});
+    delete($self->{USERHASH});
 }
 
 =head2 facebook
