@@ -1,0 +1,4 @@
+<div>
+    [% object.get('object').toString() %]<br />
+    &nbsp; <i>"[% object.get('data') %]"</i><br />
+</div>

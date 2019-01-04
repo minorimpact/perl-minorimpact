@@ -100,7 +100,6 @@ sub add_reference {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting");
 
     my $user = $MINORIMPACT->user({ force => 1 });
@@ -135,7 +134,6 @@ sub add_reference {
         }
     }
     MinorImpact::log('debug', "ending");
-    MinorImpact::debug(0);
 }
 
 sub admin {
@@ -170,6 +168,8 @@ sub delete {
     my $MINORIMPACT = shift || return;
     my $params = shift || {};
 
+    MinorImpact::log('debug', "starting");
+
     my $CGI = MinorImpact::cgi();
     my $user = MinorImpact::user({ force => 1 });
 
@@ -182,6 +182,7 @@ sub delete {
     my $back = $object->back();
 
     $object->delete();
+    MinorImpact::log('debug', "ending");
     $MINORIMPACT->redirect($back);
 }
 
@@ -584,7 +585,6 @@ sub object {
 
     my @types = $object->childTypes();
 
-    my @objects;
     if ($format eq 'json') {
         # Handle the json stuff and get out of here early.
         my $data = $object->toData();
@@ -594,13 +594,14 @@ sub object {
     }
     viewHistory($type->name(), $object->id());
 
+    my $reference_type_id = MinorImpact::Object::typeID("MinorImpact::reference");
     my $child_params = { query => { limit => $limit, page => $page } };
-    my @children = $object->children($child_params);
+    my @children = grep {  ($_->typeID() != $reference_type_id || ($_->typeID() == $reference_type_id && $_->get('object')->cmp($object) != 0 )); } $object->children($child_params);
 
     MinorImpact::tt('object', {
                             action      => "object",
                             object      => $object,
-                            objects     => [ @children ],
+                            children    => [ @children ],
                             query       => $child_params->{query},
                             #tab_number  => $tab_number,
                             types       => [ @types ],

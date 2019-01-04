@@ -6,10 +6,3 @@
         [% INCLUDE tag %]
     [% END %]
 </div>
-<div>
-    <b>References</b><br />
-    [% FOREACH ref IN object.references() %]
-        [% ref.get('object').toString() %]<br />
-        &nbsp; <i>"[% ref.get('data') %]"</i><br />
-    [% END %]
-</div>
