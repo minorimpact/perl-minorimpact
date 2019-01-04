@@ -320,20 +320,22 @@ sub children {
 
     MinorImpact::log('debug', "starting(" . $self->id() . ")");
     my $local_params = clone($params);
+
     $local_params->{query}{object_type_id} = $local_params->{query}{type_id} if ($local_params->{query}{type_id} && !$local_params->{query}{object_type_id});
-    $local_params->{query}{debug} .= "Object::children();";
-    #my $user_id = $self->userID();
 
     $local_params->{query}{where} = " AND ((object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE ?) AND object_data.value = ?)";
     $local_params->{query}{where_fields} = [ "%object[" . $self->typeID() . "]", $self->id() ];
-
-    # Uncomment these two lines if we don't want the generic 'object' field to count as a 
-    #   'child' of a particular type.  I don't know how all that's going to work.
     $local_params->{query}{where} .= " OR (object_data.object_field_id IN (SELECT id FROM object_field WHERE type = 'object') AND object_data.value = ?)";
     push(@{$local_params->{query}{where_fields}}, $self->id());
-
     $local_params->{query}{where} .= ")";
+    
+    # If we want to simplify "related" object searching, we can use the code below, but I don't like it because it means no one can ever
+    #   create a field type with the word 'object' in it, which seems like an unintuitive "gotcha!" limitation.
+    #$local_params->{query}{where} .= " AND (object_data.object_field_id IN (SELECT id FROM object_field WHERE type LIKE '%object%') AND object_data.value = ?)";
+    #$local_params->{query}{where_fields} = [ $self->id() ];
 
+
+    $local_params->{query}{debug} .= "Object::children();";
     my @children = MinorImpact::Object::Search::search($local_params);
     MinorImpact::log('debug', "ending");
     return @children;
@@ -723,7 +725,6 @@ sub get {
     my $name = shift || return;
     my $params = shift || {};
 
-    MinorImpact::debug(1);
     MinorImpact::log('debug', "starting(" . $self->id() . "-$name)");
 
     my @values;
@@ -738,7 +739,6 @@ sub get {
             $value = $self->{data}->{$name};
         }
         MinorImpact::log('debug', "ending");
-        MinorImpact::debug(0);
         return $value;
     } elsif (defined($self->{object_data}->{$name})) {
         my $field = $self->{object_data}->{$name};
@@ -764,14 +764,11 @@ sub get {
         }
         if ($field->isArray()) {
             MinorImpact::log('debug', "ending");
-            MinorImpact::debug(0);
             return @values;
         }
         MinorImpact::log('debug', "ending");
-        MinorImpact::debug(0);
         return $values[0];
     }
-    MinorImpact::debug(0);
     MinorImpact::log('debug', "ending");
 }   
 
@@ -780,16 +777,6 @@ sub validateFields {
     my $params = shift;
 
     MinorImpact::log('debug', "starting");
-
-    #if (!$fields) {
-    #   dumper($fields);
-    #}
-    #if (!$params) {
-    #   dumper($params);
-    #}
-
-    #die "No fields to validate." unless ($fields);
-    #die "No parameters to validate." unless($params);
 
     foreach my $field_name (keys %$params) {  
         MinorImpact::log('debug', "looking for $field_name");
@@ -940,7 +927,13 @@ sub toString {
     elsif ($params->{json}) { $params->{format} = "json"; }
     elsif ($params->{text}) { $params->{format} = "text"; }
 
-    if ($params->{format} eq 'column' || $params->{format} eq 'page') {
+    if ($params->{template}) {
+        my $template = $params->{template};
+        MinorImpact::tt($template, { 
+                depth => $params->{depth} || 0,
+                object => $self 
+            }, \$string);
+    } elsif ($params->{format} eq 'column' || $params->{format} eq 'page') {
         #$tt->process('object_column', { object=> $self}, \$string) || die $tt->error();
         $string .= "<div class='w3-container'>\n";
         $string .= "<h3>" . $self->name() . "</h3>\n" unless ($self->isNoName());
@@ -992,7 +985,7 @@ sub toString {
     } elsif ($params->{format} eq 'text') {
         $string = $self->name();
     } else {
-        my $template = $params->{template} || 'object_link';
+        my $template = 'object_link';
         MinorImpact::log('debug', "depth='" . $params->{depth} . "'");
         MinorImpact::tt($template, { 
                 depth => $params->{depth} || 0,
@@ -1504,8 +1497,7 @@ sub delete {
     my $object_id = $self->id();
     my $DB = MinorImpact::db();
 
-    my @children = $self->children();
-    foreach my $child (@children) {
+    foreach my $child ($self->children()) {
         $child->delete();
     }
 
