@@ -93,22 +93,6 @@ sub cmp {
     return $self->get('publish_date');
 }
 
-sub children {
-    my $self = shift || die "No self";
-    my $params = shift || {};
-    MinorImpact::log('debug', "starting");
-
-
-    my $local_params = clone($params);
-    $local_params->{query} = {} unless (defined($local_params->{query}));
-    $local_params->{query}{object_type_id} = "MinorImpact::comment";
-
-    my @comments = $self->SUPER::children($local_params);
-
-    MinorImpact::log('debug', "ending");
-    return @comments;
-}
-
 our $VERSION = 28;
 sub dbConfig {
     MinorImpact::log('debug', "starting");
