@@ -979,7 +979,13 @@ sub toString {
     } elsif ($params->{format} eq 'row') {
         $string = "<tr>";
         foreach my $key (keys %{$self->{data}}) {
-            $string .= "<td>$self->{data}{$key}</td>";
+            $string .= "<td>";
+            if ($key eq 'name') {
+                $string .= $self->toString({template => 'object_link'});
+            } else {
+                $string .= $self->{data}{$key};
+            }
+            $string .= "</td>";
         }
         $string .= "</tr>\n";
     } elsif ($params->{format} eq 'text') {
