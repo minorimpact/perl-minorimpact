@@ -334,14 +334,14 @@ sub updateTableMySQL {
                 #print "null:'" . $db_columns->{$field_name}{NULLABLE} . "','$field->{null}'\n";
 
                 my $field_sql = $SUBS->{field}->($field_name, $field);
-                my $sql = "ALTER TABLE $table_name CHANGE $field_name $field_sql";
+                my $sql = "ALTER TABLE `$table_name` CHANGE $field_name $field_sql";
                 #print "$sql\n";
                 $DB->do($sql) || die $DB->errstr;
             }
         } else {
             # add field to DB
             my $field_sql = $SUBS->{field}->($field_name, $field);
-            my $sql = "ALTER TABLE $table_name ADD $field_sql";
+            my $sql = "ALTER TABLE `$table_name` ADD $field_sql";
             #print "$sql\n";
             $DB->do($sql) || die $DB->errstr;
         }
@@ -352,7 +352,7 @@ sub updateTableMySQL {
     foreach my $field_name (keys %$db_columns) {
         next if ($fields->{$field_name});
         # delete field from DB
-        my $sql = "ALTER TABLE $table_name DROP $field_name";
+        my $sql = "ALTER TABLE `$table_name` DROP `$field_name`";
         #print "$sql\n";
         $DB->do($sql) || die $DB->errstr;
     }
@@ -365,8 +365,8 @@ sub updateTableMySQL {
 
        my $create_sql = "CREATE " .  (($index_name eq 'PRIMARY')?"PRIMARY":($index->{unique}?"UNIQUE":"")) . 
                         " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) . 
-                        " ON $table_name($fields)";
-       my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON $table_name";
+                        " ON `$table_name`($fields)";
+       my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON `$table_name`";
         if ($db_indexes->{$index_name}) {
            if ($fields ne $db_indexes->{$index_name}->{fields}) {
                #print "$drop_sql\n";
@@ -382,7 +382,7 @@ sub updateTableMySQL {
 
     foreach my $index_name (keys %$db_indexes) {
         next if ($indexes->{$index_name});
-        my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON $table_name";
+        my $drop_sql = "DROP " .  (($index_name eq 'PRIMARY')?"PRIMARY":"") . " INDEX " . (($index_name eq 'PRIMARY')?"":$index_name) .  " ON `$table_name`";
         #print "$drop_sql\n";
         $DB->do($drop_sql) || die $DB->errstr;
     }
