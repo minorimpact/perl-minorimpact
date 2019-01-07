@@ -28,21 +28,30 @@ sub new {
 
     if (ref($params) eq 'HASH') {
         my $data = $params->{data};
-        if (ref($data) eq 'ARRAY') {
-            $data = @$data[0];
-        }
 
-        die "no data" unless ($data);
-        die "no object" unless ($params->{object});
+        die "no data" unless ($params->{data});
         die "no object" unless ($params->{object});
         die "no field id" unless ($params->{object_field_uuid});
 
-        my $object = $params->{object} || die "no object";;
-        unless (ref($object)) {
+        my $data = $params->{data};
+        my $object = $params->{object};
+        my $object_field_uuid = $params->{object_field_uuid};
+
+        $data = @{$data}[0] if (ref($data) eq 'ARRAY');
+        $object = @{$object}[0] if (ref($object) eq 'ARRAY');
+        $object_field_uuid = @{$object_field_uuid}[0] if (ref($object_field_uuid) eq 'ARRAY');
+
+        die "no data" unless ($data);
+        die "no object" unless ($object);
+        die "no object field uuid" unless ($object_field_uuid);
+
+        unless(ref($object)) {
             my $object_id = $object;
+            MinorImpact::log('debug', "\$object_id='$object_id'");
             $object = new MinorImpact::Object($object_id) || die "can't create object '$object_id'";
+            MinorImpact::log('debug', "\$object->name()='" . $object->name() . "'");
         }
-        my $field = $object->field($params->{object_field_uuid}) || die "no field";
+        my $field = $object->field($object_field_uuid) || die "no field";
 
         die "not a reference field" unless ($field->get('references'));
 
