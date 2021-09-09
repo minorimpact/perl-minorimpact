@@ -1538,15 +1538,15 @@ sub log {
 
 Called as a package subroutine, returns a list of all the tags defined for all
 objects owned by the logged in user, or tags for all public objects owned by 
-all admin users if the no one is logged in.
+all admin users if the no one is logged in:
 
   @all_tags = MinorImpact::Object::tags();
 
-Called as an object method, returns the tags assigned to an object.
+Called as an object method, returns the tags assigned to an object:
 
   @tags = $OBJECT->tags();
 
-Called as an object method with an array of @tags, replaces the objects tags.
+Called as an object method with an array of @tags, replaces the object's tags:
 
   @tags = ("tag1", "tag2");
   $OBJECT->tags(@tags);
@@ -1564,11 +1564,11 @@ sub tags {
         undef($self);
     }
     if ($params && !ref($params)) {
-       unshift($params);
+       unshift(@_, $params);
        $params = {};
    }
    if ($self && !ref($self)) {
-      unshift($self);
+      unshift(@_, $self);
       undef($self);
    }
 
