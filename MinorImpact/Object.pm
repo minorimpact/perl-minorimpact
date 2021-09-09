@@ -1564,11 +1564,11 @@ sub tags {
         undef($self);
     }
     if ($params && !ref($params)) {
-       unshift($params);
+       unshift(@_, $params);
        $params = {};
    }
    if ($self && !ref($self)) {
-      unshift($self);
+      unshift(@_, $self);
       undef($self);
    }
 
